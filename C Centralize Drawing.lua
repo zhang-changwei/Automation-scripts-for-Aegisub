@@ -15,9 +15,15 @@ function Centralization(subtitle, selected, active)
     for si,li in ipairs(selected) do
         line=subtitle[li]
         
-        line.text=line.text:gsub("\\an%d","\\an7")
+        if (line.text:match("\\pos")==nil) then line.text=line.text:gsub("^{","{\\pos(0,0)")
         if (line.text:match("\\an")==nil) then line.text=line.text:gsub("^{","{\\an7") end
-
+    
+        line:text=line.text:gsub("\\fsc[%d%.%-]+","")
+        line:text=line.text:gsub("\\fscx[%d%.%-]+","")
+        line:text=line.text:gsub("\\fscy[%d%.%-]+","")
+        line.text=line.text:gsub("\\an%d","\\an7")
+        line.text=line.text:gsub("\\pos%([^%)]+%)","\\pos(0,0)\\fscx100\fscy100")
+        
         pos = string.match(line.text, "m +%-?%d+.*")
         i = 1
         totalx = 0
