@@ -35,7 +35,7 @@ Updated on 7 Dec 2020
 ]]
 
 script_name="C Translation"
-script_description="Trasnlation"
+script_description="Trasnlation v2.0"
 script_author="chaaaaang"
 script_version="2.0" 
 

@@ -7,7 +7,7 @@ Updated on Fre.8th, 2021
 
 --Script properties
 script_name="C Gradient"
-script_description="Gradient"
+script_description="Gradient v2.0"
 script_author="chaaaaang"
 script_version="1.0"
 

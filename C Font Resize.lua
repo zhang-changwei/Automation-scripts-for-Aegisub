@@ -21,7 +21,7 @@ Updated on 21st Jan 2021
 ]]
 
 script_name="C Font Resizing (Mocha Deshaking)"
-script_description="Increases scaling precision by decreasing font size"
+script_description="Font Resizing (Mocha Deshaking) v1.1"
 script_author="lyger modified by chaaaaang"
 script_version="1.1"
 
