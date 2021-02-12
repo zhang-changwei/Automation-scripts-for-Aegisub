@@ -8,6 +8,8 @@ assignees: ''
 ---
 
 **Name of the script**
+1. Name of the script
+2. Version
 
 **Describe the bug**
 A clear and concise description of what the bug is.
