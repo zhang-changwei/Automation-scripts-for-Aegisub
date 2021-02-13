@@ -4,8 +4,8 @@ README:
 ]]
 
 --Script properties
-script_name="C Scaling Rotation Conflict"
-script_description=""
+script_name="C Scaling Rotation Conflict Solution"
+script_description="Scaling Rotation Conflict Solution v1.0"
 script_author="chaaaaang"
 script_version="1.0"
 
@@ -32,9 +32,13 @@ function main(subtitle, selected)
 		local line=subtitle[li]
 		karaskel.preproc_line(subtitle,meta,styles,line)
 
-        local ltext = line.text
+        local ltext=(line.text:match("^{")==nil) and "{}"..line.text or line.text
 
         ltext = ltext:gsub("\\fsc([%d%-%.]+)","\\fscx%1\\fscy%1")
+
+        if (ltext:match("\\fscx")==nil) then ltext = ltext:gsub("^{",string.format("{\\fscx%.2f"),line.styleref.scale_x) end
+        if (ltext:match("\\fscy")==nil) then ltext = ltext:gsub("^{",string.format("{\\fscy%.2f"),line.styleref.scale_y) end
+
 		local scale_x = ltext:match("\\fscx([%d%-%.]+)")
         local scale_y = ltext:match("\\fscy([%d%-%.]+)")
         ltext = ltext:gsub("\\fscx[%d%-%.]+","")

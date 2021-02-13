@@ -35,7 +35,7 @@ Updated on 18th, Jan 2021
 
 --Script properties
 script_name="C Change SUB resolution to match video PATCH"
-script_description="Change SUB resolution to match video PATCH"
+script_description="Change SUB resolution to match video PATCH v1.0"
 script_author="chaaaaang"
 script_version="1.0"
 

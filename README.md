@@ -4,6 +4,9 @@
 1. C Font Resize
 2. C Gradient
 3. C Translation
+4. C Scaling Rotation Conflict Solution
+5. C Change SUB resolution to match video PATCH
+6. 更新日志
 
 ## 0. 前言
 * 当前各脚本版本信息 
@@ -12,13 +15,13 @@
     | C Font Resize (Mocha Deshaking) | v1.1    |
     | C Gradient                      | v2.0    |
     | C Translation                   | v2.0    |
+    | C Scaling Rotation Conflict Solution | v1.0 |
+    | C Change SUB resolution to match video PATCH | v1.0 |
     > 在Automation Manager Description栏中查看脚本版本信息  
     > 若你的脚本在上述表格中且无版本信息 可能需要考虑更新脚本
 * 使用方法
     + 将LUA脚本复制到`C:\Program Files (x86)\Aegisub\automation\autoload`路径下，或你的Aegisub安装位置
     + 在Aegisub Automation项中可以发现添加的脚本
-
-    
 
 ----------------------------------------------------------
 ## 1. C Font Resize
@@ -34,6 +37,7 @@
 * Warning  
     不允许 `\t(fs)` 代码  
     字体中不允许出现 "W"
+
 ## 2. C Gradient
 * Feature  
     对逐行/逐帧字幕，自动填写中间行标签代码，以渐变模式填充  
@@ -50,12 +54,12 @@
 * GUI  
     + setting:   
     时间模式和行模式切换，勾选为时间模式，为渐变插值依据。如为相同时间轴字幕实现空间渐变效果，必须选择行模式；如为逐帧字幕实现空间渐变效果，建议选择时间模式。  
-    + accel :  
+    + accel (float number):  
     加速度，参数范围 `(0,+∞)` ,当 `accel=1` 时为线性渐变，当 `accel>1` 时为先慢后快的渐变，当 `accel<1` 时为先快后慢的渐变，具体数学形式同 `y=x^a` 在定义域 `(0,1)` 中行为，accel为其中指数因子a。  
     + mode (exact match/custom) :  
     exact match: 精确匹配模式，选中标签必须在选中字幕的每一行都出现，且位于相同位置(position)(后面会说明)  
     + custom：定制模式，选中标签仅需出现在选中字幕的首位行，但仍需处于相同位置(position)  
-    + rule:  
+    + rule (string):  
     mode 的规则，书写规则为 `%d%d[ht]?,%d%d[ht]?...` 两个数字和一个字母为一个规则块，以半角逗号分隔  
     每个规则块中首位数字为 tag block number, 第二位数字为 tag position number, 第三位字母为 head or tail, 可略去不写。  
     tag block number：   
@@ -80,10 +84,65 @@
 * Warning  
     一次只能运行对一种 tag 进行操作  
     字体中不允许出现 "W"
+    
+## 3. C Translation
+* Feature  
+    对逐行/逐帧字幕中的特定标签进行平移(即放大/缩小标签数值)
 
+    对存在整体偏移的Mocha生成行，进行细微调整  
+    对字幕进行整体平移，如向下平移一个黑边距离  
+    > Tip: 勾选 `posy` 和 `clipy` 标签，将对应 `start` 和 `end` 都设为一个黑边距离，其他参数保持默认即可。
 
+    制作3D特效，整体向右平移960pixel   
+    More...
+* Usage  
+    选中多行字幕 运行LUA脚本    
+    设置 setting 选项     
+    根据需求勾选特效标签勾选框，而后设置对应 start, end, accel, index 数值  
+    > 一次可以勾选多个特效标签 这一点与 C Gradient 不同
+* GUI  
+    + setting:  
+    同 C Font Resize / GUI / setting  
+    + start (float number):  
+    选中行首行选中标签将增大数值
+    + end (float number):  
+    选中行末行选中标签将增大数值  
+    + accel (float number):  
+    同 C Font Resize / GUI / accel
+    + index (int number):  
+    你欲操作标签在该行所有 tag block 中所有该标签中的序数  
+    `{\fs1(#1)\bord1\t(\shad1\fs2(#2))} text block 1 {\fs9(#3)} text block 2` accusming the tag you want to manipulate is `\fs`   
+* Example  
+    `1 {\pos(500,500)}example`  
+    `2 {\pos(500,500)}example`
+    `3 {\pos(500,500)}example`  
+    -> After running (`posx: check, start: 100, end: 200, accel=1`)  
+    `1 {\pos(600.000,500)}example`  
+    `2 {\pos(650.000,500)}example`   
+    `3 {\pos(700.000,500)}example`  
+* Warning  
+    不支持 `\t(\clip)` 标签  
+    字体中不允许出现 "W"
 
-
-
-
-
+## 4. C Scaling Rotation Conflict Solution
+* Feature  
+    解决拉伸代码 `\fscx \fscy` 与旋转代码 `\frx fry` 生成SUP时冲突的问题  
+    将拉伸代码 `\fscx \fscy` 写入样式表中，并以后缀区分新增样式
+* Usage  
+    选中一行(多行)字幕，运行LUA脚本，设置 suffix 数值即可
+* GUI
+    suffix (int number):  
+    首行新样式名后缀
+* Example  
+    `1 Default {\fscx120\fscy130\frx1\fry2\frz5}example`  
+    `2 Default {\fscx130\fscy140\frx2\fry3\frz5}example`
+    `3 Default {\fscx140\fscy150\frx3\fry4\frz5}example`  
+    -> After running (`suffix=1`)  
+    `1 Default_1 {\frx1\fry2\frz5}example`  
+    `2 Default_2 {\frx2\fry3\frz5}example`   
+    `3 Default_3 {\frx3\fry4\frz5}example`  
+* Warning  
+    选中每行字幕有且只能有一组拉伸代码
+    > 程序会在样式表中产生大量样式，谨慎使用
+----------------------------------------------------------------
+## 6. 更新日志  
