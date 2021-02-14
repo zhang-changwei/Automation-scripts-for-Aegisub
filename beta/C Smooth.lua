@@ -12,8 +12,6 @@ script_version="1.0"
 include("karaskel.lua")
 require("lfs")
 
-
-
 function main(subtitle, selected, active)
     local meta,styles=karaskel.collect_head(subtitle,false)
 
@@ -55,14 +53,12 @@ function main(subtitle, selected, active)
     pressed, result = aegisub.dialog.display(dialog_config,buttons)
     if (pressed=="Quit") then aegisub.cancel() end
 
-
     if (pressed=="Run") then
         if (result["remember"]==true) then config_write(result) end
         result["upper_threshold"] = result["upper_threshold"]/100
         result["lower_threshold"] = result["lower_threshold"]/100
         result["force"] = result["force"]/100
         tag_table={}
-        --rewrite tagtype
 
         --get the tag information and write it to a table
         if (result["tagtype"]=="posx" or result["tagtype"]=="posy") then
@@ -203,7 +199,7 @@ function main(subtitle, selected, active)
                                 rebuild_tag = rebuild_tag..p.."\\"..result["tagtype"]..q
                             end
                         end
-                        rebuild_tag = rebuild_tag:gsub("\\"..result["tagtype"].."0$","}")
+                        rebuild_tag = rebuild_tag:gsub("\\"..result["tagtype"].."[%d%.%-]+$","}")
                         rebuild = rebuild..rebuild_tag..tt.text
                         count = count - 1
                     end

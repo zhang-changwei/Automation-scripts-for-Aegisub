@@ -4,9 +4,10 @@
 1. __C Font Resize__
 2. __C Gradient__
 3. __C Translation__
-4. __C Scaling Rotation Conflict Solution__
-5. __C Change SUB resolution to match video PATCH__
-6. __更新日志__
+4. __C Smooth__  
+5. __C Scaling Rotation Conflict Solution__
+6. __C Change SUB resolution to match video PATCH__
+7. __更新日志__
 
 ## 0. 前言
 * __当前各脚本版本信息__
@@ -15,6 +16,7 @@
     | C Font Resize (Mocha Deshaking) | v1.1    |
     | C Gradient                      | v2.0    |
     | C Translation                   | v3.0    |
+    | C Smooth                        | v1.0    |
     | C Scaling Rotation Conflict Solution | v1.0 |
     | C Change SUB resolution to match video PATCH | v1.0 |
     > 在Automation Manager Description栏中查看脚本版本信息  
@@ -23,8 +25,8 @@
     + 将LUA脚本复制到`C:\Program Files (x86)\Aegisub\automation\autoload`路径下，或你的Aegisub安装位置
     + 在Aegisub Automation项中可以发现添加的脚本
 
-----------------------------------------------------------
-## 1. C Font Resize
+-------------------------------------------
+## __1. C Font Resize__
 * __Feature__  
     Mocha 防抖  
 * __Usage__  
@@ -38,7 +40,7 @@
     不允许 `\t(fs)` 代码  
     字体中不允许出现 "W"
 
-## 2. C Gradient
+## __2. C Gradient__
 * __Feature__  
     对逐行/逐帧字幕，自动填写中间行标签代码，以渐变模式填充  
 
@@ -85,7 +87,7 @@
     一次只能运行对一种 tag 进行操作  
     字体中不允许出现 "W"
     
-## 3. C Translation
+## __3. C Translation__
 * __Feature__  
     对逐行/逐帧字幕中的特定标签进行平移(即放大/缩小标签数值)
 
@@ -124,7 +126,9 @@
     不支持 `\t(\clip)` 标签  
     字体中不允许出现 "W"
 
-## 4. C Scaling Rotation Conflict Solution
+## __4. C Smooth__
+
+## __5. C Scaling Rotation Conflict Solution__
 * __Feature__  
     解决拉伸代码 `\fscx \fscy` 与旋转代码 `\frx fry` 生成SUP时冲突的问题  
     将拉伸代码 `\fscx \fscy` 写入样式表中，并以后缀区分新增样式
@@ -144,5 +148,5 @@
 * __Warning__  
     选中每行字幕有且只能有一组拉伸代码
     > 程序会在样式表中产生大量样式，谨慎使用
-----------------------------------------------------------------
-## 6. 更新日志  
+--------------------------------------------
+## __7. 更新日志__
