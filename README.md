@@ -114,7 +114,7 @@
     `{\fs1(#1)\bord1\t(\shad1\fs2(#2))} text block 1 {\fs9(#3)} text block 2` accusming the tag you want to manipulate is `\fs`   
 * __Example__  
     `1 {\pos(500,500)}example`  
-    `2 {\pos(500,500)}example`
+    `2 {\pos(500,500)}example`  
     `3 {\pos(500,500)}example`  
     -> After running (`posx: check, start: 100, end: 200, accel=1`)  
     `1 {\pos(600.000,500)}example`  
@@ -131,7 +131,7 @@
 * __Usage__  
     选中一行(多行)字幕，运行LUA脚本，设置 suffix 数值即可
 * __GUI__  
-    suffix (int number):  
+    __suffix (int number):__  
     首行新样式名后缀
 * __Example__  
     `1 Default {\fscx120\fscy130\frx1\fry2\frz5}example`  
