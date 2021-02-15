@@ -1,15 +1,15 @@
 # Automation-scripts-for-Aegisub
-## 目录
-0. __前言__
-1. __C Font Resize__
-2. __C Gradient__
-3. __C Translation__
-4. __C Smooth__  
-5. __C Scaling Rotation Conflict Solution__
-6. __C Change SUB resolution to match video PATCH__
-7. __更新日志__
+## __目录__
+0. [__前言__](#0-前言)
+1. [__C Font Resize__](#1-c-font-resize)
+2. [__C Gradient__](#2-c-gradient)
+3. [__C Translation__](#3-c-translation)
+4. [__C Smooth__](#4-c-smooth)
+5. [__C Scaling Rotation Conflict Solution__](#5-C-Scaling-Rotation-Conflict-Solution)
+6. [__C Change SUB resolution to match video PATCH__](#6-C-Change-SUB-resolution-to-match-video-PATCH)
+7. [__更新日志__](#7-更新日志)
 
-## 0. 前言
+## __0. 前言__
 * __当前各脚本版本信息__
     | Name                            | Version |
     |---------------------------------|---------|
@@ -56,7 +56,7 @@
 * __GUI__
     + __setting:__   
     时间模式和行模式切换，勾选为时间模式，为渐变插值依据。如为相同时间轴字幕实现空间渐变效果，必须选择行模式；如为逐帧字幕实现空间渐变效果，建议选择时间模式。  
-    + __accel (float number):__   
+    + __accel (float number) arg: (0,+inf):__   
     加速度，参数范围 `(0,+∞)` ,当 `accel=1` 时为线性渐变，当 `accel>1` 时为先慢后快的渐变，当 `accel<1` 时为先快后慢的渐变，具体数学形式同 `y=x^a` 在定义域 `(0,1)` 中行为，accel为其中指数因子a。  
     + __mode (exact match/custom):__  
     exact match: 精确匹配模式，选中标签必须在选中字幕的每一行都出现，且位于相同位置(position)(后面会说明)  
@@ -89,7 +89,8 @@
     
 ## __3. C Translation__
 * __Feature__  
-    对逐行/逐帧字幕中的特定标签进行平移(即放大/缩小标签数值)
+    Translation: 对逐行/逐帧字幕中的特定标签进行平移(即放大/缩小标签数值)  
+    Smooth: 对逐行/逐帧字幕，保持首末行标签大小及大小变化导数不变，改变中间行特定标签大小，形成单峰( single peak )状偏移。
 
     对存在整体偏移的Mocha生成行，进行细微调整  
     对字幕进行整体平移，如向下平移一个黑边距离  
@@ -100,20 +101,26 @@
 * __Usage__  
     选中多行字幕 运行LUA脚本    
     设置 setting 选项     
-    根据需求勾选特效标签勾选框，而后设置对应 start, end, accel, index 数值  
+    根据需求勾选特效标签勾选框，而后设置对应 start, end, accel, index 等数值  
     > 一次可以勾选多个特效标签 这一点与 C Gradient 不同
 * __GUI__  
     + __setting:__  
-    同 C Font Resize / GUI / setting  
-    + __start (float number):__  
+    同 `C Font Resize / GUI / setting`  
+    + __start (float number): [Translation]__  
     选中行首行选中标签将增大数值
-    + __end (float number):__  
+    + __end (float number): [Translation]__  
     选中行末行选中标签将增大数值  
-    + __accel (float number):__  
-    同 C Font Resize / GUI / accel
-    + __index (int number):__  
+    + __deviation (float number): [Smooth]__  
+    选中行选中标签最大偏移数值   
+    + __accel (float number) arg: (0,+inf): [Translation/Smooth]__  
+    Translation: 同 `C Font Resize / GUI / accel`  
+    Smooth: 该参数描述 peak 的宽度，accel 越大，peak 越尖 (sharp)  
+    + __transverse (float number) arg: (0,+inf): [Smooth]__  
+    该参数描述 peak 的横向偏移，即标签最大偏移行偏移选中行中心的距离，peak 随 transverse 的增大向右移动，当 `transverse=1` 时，横向偏移为零。  
+    + __index (int number) arg: Z+: [Translation/Smooth]__  
     你欲操作标签在该行所有 tag block 中所有该标签中的序数  
     `{\fs1(#1)\bord1\t(\shad1\fs2(#2))} text block 1 {\fs9(#3)} text block 2` accusming the tag you want to manipulate is `\fs`   
+    > 对 Smooth 运行的原理，编写了一个可视化可交互的程序：`./information/function smooth.cdf` 可使用 `Mathematica` 打开，以更好地了解各参数的功能。
 * __Example__  
     `1 {\pos(500,500)}example`  
     `2 {\pos(500,500)}example`  
@@ -126,8 +133,10 @@
     不支持 `\t(\clip)` 标签  
     字体中不允许出现 "W"
 
-## __4. C Smooth__
-
+## __4. C Smooth__  
+> 脚本的逻辑与 `C Translation/Smooth` 不同，   
+> `C Translation/Smooth` 通过手动添置轨迹反向偏移，以实现平滑的目的  
+> `C Smooth` 通过识别快速变化标签行，对其强制线性化，以实现滤去强烈抖动的标签，达到平滑效果，注意若反复使用该脚本，最终会导致选中行标签线性变化，而并不一定能与画面完美贴合。
 ## __5. C Scaling Rotation Conflict Solution__
 * __Feature__  
     解决拉伸代码 `\fscx \fscy` 与旋转代码 `\frx fry` 生成SUP时冲突的问题  
