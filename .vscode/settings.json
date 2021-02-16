@@ -1,0 +1,15 @@
+{
+    "Lua.diagnostics.globals": [
+        "script_version",
+        "script_author",
+        "script_description",
+        "script_name",
+        "aegisub",
+        "karaskel",
+        "include",
+        "lfs"
+    ],
+    "Lua.diagnostics.disable": [
+        "lowercase-global"
+    ]
+}

@@ -14,9 +14,9 @@ Select one line and run the script
 
 --Script properties
 script_name="C Effect Dissolove"
-script_description="Dissolve"
+script_description="Effect Dissolve v1.0.1"
 script_author="chaaaaang"
-script_version="1.0"
+script_version="1.0.1"
 
 include("karaskel.lua")
 
@@ -62,10 +62,10 @@ function main(subtitle, selected)
         local fscyinline = tonumber(ltext:match("\\fscy([%d%.]+)"))
         local an = line.styleref.align
         if (ltext:match("\\an%d")~=nil) then an = tonumber(ltext:match("\\an(%d)")) end
-        local left,top,right,bottom,width,height,center,middle=0
+        local left,top,right,bottom,width,height,center,middle=0,0,0,0,0,0,0,0
 
         --ratio
-        local ratiox,ratioy = 1
+        local ratiox,ratioy = 1,1
         if (ltext:match("\\fs")~=nil) then
             ratiox = tonumber(ltext:match("\\fs([%d%.]+)")) / line.styleref.fontsize
             ratioy = tonumber(ltext:match("\\fs([%d%.]+)")) / line.styleref.fontsize
@@ -74,7 +74,7 @@ function main(subtitle, selected)
             ratiox = tonumber(ltext:match("\\fscx([%d%.]+)")) / line.styleref.scale_x
         end
         if (ltext:match("\\fscy")~=nil) then 
-            ratiox = tonumber(ltext:match("\\fscy([%d%.]+)")) / line.styleref.scale_x
+            ratioy = tonumber(ltext:match("\\fscy([%d%.]+)")) / line.styleref.scale_y
         end
         width = line.width * ratiox
         height = line.height * ratioy

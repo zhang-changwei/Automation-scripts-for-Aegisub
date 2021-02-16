@@ -56,7 +56,7 @@ function main(subtitle, selected)
     else
         --first get l1 & ln
         --line count = N, time count = T
-        local i,start_f,end_f,l1,ln = 0
+        local i,start_f,end_f,l1,ln = 0,0,0,0,0
 
         for sa,la in ipairs(selected) do
             local line = subtitle[la]
@@ -604,7 +604,7 @@ function interpolate_c(bias,head,tail)
     g2 = tonumber(g2,16)
     r1 = tonumber(r1,16)
     r2 = tonumber(r2,16)
-    local b,g,r = 0
+    local b,g,r = 0,0,0
     if (b1==b2) then b = b1 else b = math.floor((b2-b1)*bias+0.5)+b1 end
     if (g1==g2) then g = g1 else g = math.floor((g2-g1)*bias+0.5)+g1 end
     if (r1==r2) then r = r1 else r = math.floor((r2-r1)*bias+0.5)+r1 end

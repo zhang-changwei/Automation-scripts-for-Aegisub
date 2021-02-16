@@ -172,7 +172,7 @@ function main(subtitle, selected, active)
     xres, yres, ar, artype = aegisub.video_size()
 
     --count the size N,T
-    local i,start_f,end_f = 0
+    local i,start_f,end_f = 0,0,0
 
     for sa,la in ipairs(selected) do
         local line = subtitle[la]
@@ -186,11 +186,11 @@ function main(subtitle, selected, active)
     pressed, result = aegisub.dialog.display(dialog_config,buttons)
     if (pressed=="Quit") then aegisub.cancel() end
     --all false
-    if (result["posx"]==false and result["posy"]==false and result["fscx"]==false and result["fscy"]==false and result["clip_x"]==false and result["clip_y"]==false and result["frz"]==false and result["other_button"]==false) then 
+    if (result["posx"]==false and result["posy"]==false and result["fscx"]==false and result["fscy"]==false and result["clip_x"]==false and result["clip_y"]==false and result["frz"]==false and result["other_button"]==false) then
         aegisub.cancel()
     else
         --loop begins
-        local i = 0 
+        local i = 0
         for si,li in ipairs(selected) do
             i = i + 1
             local line=subtitle[li]
@@ -204,7 +204,7 @@ function main(subtitle, selected, active)
                 linetext = line.text
             end
             linetext = linetext:gsub("}{","")
-            
+
             --posx posy
             if (result["posx"]==true or result["posy"]==true) then
                 --confirm the \pos is in the tag
@@ -271,12 +271,12 @@ function main(subtitle, selected, active)
             --clip
             if (result["clip_x"]==true or result["clip_y"]==true) then
                 linetext = linetext:gsub("(\\[i]?clip)([^%)]+)%)",
-                    function(c,d) 
+                    function(c,d)
                         --odd or even xyxy
                         local o_e=0
-                        local trs_clip = c 
+                        local trs_clip = c
                         for head,num in d:gmatch("([^%d%.%-]+)([%d%.%-]+)") do
-                            if (o_e == 0 and result["clip_x"]==true) then 
+                            if (o_e == 0 and result["clip_x"]==true) then
                                 trs_clip = string.format("%s%s%.2f",trs_clip,head,num+interpolate(result["clip_x_start"],result["clip_x_end"],result["clip_x_accel"],N,T,i,t,result["set"],result["clip_x_deviation"],result["clip_x_transverse"],pressed))
                             elseif (o_e == 1 and result["clip_y"]==true) then
                                 trs_clip = string.format("%s%s%.2f",trs_clip,head,num+interpolate(result["clip_y_start"],result["clip_y_end"],result["clip_y_accel"],N,T,i,t,result["set"],result["clip_y_deviation"],result["clip_y_transverse"],pressed))
@@ -341,8 +341,8 @@ function main(subtitle, selected, active)
         end
         --loop ends
     end
-    aegisub.set_undo_point(script_name) 
-    return selected 
+    aegisub.set_undo_point(script_name)
+    return selected
 end
 
 function interpolate(head,tail,accel,N,T,i,t,judge,deviation,transverse,button)
@@ -366,7 +366,7 @@ function interpolate(head,tail,accel,N,T,i,t,judge,deviation,transverse,button)
     else
         return 0
     end
-    
+
 end
 
 function translation(linetext,tagtype,deviation,index,match,matchtail)
