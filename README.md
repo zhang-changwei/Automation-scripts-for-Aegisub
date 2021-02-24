@@ -1,20 +1,21 @@
 # Automation-scripts-for-Aegisub
 ## __目录__
-0. [__前言__](#0-前言)
-1. [__C Font Resize__](#1-c-font-resize)
-2. [__C Gradient__](#2-c-gradient)
-3. [__C Translation__](#3-c-translation)
-4. [__C Smooth__](#4-c-smooth)
-5. [__C Scaling Rotation Conflict Solution__](#5-C-Scaling-Rotation-Conflict-Solution)
-6. [__C Change SUB resolution to match video PATCH__](#6-C-Change-SUB-resolution-to-match-video-PATCH)
-7. [__更新日志__](#7-更新日志)
+- [Automation-scripts-for-Aegisub](#automation-scripts-for-aegisub)
+  - [__目录__](#目录)
+  - [__0. 前言__](#0-前言)
+  - [__1. C Font Resize__](#1-c-font-resize)
+  - [__2. C Gradient__](#2-c-gradient)
+  - [__3. C Translation__](#3-c-translation)
+  - [__4. C Smooth__](#4-c-smooth)
+  - [__5. C Scaling Rotation Conflict Solution__](#5-c-scaling-rotation-conflict-solution)
+  - [__7. 更新日志__](#7-更新日志)
 
 ## __0. 前言__
 * __当前各脚本版本信息__
     | Name                            | Version |
     |---------------------------------|---------|
     | C Font Resize (Mocha Deshaking) | v1.1    |
-    | C Gradient                      | v2.0    |
+    | C Gradient                      | v2.0.1  |
     | C Translation                   | v3.0    |
     | C Smooth                        | v1.0    |
     | C Scaling Rotation Conflict Solution | v1.0 |
@@ -24,6 +25,7 @@
 * __使用方法__
     + 将LUA脚本复制到`C:\Program Files (x86)\Aegisub\automation\autoload`路径下，或你的Aegisub安装位置
     + 在Aegisub Automation项中可以发现添加的脚本
+* __该仓库本人长期维护，欢迎star与fork。__
 
 -------------------------------------------
 ## __1. C Font Resize__

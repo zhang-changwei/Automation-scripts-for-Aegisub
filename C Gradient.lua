@@ -7,9 +7,9 @@ Updated on Fre.8th, 2021
 
 --Script properties
 script_name="C Gradient"
-script_description="Gradient v2.0"
+script_description="Gradient v2.0.1"
 script_author="chaaaaang"
-script_version="1.0"
+script_version="2.0.1"
 
 include("karaskel.lua")
 util = require 'aegisub.util'
@@ -30,7 +30,7 @@ dialog_config={
     {class="checkbox",name="alpha_cb",label="alpha",value=false,x=2,y=3},
     {class="dropdown",name="alpha",items={"alpha","1a","2a","3a","4a"},value="alpha",x=2,y=4},
     {class="checkbox",name="other_cb",label="others",value=false,x=3,y=3},
-    {class="dropdown",name="other",items={"pos","fscx","fscy","fsc","fsvp","frz","frx","fry","fax","fay","clip"},value="pos",x=3,y=4,hint="clip not available"},
+    {class="dropdown",name="other",items={"pos","fscx","fscy","fsc","fsvp","frz","frx","fry","fax","fay","bord","shad","xshad","yshad","clip"},value="pos",x=3,y=4,hint="clip not available"},
     {class="checkbox",name="t_cb",label="\\t",value=false,x=0,y=3,hint="not available"},
     --note
     {class="label",width=6,height=8,x=0,y=5,
@@ -209,6 +209,18 @@ function main(subtitle, selected)
                 -- \fay
                 elseif (result["other"]=="fay") then
                     get_information_other(text1,textn,rule_table,"\\fay([%-%d%.]+)")
+                -- \bord
+                elseif (result["other"]=="bord") then
+                    get_information_other(text1,textn,rule_table,"\\bord([%-%d%.]+)")
+                -- \shad
+                elseif (result["other"]=="shad") then
+                    get_information_other(text1,textn,rule_table,"\\shad([%-%d%.]+)")
+                -- \xshad
+                elseif (result["other"]=="xshad") then
+                    get_information_other(text1,textn,rule_table,"\\xshad([%-%d%.]+)")
+                -- \yshad
+                elseif (result["other"]=="yshad") then
+                    get_information_other(text1,textn,rule_table,"\\yshad([%-%d%.]+)")
                 else
                 end
             end
@@ -380,6 +392,22 @@ function main(subtitle, selected)
                     elseif (result["other"]=="fay") then
                         ltext = rewrite_other(tt_table,rule_table,result["mode"],bias,
                             "\\fay([%-%d%.]+)","\\fay","WWW\\fay0","([^W]*)WWW\\fay([%-%d%.]+)","\\fay0$")
+                    -- \bord
+                    elseif (result["other"]=="bord") then
+                        ltext = rewrite_other(tt_table,rule_table,result["mode"],bias,
+                            "\\bord([%-%d%.]+)","\\bord","WWW\\bord0","([^W]*)WWW\\bord([%-%d%.]+)","\\bord0$")
+                    -- \shad
+                    elseif (result["other"]=="shad") then
+                        ltext = rewrite_other(tt_table,rule_table,result["mode"],bias,
+                            "\\shad([%-%d%.]+)","\\shad","WWW\\shad0","([^W]*)WWW\\shad([%-%d%.]+)","\\shad0$")
+                    -- \xshad
+                    elseif (result["other"]=="xshad") then
+                        ltext = rewrite_other(tt_table,rule_table,result["mode"],bias,
+                            "\\xshad([%-%d%.]+)","\\xshad","WWW\\xshad0","([^W]*)WWW\\xshad([%-%d%.]+)","\\xshad0$")
+                    -- \yshad
+                    elseif (result["other"]=="yshad") then
+                        ltext = rewrite_other(tt_table,rule_table,result["mode"],bias,
+                            "\\yshad([%-%d%.]+)","\\yshad","WWW\\yshad0","([^W]*)WWW\\yshad([%-%d%.]+)","\\yshad0$")
                     else
                     end
                 else
