@@ -1,7 +1,5 @@
 # Automation-scripts-for-Aegisub
 ## __目录__
-- [Automation-scripts-for-Aegisub](#automation-scripts-for-aegisub)
-  - [__目录__](#目录)
   - [__0. 前言__](#0-前言)
   - [__1. C Font Resize__](#1-c-font-resize)
   - [__2. C Gradient__](#2-c-gradient)
