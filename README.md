@@ -12,7 +12,7 @@
 * __当前各脚本版本信息__
     | Name                            | Version |
     |---------------------------------|---------|
-    | C Font Resize (Mocha Deshaking) | v1.1    |
+    | C Font Resize (Mocha Deshaking) | v1.2    |
     | C Gradient                      | v2.0.1  |
     | C Translation                   | v3.0    |
     | C Smooth                        | v1.0    |
@@ -38,7 +38,6 @@
     `1  {\fscy1000\fs8\fscx1200\fsp0.100}exam{\fscx1266\fscy1055\fs9\t(\fscx1583)}ple`  
 * __Warning__  
     不允许 `\t(fs)` 代码  
-    字体中不允许出现 "W"
 
 ## __2. C Gradient__
 * __Feature__  
@@ -159,3 +158,6 @@
     > 程序会在样式表中产生大量样式，谨慎使用
 --------------------------------------------
 ## __7. 更新日志__
+| Date | Script | Version | Detail |
+|------|--------|---------|--------|
+|2021.02.28|C Font Resize|1.2|解决字体中"W"导致错误，增添对样式表中设置fsp值的支持|

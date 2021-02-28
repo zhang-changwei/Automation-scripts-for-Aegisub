@@ -21,9 +21,9 @@ Updated on 21st Jan 2021
 ]]
 
 script_name="C Font Resizing (Mocha Deshaking)"
-script_description="Font Resizing (Mocha Deshaking) v1.1"
+script_description="Font Resizing (Mocha Deshaking) v1.2"
 script_author="lyger modified by chaaaaang"
-script_version="1.1"
+script_version="1.2"
 
 include("karaskel.lua")
 
@@ -58,19 +58,25 @@ function refont(sub, sel)
 			ltext=ltext:gsub("^{",string.format("{\\fscx%.2f",line.styleref.scale_x))
 		end
 
-		--Store these pairs in a new data structure
-		tt_table={}
-		for tg,tx in ltext:gmatch("({[^}]*})([^{]*)") do
-			table.insert(tt_table,{tag=tg,text=tx})
-		end
-		
 		--These store the current values of the three parameters at the part of the line
 		--we are looking at
 		--Since we have not started looking at the line yet, these are set to the style defaults
 		cur_fs=line.styleref.fontsize
 		cur_fscx=line.styleref.scale_x
 		cur_fscy=line.styleref.scale_y
-		cur_fsp=0. --new
+		cur_fsp=0.
+		if (line.styleref.spacing~=0) then
+			if ltext:match("^{[^}]*\\fsp[%d%.%-]+[^}]*}")==nil then
+				ltext=ltext:gsub("^{",string.format("{\\fsp%.3f",line.styleref.spacing))
+			end
+			cur_fsp=line.styleref.spacing
+		end
+
+		--Store these pairs in a new data structure
+		tt_table={}
+		for tg,tx in ltext:gmatch("({[^}]*})([^{]*)") do
+			table.insert(tt_table,{tag=tg,text=tx})
+		end
 		
 		--This is where the new text will be stored
 		rebuilt_text=""
@@ -82,7 +88,7 @@ function refont(sub, sel)
 			--first handle the \fs tag
 			local n_fs="" --PLEASE MAKE SURE NO \t(\fs) CODE IS USED
 			local i=0
-			for nfs in tt.tag:gmatch("\\fs[%d%.]+") do 
+			for nfs in tt.tag:gmatch("\\fs[%d%.]+") do
 				n_fs=nfs
 				i=i+1
 			end
@@ -111,32 +117,30 @@ function refont(sub, sel)
 			--	tt.tag:gsub("\\fn[^\\}]+","")
 			--end
 			--*new* delete all blanks and readd blanks behind \fscx \fscy \fsp use 'WWW'
-			tt.tag=tt.tag:gsub("WWW","")
-			tt.tag=tt.tag:gsub("(\\fscx[%d%.]+)","%1WWW")
-			tt.tag=tt.tag:gsub("(\\fscy[%d%.]+)","%1WWW")
-			tt.tag=tt.tag:gsub("(\\fsp[%-%d%.]+)","%1WWW")
-			tt.tag=tt.tag:gsub("}$","}WWW")
+			tt.tag=tt.tag:gsub("(\\fscx[%d%.%-]+)","%1}")
+			tt.tag=tt.tag:gsub("(\\fscy[%d%.%-]+)","%1}")
+			tt.tag=tt.tag:gsub("(\\fsp[%d%.%-]+)","%1}")
 			-- table tgs means tagsplit
 			local rebuilt_tag=""
-			for tgs in tt.tag:gmatch("([^W]+)WWW") do
-				if (tgs:match("\\fscx[%d%.]+")~=nil) then 
-					cur_fscx=tonumber(tgs:match("\\fscx([%d%.]+)"))
+			for tgs in tt.tag:gmatch("([^}]+)}") do
+				if (tgs:match("\\fscx[%d%.%-]+")~=nil) then 
+					cur_fscx=tonumber(tgs:match("\\fscx([%d%.%-]+)"))
 					new_fscx=math.floor(cur_fscx*factor)
-					tgs=tgs:gsub("\\fscx[%d%.]+",string.format("\\fscx%d",new_fscx))
+					tgs=tgs:gsub("\\fscx[%d%.%-]+",string.format("\\fscx%d",new_fscx))
 				end
-				if (tgs:match("\\fscy[%d%.]+")~=nil) then 
-					cur_fscy=tonumber(tgs:match("\\fscy([%d%.]+)"))
+				if (tgs:match("\\fscy[%d%.%-]+")~=nil) then 
+					cur_fscy=tonumber(tgs:match("\\fscy([%d%.%-]+)"))
 					new_fscy=math.floor(cur_fscy*factor)
-					tgs=tgs:gsub("\\fscy[%d%.]+",string.format("\\fscy%d",new_fscy))
+					tgs=tgs:gsub("\\fscy[%d%.%-]+",string.format("\\fscy%d",new_fscy))
 				end
-				if (tgs:match("\\fsp[%-%d%.]+")~=nil) then 
+				if (tgs:match("\\fsp[%d%.%-]+")~=nil) then 
 					cur_fsp=tonumber(tgs:match("\\fsp([%-%d%.]+)"))
 					new_fsp=cur_fsp/factor
-					tgs=tgs:gsub("\\fsp[%-%d%.]+",string.format("\\fsp%.3f",new_fsp))
+					tgs=tgs:gsub("\\fsp[%d%.%-]+",string.format("\\fsp%.3f",new_fsp))
 				end
 				rebuilt_tag = rebuilt_tag..tgs
 			end
-			tt.tag = rebuilt_tag
+			tt.tag = rebuilt_tag.."}"
 			--readd \fn code
 			--if (fn~=nil) then 
 			--	tt.tag=tt.tag("^{",string.format("{%s",fn)) 
