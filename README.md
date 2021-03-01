@@ -13,7 +13,7 @@
     | Name                            | Version |
     |---------------------------------|---------|
     | C Font Resize (Mocha Deshaking) | v1.2    |
-    | C Gradient                      | v2.0.1  |
+    | C Gradient                      | v2.1    |
     | C Translation                   | v3.0    |
     | C Smooth                        | v1.0    |
     | C Scaling Rotation Conflict Solution | v1.0 |
@@ -84,7 +84,6 @@
     `3 {\c&H00FF00&}example`  
 * __Warning__  
     一次只能运行对一种 tag 进行操作  
-    字体中不允许出现 "W"
     
 ## __3. C Translation__
 * __Feature__  
@@ -160,4 +159,5 @@
 ## __7. 更新日志__
 | Date | Script | Version | Detail |
 |------|--------|---------|--------|
-|2021.02.28|C Font Resize|1.2|解决字体中"W"导致错误，增添对样式表中设置fsp值的支持|
+|2021.2.28|C Font Resize|1.2|解决字体中"W"导致错误，增添对样式表中设置fsp值的支持|
+|2021.3.1|C Gradient|2.1|解决字体中"W"导致错误，新增对 `t1(\t第1个参数),t2(\t第2个参数),[i]clip` 的支持|

@@ -46,7 +46,7 @@ function main(subtitle, selected, active)
         --force 0-100
         {class="label",label="force",x=0,y=3},
         {class="floatedit",name="force",value=config_table.F,x=1,y=3,hint="default: 30"},
-        {class="checkbox",name="remember",label="remember config",value=config_table.remember,x=2,y=3,width=2},
+        {class="checkbox",name="remember",label="remember config",value=config_table.remember,x=2,y=3,width=2}
     }
     buttons={"Run","Quit"}
 
