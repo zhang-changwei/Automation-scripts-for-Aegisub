@@ -35,9 +35,9 @@ Updated on 7 Dec 2020
 ]]
 
 script_name="C Translation"
-script_description="Trasnlation v3.0"
+script_description="Trasnlation v3.1"
 script_author="chaaaaang"
-script_version="3.0" 
+script_version="3.1"
 
 include("karaskel.lua")
 
@@ -250,7 +250,7 @@ function main(subtitle, selected, active)
                     linetext=linetext:gsub("^{",string.format("{\\fscx%.2f",line.styleref.scale_x))
                 end
                 deviation = interpolate(result["fscx_start"],result["fscx_end"],result["fscx_accel"],N,T,i,t,result["set"],result["fscx_deviation"],result["fscx_transverse"],pressed)
-                linetext = translation(linetext,"\\fscx",deviation,result["fscx_index"],"([^W]*)WWW\\fscx([%d%.%-]+)","\\fscx[%d%.%-]+$")
+                linetext = translation(linetext,"\\fscx",deviation,result["fscx_index"],"([^}]*)}\\fscx([%d%.%-]+)","\\fscx[%d%.%-]+$")
             end
             --fscy
             if (result["fscy"]==true) then
@@ -258,7 +258,7 @@ function main(subtitle, selected, active)
                     linetext=linetext:gsub("^{",string.format("{\\fscy%.2f",line.styleref.scale_y))
                 end
                 deviation = interpolate(result["fscy_start"],result["fscy_end"],result["fscy_accel"],N,T,i,t,result["set"],result["fscy_deviation"],result["fscy_transverse"],pressed)
-                linetext = translation(linetext,"\\fscy",deviation,result["fscy_index"],"([^W]*)WWW\\fscy([%d%.%-]+)","\\fscy[%d%.%-]+$")
+                linetext = translation(linetext,"\\fscy",deviation,result["fscy_index"],"([^}]*)}\\fscy([%d%.%-]+)","\\fscy[%d%.%-]+$")
             end
             --frz
             if (result["frz"]==true) then
@@ -266,7 +266,7 @@ function main(subtitle, selected, active)
                     linetext=linetext:gsub("^({[^}]*)}",function (a) return string.format("%s\\frz%.2f}",a,line.styleref.angle) end)
                 end
                 deviation = interpolate(result["frz_start"],result["frz_end"],result["frz_accel"],N,T,i,t,result["set"],result["frz_deviation"],result["frz_transverse"],pressed)
-                linetext = translation(linetext,"\\frz",deviation,result["frz_index"],"([^W]*)WWW\\frz([%d%.%-]+)","\\frz[%d%.%-]+$")
+                linetext = translation(linetext,"\\frz",deviation,result["frz_index"],"([^}]*)}\\frz([%d%.%-]+)","\\frz[%d%.%-]+$")
             end
             --clip
             if (result["clip_x"]==true or result["clip_y"]==true) then
@@ -296,42 +296,42 @@ function main(subtitle, selected, active)
                         linetext=linetext:gsub("^({[^}]*)}",function (a) return string.format("%s\\fsp%.2f}",a,line.styleref.spacing) end)
                     end
                     deviation = interpolate(result["other_start"],result["other_end"],result["other_accel"],N,T,i,t,result["set"],result["other_deviation"],result["other_transverse"],pressed)
-                    linetext = translation(linetext,"\\fsp",deviation,result["other_index"],"([^W]*)WWW\\fsp([%d%.%-]+)","\\fsp[%d%.%-]+$")
+                    linetext = translation(linetext,"\\fsp",deviation,result["other_index"],"([^}]*)}\\fsp([%d%.%-]+)","\\fsp[%d%.%-]+$")
                 --fsvp
                 elseif (result["other"]=="fsvp") then
                     if (linetext:match("\\fsvp")==nil) then
                         linetext=linetext:gsub("^({[^}]*)}",function (a) return a.."\\fsvp0}" end)
                     end
                     deviation = interpolate(result["other_start"],result["other_end"],result["other_accel"],N,T,i,t,result["set"],result["other_deviation"],result["other_transverse"],pressed)
-                    linetext = translation(linetext,"\\fsvp",deviation,result["other_index"],"([^W]*)WWW\\fsvp([%d%.%-]+)","\\fsvp[%d%.%-]+$")
+                    linetext = translation(linetext,"\\fsvp",deviation,result["other_index"],"([^}]*)}\\fsvp([%d%.%-]+)","\\fsvp[%d%.%-]+$")
                 --fax
                 elseif (result["other"]=="fax") then
                     if (linetext:match("\\fax")==nil) then
                         linetext=linetext:gsub("^({[^}]*)}",function (a) return a.."\\fax0}" end)
                     end
                     deviation = interpolate(result["other_start"],result["other_end"],result["other_accel"],N,T,i,t,result["set"],result["other_deviation"],result["other_transverse"],pressed)
-                    linetext = translation(linetext,"\\fax",deviation,result["other_index"],"([^W]*)WWW\\fax([%d%.%-]+)","\\fax[%d%.%-]+$")
+                    linetext = translation(linetext,"\\fax",deviation,result["other_index"],"([^}]*)}\\fax([%d%.%-]+)","\\fax[%d%.%-]+$")
                 --fay
                 elseif (result["other"]=="fay") then
                     if (linetext:match("\\fay")==nil) then
                         linetext=linetext:gsub("^({[^}]*)}",function (a) return a.."\\fay0}" end)
                     end
                     deviation = interpolate(result["other_start"],result["other_end"],result["other_accel"],N,T,i,t,result["set"],result["other_deviation"],result["other_transverse"],pressed)
-                    linetext = translation(linetext,"\\fay",deviation,result["other_index"],"([^W]*)WWW\\fay([%d%.%-]+)","\\fay[%d%.%-]+$")
+                    linetext = translation(linetext,"\\fay",deviation,result["other_index"],"([^}]*)}\\fay([%d%.%-]+)","\\fay[%d%.%-]+$")
                 --frx
                 elseif (result["other"]=="frx") then
                     if (linetext:match("\\frx")==nil) then
                         linetext=linetext:gsub("^({[^}]*)}",function (a) return a.."\\frx0}" end)
                     end
                     deviation = interpolate(result["other_start"],result["other_end"],result["other_accel"],N,T,i,t,result["set"],result["other_deviation"],result["other_transverse"],pressed)
-                    linetext = translation(linetext,"\\frx",deviation,result["other_index"],"([^W]*)WWW\\frx([%d%.%-]+)","\\frx[%d%.%-]+$")
+                    linetext = translation(linetext,"\\frx",deviation,result["other_index"],"([^}]*)}\\frx([%d%.%-]+)","\\frx[%d%.%-]+$")
                 --fry
                 elseif (result["other"]=="fry") then
                     if (linetext:match("\\fry")==nil) then
                         linetext=linetext:gsub("^({[^}]*)}",function (a) return a.."\\fry0}" end)
                     end
                     deviation = interpolate(result["other_start"],result["other_end"],result["other_accel"],N,T,i,t,result["set"],result["other_deviation"],result["other_transverse"],pressed)
-                    linetext = translation(linetext,"\\fry",deviation,result["other_index"],"([^W]*)WWW\\fry([%d%.%-]+)","\\fry[%d%.%-]+$")
+                    linetext = translation(linetext,"\\fry",deviation,result["other_index"],"([^}]*)}\\fry([%d%.%-]+)","\\fry[%d%.%-]+$")
                 end
             end
             --more feature (gradient|smooth) coming
@@ -381,8 +381,8 @@ function translation(linetext,tagtype,deviation,index,match,matchtail)
         if (tt.tag:match(tagtype)==nil) then
             rebuild = rebuild..tt.tag..tt.text
         else
-            tt.tag = tt.tag:gsub(tagtype,"WWW"..tagtype)
-            tt.tag = tt.tag.."WWW"..tagtype.."0"
+            tt.tag = tt.tag:gsub(tagtype,"}"..tagtype)
+            tt.tag = tt.tag..tagtype.."0"
             local rebuild_tag = ""
 
             for p,q in tt.tag:gmatch(match) do
@@ -393,7 +393,7 @@ function translation(linetext,tagtype,deviation,index,match,matchtail)
                     rebuild_tag = rebuild_tag..p..tagtype..q
                 end
             end
-            rebuild_tag = rebuild_tag:gsub(matchtail,"")
+            rebuild_tag = rebuild_tag:gsub(matchtail,"}")
             rebuild = rebuild..rebuild_tag..tt.text
             count = count - 1
         end

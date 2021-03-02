@@ -14,7 +14,7 @@
     |---------------------------------|---------|
     | C Font Resize (Mocha Deshaking) | v1.2    |
     | C Gradient                      | v2.1    |
-    | C Translation                   | v3.0    |
+    | C Translation                   | v3.1    |
     | C Smooth                        | v1.0    |
     | C Scaling Rotation Conflict Solution | v1.0 |
     | C Change SUB resolution to match video PATCH | v1.0 |
@@ -129,7 +129,6 @@
     `3 {\pos(700.000,500)}example`  
 * __Warning__  
     不支持 `\t(\clip)` 标签  
-    字体中不允许出现 "W"
 
 ## __4. C Smooth__  
 > 脚本的逻辑与 `C Translation/Smooth` 不同，   
@@ -159,5 +158,6 @@
 ## __7. 更新日志__
 | Date | Script | Version | Detail |
 |------|--------|---------|--------|
+|2021.3.2|C Translation|3.1|解决字体中"W"导致错误|
+|2021.3.1|C Gradient|2.1|解决字体中"W"导致错误，修复 `1vc` 中的 bug，新增对 `t1(\t第1个参数),t2(\t第2个参数),[i]clip` 的支持|
 |2021.2.28|C Font Resize|1.2|解决字体中"W"导致错误，增添对样式表中设置fsp值的支持|
-|2021.3.1|C Gradient|2.1|解决字体中"W"导致错误，新增对 `t1(\t第1个参数),t2(\t第2个参数),[i]clip` 的支持|
