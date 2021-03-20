@@ -16,14 +16,16 @@
     | C Gradient                      | v2.1    |
     | C Translation                   | v3.1    |
     | C Smooth                        | v1.0    |
-    | C Scaling Rotation Conflict Solution | v1.0 |
+    | C Scaling Rotation Conflict Solution | v1.1 |
     | C Change SUB resolution to match video PATCH | v1.0 |
     > 在Automation Manager Description栏中查看脚本版本信息  
     > 若你的脚本在上述表格中且无版本信息 可能需要考虑更新脚本
 * __使用方法__
     + 将LUA脚本复制到`C:\Program Files (x86)\Aegisub\automation\autoload`路径下，或你的Aegisub安装位置
     + 在Aegisub Automation项中可以发现添加的脚本
-* __该仓库本人长期维护，欢迎star与fork。__
+    + `C Effect`脚本依赖Yutils库，请先安装相关组件，传送门[https://github.com/Youka/Yutils](#https://github.com/Youka/Yutils)，感谢原作者。
+* __该仓库本人长期维护，欢迎star与fork。__  
+* 2021.3.20 Mocha三件套`(Font Resize,Gradient,Translation)`已基本趋于稳定，现主要开发Effect相关脚本，说明文档等我心情好了再写吧~
 
 -------------------------------------------
 ## __1. C Font Resize__
@@ -69,7 +71,7 @@
     行首若缺少 tag block 脚本将自动添加      
     __tag position number:__  
     你欲操作标签在一个 tag block 中所有该标签中的序数  
-    `{\fs1(#1)\bord1\t(\shad1\fs2(#2))\fs9(#3)}` accusming the tag you want to manipulate is `\fs`  
+    `{\fs1(#1)\bord1\t(\shad1\fs2(#2))\fs9(#3)}` assuming the tag you want to manipulate is `\fs`  
     __head or tail:__  
     仅对 custom mode 有效，'h'=head，即添加标签至 tag block 首，'t'=tail，即添加标签至 tag block 尾，若略去不写，默认为 'h'。  
     + __\t__  
@@ -117,7 +119,7 @@
     该参数描述 peak 的横向偏移，即标签最大偏移行偏移选中行中心的距离，peak 随 transverse 的增大向右移动，当 `transverse=1` 时，横向偏移为零。  
     + __index (int number) arg: Z+: [Translation/Smooth]__  
     你欲操作标签在该行所有 tag block 中所有该标签中的序数  
-    `{\fs1(#1)\bord1\t(\shad1\fs2(#2))} text block 1 {\fs9(#3)} text block 2` accusming the tag you want to manipulate is `\fs`   
+    `{\fs1(#1)\bord1\t(\shad1\fs2(#2))} text block 1 {\fs9(#3)} text block 2` assuming the tag you want to manipulate is `\fs`   
     > 对 Smooth 运行的原理，编写了一个可视化可交互的程序：`./information/function smooth.cdf` 可使用 `Mathematica` 打开，以更好地了解各参数的功能。
 * __Example__  
     `1 {\pos(500,500)}example`  
@@ -161,3 +163,4 @@
 |2021.3.2|C Translation|3.1|解决字体中"W"导致错误|
 |2021.3.1|C Gradient|2.1|解决字体中"W"导致错误，修复 `1vc` 中的 bug，新增对 `t1(\t第1个参数),t2(\t第2个参数),[i]clip` 的支持|
 |2021.2.28|C Font Resize|1.2|解决字体中"W"导致错误，增添对样式表中设置fsp值的支持|
+|2021.3.20|C Scaling Rotation Conflict Solution|1.1|Bug Fixed|

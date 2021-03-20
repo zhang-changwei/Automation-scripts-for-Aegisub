@@ -5,9 +5,9 @@ README:
 
 --Script properties
 script_name="C Scaling Rotation Conflict Solution"
-script_description="Scaling Rotation Conflict Solution v1.0"
+script_description="Scaling Rotation Conflict Solution v1.1"
 script_author="chaaaaang"
-script_version="1.0"
+script_version="1.1"
 
 include("karaskel.lua")
 
@@ -58,7 +58,7 @@ function main(subtitle, selected)
     for li=1,#subtitle do
         local style = subtitle[li]
         if (style.class == "style" and style.name == selected_style) then
-            subtitle.delete(li)
+            -- subtitle.delete(li)
             for _,sty in ipairs(style_table) do
                 subtitle.insert(li,style)
                 sg = subtitle[li]
