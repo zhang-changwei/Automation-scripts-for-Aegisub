@@ -1,6 +1,8 @@
 --[[
 README:
 
+goto my repository https://github.com/zhang-changwei/Automation-scripts-for-Aegisub for the latest version
+
 Font Resizing (Mocha Deshaking)
 
 Feature:
@@ -21,9 +23,9 @@ Updated on 21st Jan 2021
 ]]
 
 script_name="C Font Resizing (Mocha Deshaking)"
-script_description="Font Resizing (Mocha Deshaking) v1.2"
+script_description="Font Resizing (Mocha Deshaking) v1.3"
 script_author="lyger modified by chaaaaang"
-script_version="1.2"
+script_version="1.3"
 
 include("karaskel.lua")
 
@@ -72,6 +74,19 @@ function refont(sub, sel)
 			cur_fsp=line.styleref.spacing
 		end
 
+		-- vector picture
+		if (ltext:match("\\p%d")~=nil) then
+			ltext = ltext:gsub("\\p(%d)",function (a) return "\\p"..a+3	end)
+			ltext = ltext:gsub("\\fscx([%d%.]+)",function (a) return "\\fscx"..a*8	end)
+			ltext = ltext:gsub("\\fscy([%d%.]+)",function (a) return "\\fscy"..a*8	end)
+			if (ltext:match("{\\p%d}$")~=nil) then
+				ltext = ltext:gsub("{\\p%d}$","{\\p0}")
+			end
+			line.text = ltext
+			sub[li] = line
+			goto loop_end
+		end
+
 		--Store these pairs in a new data structure
 		tt_table={}
 		for tg,tx in ltext:gmatch("({[^}]*})([^{]*)") do
@@ -111,11 +126,6 @@ function refont(sub, sel)
 
 			if (tagcopy:match("\\fscx")==nil) then tt.tag = tt.tag:gsub("^{",string.format("{\\fscx%d",cur_fscx)) end
 			
-			--remove \fn code
-			--if (tt.tag:match("\\fn[^\\}]+")~=nil) then
-			--	fn = tt.tag:match("\\fn[^\\}]+")
-			--	tt.tag:gsub("\\fn[^\\}]+","")
-			--end
 			--*new* delete all blanks and readd blanks behind \fscx \fscy \fsp use 'WWW'
 			tt.tag=tt.tag:gsub("(\\fscx[%d%.%-]+)","%1}")
 			tt.tag=tt.tag:gsub("(\\fscy[%d%.%-]+)","%1}")
@@ -141,17 +151,14 @@ function refont(sub, sel)
 				rebuilt_tag = rebuilt_tag..tgs
 			end
 			tt.tag = rebuilt_tag.."}"
-			--readd \fn code
-			--if (fn~=nil) then 
-			--	tt.tag=tt.tag("^{",string.format("{%s",fn)) 
-			--end
-			--Rebuild line
 			rebuilt_text=rebuilt_text..tt.tag..tt.text
 		end
 		
 		line.text=rebuilt_text
 		
 		sub[li]=line
+
+		::loop_end::
 		
 	end
 	

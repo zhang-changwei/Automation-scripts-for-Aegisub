@@ -12,7 +12,7 @@
 * __当前各脚本版本信息__
     | Name                            | Version |
     |---------------------------------|---------|
-    | C Font Resize (Mocha Deshaking) | v1.2    |
+    | C Font Resize (Mocha Deshaking) | v1.3    |
     | C Gradient                      | v2.1    |
     | C Translation                   | v3.1    |
     | C Smooth                        | v1.0    |
@@ -23,7 +23,7 @@
 * __使用方法__
     + 将LUA脚本复制到`C:\Program Files (x86)\Aegisub\automation\autoload`路径下，或你的Aegisub安装位置
     + 在Aegisub Automation项中可以发现添加的脚本
-    + `C Effect`脚本依赖Yutils库，请先安装相关组件，传送门[https://github.com/Youka/Yutils](#https://github.com/Youka/Yutils)，感谢原作者。
+    + `C Effect`脚本依赖Yutils库，请先安装相关组件，传送门[https://github.com/Youka/Yutils](https://github.com/Youka/Yutils)，感谢原作者。
 * __该仓库本人长期维护，欢迎star与fork。__  
 * 2021.3.20 Mocha三件套`(Font Resize,Gradient,Translation)`已基本趋于稳定，现主要开发Effect相关脚本，说明文档等我心情好了再写吧~
 
@@ -160,7 +160,9 @@
 ## __7. 更新日志__
 | Date | Script | Version | Detail |
 |------|--------|---------|--------|
+|2021.4.20|C Font Resize|1.3|增加对矢量图的支持|
+|2021.4.20|C Effect|1.0|beta 内测版|
+|2021.3.20|C Scaling Rotation Conflict Solution|1.1|Bug Fixed|
 |2021.3.2|C Translation|3.1|解决字体中"W"导致错误|
 |2021.3.1|C Gradient|2.1|解决字体中"W"导致错误，修复 `1vc` 中的 bug，新增对 `t1(\t第1个参数),t2(\t第2个参数),[i]clip` 的支持|
 |2021.2.28|C Font Resize|1.2|解决字体中"W"导致错误，增添对样式表中设置fsp值的支持|
-|2021.3.20|C Scaling Rotation Conflict Solution|1.1|Bug Fixed|
