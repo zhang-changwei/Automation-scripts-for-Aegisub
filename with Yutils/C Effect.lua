@@ -16,7 +16,7 @@ include('karaskel.lua')
 
 local dialog_config = {
 	{class="label",label="effect",x=0,y=0},
-	{class="dropdown",name="effect",items={"particle","dissolve","spotlight","clip_blur"},x=0,y=1,width=2}
+	{class="dropdown",name="effect",items={"particle","dissolve","spotlight","clip_blur","component_split"},x=0,y=1,width=2}
 }
 local buttons = {"Detail","Quit"}
 
@@ -434,6 +434,94 @@ function main(subtitle, selected)
 							subtitle[#subtitle] = new_line
 						end
 					end
+				elseif result.effect=="component_split" then
+					if (d_res.fin_cb==false and d_res.fout_cb==false) or (d_res.fin_cb==true and d_res.fout_cb==true) then
+						aegisub.cancel()
+					end
+
+					local components = M.shape.split_component(shape)
+
+					if d_res.fin_cb==true then tag = tag:gsub("^{",string.format("{\\blur3\\t(0,%d,\\blur0)",d_res.fin_t)) end
+					tag = tag:gsub("^{",string.format("{\\an7\\fad(%d,%d)",d_res.fin_t,d_res.fout_t))
+					tag = tag:gsub("}$","\\p1}")
+					if d_res.fout_cb==true then tag = tag:gsub("}$",string.format("\\t(%d,%d,\\blur3)",ldur-d_res.fout_t,ldur)) end
+
+					for nj,sj in ipairs(components) do
+						subtitle.append(line)
+						local new_line = subtitle[#subtitle]
+
+						local tagj = tag
+
+						-- move
+						if d_res.move_cb==true then
+							tagj = tagj:gsub("\\pos%([^%)]*%)","")
+							if d_res.move=="to_center_or_surrounding" then
+								local randx,randy=0,0
+								repeat
+									randx,randy = math.random(-1*d_res.move_range,d_res.move_range),math.random(-1*d_res.move_range,d_res.move_range)
+								until (M.pt_in_circle(randx,randy,0,0,d_res.move_range))
+
+								local randt = d_res.move_t
+								if d_res.randomize_mt==true then randt = math.random(d_res.move_t/2,d_res.move_t) end
+
+								if d_res.fin_cb==true then
+									tagj = tagj:gsub("}$",string.format("\\move(%.2f,%.2f,%.2f,%.2f,%d,%d)}",
+										posx-randx,posy-randy,posx,posy,0,randt))
+								else
+									tagj = tagj:gsub("}$",string.format("\\move(%.2f,%.2f,%.2f,%.2f,%d,%d)}",
+										posx,posy,posx+randx,posy+randy,ldur-randt,ldur))
+								end
+							elseif d_res.move=="one_direction" then
+								local randxy = d_res.move_range
+								if d_res.randomize_mr==true then randxy = math.random(d_res.move_range) end
+
+								local randt = d_res.move_t
+								if d_res.randomize_mt==true then randt = math.random(d_res.move_t/2,d_res.move_t) end
+
+								if d_res.fin_cb==true then
+									if d_res.direction=="left" then
+										tagj = tagj:gsub("}$",string.format("\\move(%.2f,%.2f,%.2f,%.2f,%d,%d)}",
+											posx-randxy,posy,posx,posy,0,randt))
+									elseif d_res.direction=="right" then
+										tagj = tagj:gsub("}$",string.format("\\move(%.2f,%.2f,%.2f,%.2f,%d,%d)}",
+											posx+randxy,posy,posx,posy,0,randt))
+									elseif d_res.direction=="top" then
+										tagj = tagj:gsub("}$",string.format("\\move(%.2f,%.2f,%.2f,%.2f,%d,%d)}",
+											posx,posy-randxy,posx,posy,0,randt))
+									else
+										tagj = tagj:gsub("}$",string.format("\\move(%.2f,%.2f,%.2f,%.2f,%d,%d)}",
+											posx,posy+randxy,posx,posy,0,randt))
+									end
+								else
+									if d_res.direction=="left" then
+										tagj = tagj:gsub("}$",string.format("\\move(%.2f,%.2f,%.2f,%.2f,%d,%d)}",
+											posx,posy,posx-randxy,posy,ldur-randt,ldur))
+									elseif d_res.direction=="right" then
+										tagj = tagj:gsub("}$",string.format("\\move(%.2f,%.2f,%.2f,%.2f,%d,%d)}",
+											posx,posy,posx+randxy,posy,0,randt))
+									elseif d_res.direction=="top" then
+										tagj = tagj:gsub("}$",string.format("\\move(%.2f,%.2f,%.2f,%.2f,%d,%d)}",
+											posx,posy,posx,posy-randxy,0,randt))
+									else
+										tagj = tagj:gsub("}$",string.format("\\move(%.2f,%.2f,%.2f,%.2f,%d,%d)}",
+											posx,posy,posx,posy+randxy,0,randt))
+									end
+								end
+							end
+						end
+
+						-- time
+						if d_res.time_cb==true then
+							if d_res.fin_cb==true then
+								new_line.start_time = new_line.start_time + math.random(-1*d_res.time_range,d_res.time_range)
+							else
+								new_line.end_time = new_line.end_time + math.random(-1*d_res.time_range,d_res.time_range)
+							end
+						end
+
+						new_line.text = tagj..sj
+						subtitle[#subtitle] = new_line
+					end
 				end
 			end
 		end
@@ -554,6 +642,32 @@ function daughter_dialog(effect)
 			{class="intedit",name="width",value=30,x=1,y=2},
 			{class="label",label="step",x=2,y=1},
 			{class="intedit",name="step",value=1,x=2,y=2}
+		}
+		button = {"Run","Quit"}
+		return dialog_conf,button
+	elseif (effect=="component_split") then
+		dialog_conf = {
+			{class="label",label="component_split",x=0,y=0},
+			{class="checkbox",label="fade_in",name="fin_cb",x=0,y=1},
+			{class="intedit",label="fade_in_time",name="fin_t",value=0,x=0,y=2},
+			{class="checkbox",label="fade_out",name="fout_cb",x=0,y=3},
+			{class="intedit",label="fade_out_time",name="fout_t",value=0,x=0,y=4},
+			-- move
+			{class="checkbox",label="move",name="move_cb",value=false,x=1,y=0},
+			{class="dropdown",name="move",items={"to_center_or_surrounding","one_direction"},x=1,y=1},
+			{class="label",label="direction",x=1,y=2},
+			{class="dropdown",name="direction",items={"left","right","top","right"},x=1,y=3,hint="for one direction"},
+			{class="label",label="move_range",x=2,y=1},
+			{class="intedit",name="move_range",value=300,x=2,y=2},
+			{class="checkbox",label="randomize",name="randomize_mr",value=false,x=2,y=3},
+			{class="label",label="move_t",x=3,y=1},
+			{class="intedit",name="move_t",value=1500,x=3,y=2},
+			{class="checkbox",label="randomize",name="randomize_mt",value=true,x=3,y=3},
+
+			--time
+			{class="checkbox",label="time",name="time_cb",value=false,x=1,y=4},
+			{class="label",label="time_range",x=1,y=5},
+			{class="intedit",name="time_range",value=1000,x=2,y=5}
 		}
 		button = {"Run","Quit"}
 		return dialog_conf,button
@@ -731,6 +845,7 @@ end
 M={}
 M.shape = {}
 M.math = {}
+-- M.temp = {}
 
 function M.pt_in_circle(x,y,center,middle,r)
 	if (x-center)^2+(y-middle)^2<=r^2 then
@@ -835,11 +950,12 @@ function M.interpolate(bias,head,tail)
     return string.format("%.2f",a)
 end
 
--- shape contain only one m 
+-- shape contain only one m   
+-- -> shape
 function M.shape.normalize(shape)
 	local start_x,start_y = shape:match("([%d%.%-]+) +([%d%.%-]+)")
 	local end_x,end_y = shape:match("([%d%.%-]+) +([%d%.%-]+)[^%d%.%-]*$")
-	if start_x==end_x and start_y==end_y then
+	if math.abs(start_x-end_x)<M.math.epsilon() and math.abs(start_y-end_y)<M.math.epsilon() then
 		shape = shape:gsub("[^%d%.%-]*$"," c")
 	else
 		shape = shape:gsub("[^%d%.%-]*$",string.format(" l %.2f %.2f c",start_x,start_y))
@@ -848,6 +964,7 @@ function M.shape.normalize(shape)
 	return shape
 end
 
+-- -> shape
 function M.shape.normalize_all(shape)
 	local shapes = M.shape.split_by_m(shape)
 	local new = ""
@@ -858,6 +975,21 @@ function M.shape.normalize_all(shape)
 	return new
 end
 
+-- -> number * 2
+function M.shape.center(shape)
+	local flatten_shape = Yutils.shape.flatten(shape)
+	local xmin,ymin = shape.match("([%d%.%-]+) +([%d%.%-]+)")
+	local xmax,ymax = xmin,ymin
+	for x,y in shape.gmatch("([%d%.%-]+) +([%d%.%-]+)") do
+		xmin = math.min(xmin,x)
+		ymin = math.min(ymin,y)
+		xmax = math.max(xmax,x)
+		ymax = math.max(ymax,y)
+	end
+	return (xmin+xmax)/2,(ymin+ymax)/2
+end
+
+-- -> shapes .shape , .other = nil
 function M.shape.split_by_m(shape)
 	local shapes = {}
 	for i in shape:gmatch("m[^m]+") do
@@ -890,7 +1022,8 @@ function M.shape.read_line(shape)
 	return line_inf
 end
 
--- shape contain only one m 
+-- shape contain only one m   
+-- -> shape
 function M.shape.inverse(shape)
 	local line_inf = M.shape.read_line(shape)
 	local N = #line_inf
@@ -907,7 +1040,8 @@ function M.shape.inverse(shape)
 	return new
 end
 
--- shape contain only one m 
+-- shape contain only one m   
+-- -> anticlockwise: 1, clockwise: -1, else: 0
 function M.shape.judge_rotation_direction(shape)
 	local flatten_shape = Yutils.shape.flatten(shape)
 	local line_inf = M.shape.read_line(flatten_shape)
@@ -970,6 +1104,87 @@ function M.shape.slice_outline(shape,width,step)
 	return new,shape_table[1],shape_table[#shape_table]
 end
 
+-- shape -> shapes
+function M.shape.split_component(shape)
+	local shapes = M.shape.split_by_m(shape)
+
+	for ni,si in ipairs(shapes) do
+		si.shape = M.shape.normalize(si.shape)
+		si.other = {inside={},outside={},i=0,o=0,del=false,dn={},pn=nil} -- shape num inside & outside daughter & parent node
+	end
+
+	-- get inside & outside information
+	for ni,si in ipairs(shapes) do
+		local xi,yi = si.shape:match("([%d%.%-]+) ([%d%.%-]+)")
+		
+		for nj,sj in ipairs(shapes) do
+			if nj~=ni then
+				local judge = M.pt_in_shape(xi,yi,sj.shape)
+			
+				-- true -> si in sj
+				if judge==true then
+					table.insert(sj.other.inside,ni)
+					sj.other.i = sj.other.i + 1
+					table.insert(si.other.outside,nj)
+					si.other.o = si.other.o + 1
+				end
+			end
+		end
+	end
+	aegisub.log("inside ouside \n")
+
+	local new = {}
+
+	-- get parent & daughter node information
+	for ni,si in ipairs(shapes) do
+		-- first find the tree with more than two node (not top node)
+		if si.other.o~=0 then
+			for nj,Nj in ipairs(si.other.outside) do
+				if si.other.o-1==shapes[Nj].other.o then
+					-- write down pn & dn information
+					-- if si.other.pn==nil then si.other.pn = Nj end
+					table.insert(shapes[Nj].other.dn,ni)
+					break
+				end
+			end
+		end
+	end
+	aegisub.log("pn dn \n")
+
+	local del_count = 0
+	while del_count<#shapes do		
+		for ni,si in ipairs(shapes) do
+			-- first the top of the tree
+			aegisub.log("+1\n")
+			if si.other.del==false and si.other.o==0 then
+				local new_shape = si.shape
+				-- something in si
+				if si.other.i~=0 then
+					local dnum_table = si.other.dn -- table
+					for nj,dnum in ipairs(dnum_table) do
+						new_shape = new_shape.." "..shapes[dnum].shape
+						-- delete
+						shapes[dnum].other.del = true
+						del_count = del_count + 1 
+					end
+					
+					-- minus the number
+					local n_del = 1 + #dnum_table
+					for nk,inum in ipairs(si.other.inside) do
+						shapes[inum].other.o = shapes[inum].other.o - n_del
+					end
+				-- else nothing in si <=> si is the smallest
+				end
+				table.insert(new,new_shape)
+				si.other.del = true
+				del_count = del_count + 1
+			end
+		end
+	end
+
+	return new
+end
+
 function M.math.epsilon()
 	return 0.000001
 end
@@ -1007,8 +1222,6 @@ function M.math.angle3(x1,y1,x2,y2,x0,y0)
 		end
 	end
 end
-
-
 
 --Register macro (no validation function required)
 aegisub.register_macro(script_name,script_description,main)

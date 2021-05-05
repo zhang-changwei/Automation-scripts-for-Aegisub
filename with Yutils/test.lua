@@ -69,7 +69,7 @@ function main(subtitle, selected)
 			-- 	local shape = line.text
 			-- 	local pixels = Yutils.shape.to_pixels(shape)
 
-			local bmp = Yutils.decode.create_bmp_reader("E:/ZiMuZu/SHORT/SparkShorts2500_001_481.png")
+			local bmp = Yutils.decode.create_bmp_reader("E:\\ZiMuZu\\0_Karaoke\\Yutils\\tests\\test.bmp")
 			line.text = bmp.file_size()
 			subtitle[li]=line
 		end
