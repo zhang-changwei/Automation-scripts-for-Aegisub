@@ -272,54 +272,56 @@ function main(subtitle, selected, active)
 			clipboard.set(data)
 			aegisub.cancel()
 		elseif result.option=="Move!" then
-			if result.move_pos==true then
-				if linetext:match("\\move[^v]")==nil then
-					local x,y = drawing_position(linetext,line,xres,yres)
-					if linetext:match("\\pos")==nil then linetext=linetext:gsub("^{","{\\pos("..x..","..y..")") end
-					linetext = linetext:gsub("\\pos%(([^,]*),([^%)]*)%)",function (a,b) return "\\pos("..a+result.move_x..","..b+result.move_y..")" end)
-				end
-			end
-
-			if result.move_clip==true then
-				if linetext:match("\\i?clip%([%d%.%- ]+,")~=nil then
-					linetext = linetext:gsub("(\\i?clip)%( *([%d%.%-]+) *, *([%d%.%-]+) *, *([%d%.%-]+) *, *([%d%.%-]+) *%)",
-					function (p,a,b,c,d)
-						return p.."("..a+result.move_x..","..b+result.move_y..","..c+result.move_x..","..d+result.move_y..")"
-					end)
-				else
-					local Yutils = require('Yutils')
-					linetext = linetext:gsub("(\\i?clip)%(([^%)]*)%)",
-					function (p,a)
-						a = Yutils.shape.filter(a,function (x,y) return x+result.move_x,y+result.move_y end)
-						return p.."("..a..")"
-					end)
-				end
-			end
-
-			if result.move_move==true then
-				linetext = linetext:gsub("\\move%( *([%d%.%-]+) *, *([%d%.%-]+) *, *([%d%.%-]+) *, *([%d%.%-]+) *",
-				function (a,b,c,d)
-					return "\\move("..a+result.move_x..","..b+result.move_y..","..c+result.move_x..","..d+result.move_y
-				end)
-			end
-
-			if result.move_move2==true then
-				local mnum = tonumber(linetext:match("\\moves(%d)"))
-				linetext = linetext:gsub("(\\moves%d)%(([^%)]*)%)",
-				function (p,a)
-					local i = 0
-					local new_a = ""
-					for x,y in a:gmatch(" *([%d%.%-]+) *, *([%d%.%-]+) *") do
-						i = i + 1
-						if i<=mnum then
-							x,y = tonumber(x),tonumber(y)
-							x,y = x+result.move_x,y+result.move_y
-						end
-						new_a = new_a..x..","..y..","
+			if line.comment==false then
+				if result.move_pos==true then
+					if linetext:match("\\move[^v]")==nil then
+						local x,y = drawing_position(linetext,line,xres,yres)
+						if linetext:match("\\pos")==nil then linetext=linetext:gsub("^{","{\\pos("..x..","..y..")") end
+						linetext = linetext:gsub("\\pos%(([^,]*),([^%)]*)%)",function (a,b) return "\\pos("..a+result.move_x..","..b+result.move_y..")" end)
 					end
-					new_a = new_a:gsub(",$","")
-					return p.."("..new_a..")"
-				end)
+				end
+
+				if result.move_clip==true then
+					if linetext:match("\\i?clip%([%d%.%- ]+,")~=nil then
+						linetext = linetext:gsub("(\\i?clip)%( *([%d%.%-]+) *, *([%d%.%-]+) *, *([%d%.%-]+) *, *([%d%.%-]+) *%)",
+						function (p,a,b,c,d)
+							return p.."("..a+result.move_x..","..b+result.move_y..","..c+result.move_x..","..d+result.move_y..")"
+						end)
+					else
+						local Yutils = require('Yutils')
+						linetext = linetext:gsub("(\\i?clip)%(([^%)]*)%)",
+						function (p,a)
+							a = Yutils.shape.filter(a,function (x,y) return x+result.move_x,y+result.move_y end)
+							return p.."("..a..")"
+						end)
+					end
+				end
+
+				if result.move_move==true then
+					linetext = linetext:gsub("\\move%( *([%d%.%-]+) *, *([%d%.%-]+) *, *([%d%.%-]+) *, *([%d%.%-]+) *",
+					function (a,b,c,d)
+						return "\\move("..a+result.move_x..","..b+result.move_y..","..c+result.move_x..","..d+result.move_y
+					end)
+				end
+
+				if result.move_move2==true then
+					local mnum = tonumber(linetext:match("\\moves(%d)"))
+					linetext = linetext:gsub("(\\moves%d)%(([^%)]*)%)",
+					function (p,a)
+						local i = 0
+						local new_a = ""
+						for x,y in a:gmatch(" *([%d%.%-]+) *, *([%d%.%-]+) *") do
+							i = i + 1
+							if i<=mnum then
+								x,y = tonumber(x),tonumber(y)
+								x,y = x+result.move_x,y+result.move_y
+							end
+							new_a = new_a..x..","..y..","
+						end
+						new_a = new_a:gsub(",$","")
+						return p.."("..new_a..")"
+					end)
+				end
 			end
 		elseif result.option=="Seperate Bilingual SUBS by \\N" then
 			linetext = linetext:gsub("^{}","")
