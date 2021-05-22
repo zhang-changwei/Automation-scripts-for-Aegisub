@@ -13,8 +13,8 @@ local Yutils = require('Yutils')
 include('karaskel.lua')
 
 local dialog_config = {
-	{class="label",label="effect",x=0,y=0},
-	{class="dropdown",name="effect",items={"particle","spotlight"},x=0,y=1,width=2}
+	{class="label",label="option",x=0,y=0},
+	{class="dropdown",name="option",items={"delete SDH comment","spotlight"},x=0,y=1,width=2}
 }
 local buttons = {"Detail","Quit"}
 

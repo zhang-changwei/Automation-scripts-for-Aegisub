@@ -22,7 +22,7 @@ function Centralization(subtitle, selected, active)
         line.text=line.text:gsub("\\fscx[%d%.%-]+","")
         line.text=line.text:gsub("\\fscy[%d%.%-]+","")
         line.text=line.text:gsub("\\an%d","\\an7")
-        line.text=line.text:gsub("\\pos%([^%)]+%)","\\pos(0,0)\\fscx100\fscy100")
+        line.text=line.text:gsub("\\pos%([^%)]+%)","\\pos(0,0)\\fscx100\\fscy100")
         
         pos = string.match(line.text, "m +%-?%d+.*")
         i = 1

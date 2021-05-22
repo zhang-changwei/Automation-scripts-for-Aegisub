@@ -716,21 +716,21 @@ end
 
 function position(ltext,line,xres,yres)
 	local x,y,top,left,bottom,right,center,middle = 0,0,0,0,0,0,0,0
-	
+
 	local ratiox,ratioy = 1,1
 	if (ltext:match("\\fs%d")~=nil) then
 		ratiox = tonumber(ltext:match("\\fs([%d%.]+)")) / line.styleref.fontsize
 		ratioy = tonumber(ltext:match("\\fs([%d%.]+)")) / line.styleref.fontsize
 	end
 	if (ltext:match("\\fscx")~=nil) then 
-		ratiox = tonumber(ltext:match("\\fscx([%d%.]+)")) / line.styleref.scale_x
+		ratiox = ratiox * tonumber(ltext:match("\\fscx([%d%.]+)")) / line.styleref.scale_x
 	end
 	if (ltext:match("\\fscy")~=nil) then 
-		ratioy = tonumber(ltext:match("\\fscy([%d%.]+)")) / line.styleref.scale_y
+		ratioy = ratioy * tonumber(ltext:match("\\fscy([%d%.]+)")) / line.styleref.scale_y
 	end
 	local width = line.width * ratiox
 	local height = line.height * ratioy
-	local an = ltext:match("\\an") and ltext:match("\\an(%d)") or line.styleref.align
+	local an = ltext:match("\\an%d") and tonumber(ltext:match("\\an(%d)")) or line.styleref.align
 	if     (an == 1) then
 		if (ltext:match("\\pos")~=nil) then
 			left = tonumber(ltext:match("\\pos%(([^,]+)"))
