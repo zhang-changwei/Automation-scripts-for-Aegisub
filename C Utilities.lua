@@ -6,9 +6,9 @@ goto my repository https://github.com/zhang-changwei/Automation-scripts-for-Aegi
 ]]
 
 script_name="C Utilities"
-script_description="Utilities v1.1"
+script_description="Utilities v1.2"
 script_author="chaaaaang"
-script_version="1.1" 
+script_version="1.2" 
 
 include('karaskel.lua')
 re = require 'aegisub.re'
@@ -28,7 +28,7 @@ local dialog_config = {
     {class="checkbox",name="SDH_h",label="<...>",value=false,x=1,y=3},
     {class="checkbox",name="SDH_M",label="【...】",value=false,x=0,y=4},
     {class="checkbox",name="SDH_S",label="（...）",value=false,x=1,y=4},
-	{class="checkbox",name="SDH_speaker",label="automatically remove speaker",value=false,x=0,y=5,width=3,hint="ATTENTION: it many lead to some errors, be careful!"},
+	{class="checkbox",name="SDH_speaker",label="automatically remove speaker",value=false,x=0,y=5,width=3,hint="ATTENTION: it may lead to some errors, be careful!"},
     {class="checkbox",name="SDH_o",label="other patterns",value=false,x=0,y=6},
     {class="edit",name="SDH_other",x=0,y=7,width=2,hint="seperate by comma without any blank"},
     {class="label",label="to",x=0,y=8},
@@ -48,19 +48,21 @@ local dialog_config = {
 	{class="checkbox",label="overlap checker",name="dialog_olp",value=true,x=3,y=7,width=2},
 	{class="checkbox",label="bilang checker",name="dialog_bl",value=true,x=3,y=8,width=2},
 	{class="checkbox",label="overlength checker",name="dialog_ol",value=true,x=3,y=9,width=2},
-	{class="label",label="buffer",x=3,y=10},
-	{class="floatedit",name="dialog_bf",value=300,x=4,y=10,hint="ACT ON overlength checker, larger buffer means narrower space for SUBS."},
+	{class="label",label="buffer 1",x=3,y=10},
+	{class="floatedit",name="dialog_bf1",value=0.6,x=4,y=10,hint="Buffer for CHS SUBS, Arg:0-1. ACT ON overlength checker, smaller buffer means narrower space for SUBS."},
+    {class="label",label="buffer 2",x=3,y=11},
+	{class="floatedit",name="dialog_bf2",value=0.75,x=4,y=11,hint="Buffer for ENG SUBS, Arg:0-1. ACT ON overlength checker, smaller buffer means narrower space for SUBS."},
     -- note
 	{class="label",label="      ",x=2,y=1},
 	
-    {class="label",label="Centralize Drawing:",x=0,y=11},
-	{class="label",label="require Yutils library, only work under \\an7 tag.",x=1,y=11,width=6},
-	{class="label",label="Delete Empty Lines:",x=0,y=12},
-	{class="label",label="the program may not terminate properly, just ignore it.",x=1,y=12,width=6},
-	{class="label",label="Dialog Checker:",x=0,y=13},
-	{class="label",label="Yutils library is required for overlength checker.",x=1,y=13,width=6},
-	{class="label",label="Move!:",x=0,y=14},
-	{class="label",label="Yutils library is required for vector clip movement.",x=1,y=14,width=6}
+    {class="label",label="Centralize Drawing:",x=0,y=12},
+	{class="label",label="require Yutils library, only work under \\an7 tag.",x=1,y=12,width=6},
+	{class="label",label="Delete Empty Lines:",x=0,y=13},
+	{class="label",label="the program may not terminate properly, just ignore it.",x=1,y=13,width=6},
+	{class="label",label="Dialog Checker:",x=0,y=14},
+	{class="label",label="Yutils library is required for overlength checker.",x=1,y=14,width=6},
+	{class="label",label="Move!:",x=0,y=15},
+	{class="label",label="Yutils library is required for vector clip movement.",x=1,y=15,width=6}
 }
 local buttons = {"Run","Quit"}
 
@@ -169,7 +171,7 @@ function main(subtitle, selected, active)
 					if linetext:match("\\fsc[%d%.]")~=nil then w1=w1*linetext:match("\\fsc([%d%.]+)")/line.styleref.scale_x end
 					if linetext:match("\\fscx[%d%.]")~=nil then w1=w1*linetext:match("\\fscx([%d%.]+)")/line.styleref.scale_x end
 					if linetext:match("\\fs[%d%.]")~=nil then w1=w1*linetext:match("\\fs([%d%.]+)")/line.styleref.fontsize end
-					if w1>=xres-result.dialog_bf then 
+					if w1>=xres*result.dialog_bf1 then 
 						line.actor = line.actor.."overlength "
 						log.overlength = log.overlength + 1
 					end
@@ -207,7 +209,7 @@ function main(subtitle, selected, active)
 					local ENG_HANDLE = Yutils.decode.create_font(name2,false,false,false,false,size2,scale_x2/100,1,hspace2)
 					local w1,w2 = CHS_HANDLE.text_extents(chss).width,ENG_HANDLE.text_extents(engs).width
 
-					if w1>=xres-result.dialog_bf or w2>=xres-result.dialog_bf then
+					if w1>=xres*result.dialog_bf1 or w2>=xres*result.dialog_bf2 then
 						line.actor = line.actor.."overlength "
 						log.overlength = log.overlength + 1
 					end

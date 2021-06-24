@@ -3,6 +3,8 @@ README:
 
 Translation
 
+goto my repository https://github.com/zhang-changwei/Automation-scripts-for-Aegisub for the latest version
+
 Feature:
 Translate the values of the tags
 which means add values with equivalent inteval (or specific function relationship) to the tags of selected lines
@@ -35,9 +37,9 @@ Updated on 7 Dec 2020
 ]]
 
 script_name="C Translation"
-script_description="Trasnlation v3.1"
+script_description="Trasnlation v3.2"
 script_author="chaaaaang"
-script_version="3.1"
+script_version="3.2"
 
 include("karaskel.lua")
 
@@ -155,9 +157,10 @@ dialog_config={
     {class="floatedit",name="other_transverse",value=1,x=10,y=9},
     {class="label",label="index",x=11,y=9},
     {class="intedit",name="other_index",value=1,x=12,y=9},
-
+    --multiply
+    {class="checkbox",name="multiply",label="multiply",value=false,x=4,y=10},
     --note
-    {class="label",x=0,y=10,width=13,label="Translation v3.0"},
+    {class="label",x=0,y=10,width=2,label="Translation v3.0"},
     {class="label",x=0,y=11,width=13,label="better to be used in FRAME BY FRAME lines, may use the linetofbf in Relocator first, index argument Z+"},
     {class="label",x=0,y=12,width=13,label="index: index of the tag you would like to translate in ALL this tag"},
     {class="label",x=0,y=13,width=13,label="ATTENTION: positive posy means moving downwards"},
@@ -250,7 +253,7 @@ function main(subtitle, selected, active)
                     linetext=linetext:gsub("^{",string.format("{\\fscx%.2f",line.styleref.scale_x))
                 end
                 deviation = interpolate(result["fscx_start"],result["fscx_end"],result["fscx_accel"],N,T,i,t,result["set"],result["fscx_deviation"],result["fscx_transverse"],pressed)
-                linetext = translation(linetext,"\\fscx",deviation,result["fscx_index"],"([^}]*)}\\fscx([%d%.%-]+)","\\fscx[%d%.%-]+$")
+                linetext = translation(linetext,"\\fscx",deviation,result["fscx_index"],"([^}]*)}\\fscx([%d%.%-]+)","\\fscx[%d%.%-]+$",result["multiply"])
             end
             --fscy
             if (result["fscy"]==true) then
@@ -258,7 +261,7 @@ function main(subtitle, selected, active)
                     linetext=linetext:gsub("^{",string.format("{\\fscy%.2f",line.styleref.scale_y))
                 end
                 deviation = interpolate(result["fscy_start"],result["fscy_end"],result["fscy_accel"],N,T,i,t,result["set"],result["fscy_deviation"],result["fscy_transverse"],pressed)
-                linetext = translation(linetext,"\\fscy",deviation,result["fscy_index"],"([^}]*)}\\fscy([%d%.%-]+)","\\fscy[%d%.%-]+$")
+                linetext = translation(linetext,"\\fscy",deviation,result["fscy_index"],"([^}]*)}\\fscy([%d%.%-]+)","\\fscy[%d%.%-]+$",result["multiply"])
             end
             --frz
             if (result["frz"]==true) then
@@ -349,9 +352,9 @@ function interpolate(head,tail,accel,N,T,i,t,judge,deviation,transverse,button)
     -- i 1-N
     if (button=="Translation") then
         if (judge==false) then
-            bias = math.pow(1/(N-1)*(i-1),accel)
+            bias = (1/(N-1)*(i-1))^accel
         else
-            bias = math.pow(1/(T-1)*(t-1),accel)
+            bias = (1/(T-1)*(t-1))^accel
         end
         return (tail-head)*bias+head
     elseif (button=="Smooth") then
@@ -361,7 +364,7 @@ function interpolate(head,tail,accel,N,T,i,t,judge,deviation,transverse,button)
         else
             x = 2*(t-1)* math.pi/(T-1)
         end
-        bias = math.pow((1-math.cos(math.pow(x,transverse)))/2,accel)*deviation
+        bias = ((1-math.cos(x^transverse))/2)^accel*deviation
         return bias
     else
         return 0
@@ -369,7 +372,7 @@ function interpolate(head,tail,accel,N,T,i,t,judge,deviation,transverse,button)
 
 end
 
-function translation(linetext,tagtype,deviation,index,match,matchtail)
+function translation(linetext,tagtype,deviation,index,match,matchtail,multiply)
     tt_table={}
     for tg,tx in linetext:gmatch("({[^}]*})([^{]*)") do
         table.insert(tt_table,{tag=tg,text=tx})
@@ -388,7 +391,11 @@ function translation(linetext,tagtype,deviation,index,match,matchtail)
             for p,q in tt.tag:gmatch(match) do
                 count = count + 1
                 if (count == index) then
-                    rebuild_tag = string.format("%s%s%s%.2f",rebuild_tag,p,tagtype,q+deviation)
+                    if multiply~=true then
+                        rebuild_tag = string.format("%s%s%s%.2f",rebuild_tag,p,tagtype,q+deviation)
+                    else
+                        rebuild_tag = string.format("%s%s%s%.2f",rebuild_tag,p,tagtype,q*deviation)
+                    end
                 else
                     rebuild_tag = rebuild_tag..p..tagtype..q
                 end

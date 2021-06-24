@@ -1,5 +1,8 @@
 --[[
 README:
+
+goto my repository https://github.com/zhang-changwei/Automation-scripts-for-Aegisub for the latest version
+
 Updated on Fre.8th, 2021
     Bug Fixed
 ]]
@@ -707,9 +710,9 @@ end
 function interpolate01(N,T,i,t,judge,accel)
     -- true: time mode, false: line mode
     if (judge==false) then
-        return math.pow(1/(N-1)*(i-1),accel)
+        return (1/(N-1)*(i-1))^accel
     else
-        return math.pow(1/(T-1)*(t-1),accel)
+        return (1/(T-1)*(t-1))^accel
     end
 end
 

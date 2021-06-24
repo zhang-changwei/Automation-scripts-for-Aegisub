@@ -4,9 +4,8 @@
   - [__1. C Font Resize__](#1-c-font-resize)
   - [__2. C Gradient__](#2-c-gradient)
   - [__3. C Translation__](#3-c-translation)
-  - [__4. C Smooth__](#4-c-smooth)
-  - [__5. C Scaling Rotation Conflict Solution__](#5-c-scaling-rotation-conflict-solution)
-  - [__7. 更新日志__](#7-更新日志)
+  - [__4. C Scaling Rotation Conflict Solution__](#4-c-scaling-rotation-conflict-solution)
+  - [__INF. 更新日志__](#INF-更新日志)
 
 ## __0. 前言__
 * __当前各脚本版本信息__
@@ -14,18 +13,22 @@
     |---------------------------------|---------|
     | C Font Resize (Mocha Deshaking) | v1.3    |
     | C Gradient                      | v2.1    |
+    | C Merge Bilingual SUBS          | v1.1    |
     | C Translation                   | v3.1    |
     | C Smooth                        | v1.0    |
-    | C Scaling Rotation Conflict Solution | v1.1 |
-    | C Change SUB resolution to match video PATCH | v1.0 |
+    | * C Scaling Rotation Conflict Solution | v1.1 |
+    | * C Change SUB resolution to match video PATCH | v1.0 |
+    | C Utilities                     | v1.2    |
     > 在Automation Manager Description栏中查看脚本版本信息  
-    > 若你的脚本在上述表格中且无版本信息 可能需要考虑更新脚本
+    > 若你的脚本在上述表格中且无版本信息 可能需要考虑更新脚本  
+    > *表示“非主线”脚本，未列出的脚本为测试性或实验性的
 * __使用方法__
     + 将LUA脚本复制到`C:\Program Files (x86)\Aegisub\automation\autoload`路径下，或你的Aegisub安装位置
-    + 在Aegisub Automation项中可以发现添加的脚本
-    + `C Effect`脚本依赖Yutils库，请先安装相关组件，传送门[https://github.com/Youka/Yutils](https://github.com/Youka/Yutils)，感谢原作者。
+    + 在 Aegisub Automation 项中可以发现添加的脚本
+    + `C Effect & C Utilities`脚本部分功能依赖Yutils库，请先安装相关组件，传送门[https://github.com/Youka/Yutils](https://github.com/Youka/Yutils)，感谢原作者。
 * __该仓库本人长期维护，欢迎star与fork。__  
-* 2021.3.20 Mocha三件套`(Font Resize,Gradient,Translation)`已基本趋于稳定，现主要开发Effect相关脚本，说明文档等我心情好了再写吧~
+* 2021.3.20 Mocha三件套`(Font Resize,Gradient,Translation)`已基本趋于稳定
+* 2021 7月初可能会有一次release，敬请期待
 
 -------------------------------------------
 ## __1. C Font Resize__
@@ -132,11 +135,11 @@
 * __Warning__  
     不支持 `\t(\clip)` 标签  
 
-## __4. C Smooth__  
+<!-- ## __4. C Smooth__  
 > 脚本的逻辑与 `C Translation/Smooth` 不同，   
 > `C Translation/Smooth` 通过手动添置轨迹反向偏移，以实现平滑的目的  
-> `C Smooth` 通过识别快速变化标签行，对其强制线性化，以实现滤去强烈抖动的标签，达到平滑效果，注意若反复使用该脚本，最终会导致选中行标签线性变化，而并不一定能与画面完美贴合。
-## __5. C Scaling Rotation Conflict Solution__
+> `C Smooth` 通过识别快速变化标签行，对其强制线性化，以实现滤去强烈抖动的标签，达到平滑效果，注意若反复使用该脚本，最终会导致选中行标签线性变化，而并不一定能与画面完美贴合。 -->
+## __4. C Scaling Rotation Conflict Solution__
 * __Feature__  
     解决拉伸代码 `\fscx \fscy` 与旋转代码 `\frx fry` 生成SUP时冲突的问题  
     将拉伸代码 `\fscx \fscy` 写入样式表中，并以后缀区分新增样式
@@ -157,9 +160,12 @@
     选中每行字幕有且只能有一组拉伸代码
     > 程序会在样式表中产生大量样式，谨慎使用
 --------------------------------------------
-## __7. 更新日志__
+## __INF. 更新日志__
 | Date | Script | Version | Detail |
 |------|--------|---------|--------|
+|2021.6.24|C Translation & Gradient| |将`math.power`替换为`^`，以兼容LUA 5.4|
+|2021.6.24|C Translation|3.2|乘法for fscx fscy|
+|2021.6.24|C Utilities|1.2|功能更新for buffer|
 |2021.4.20|C Font Resize|1.3|增加对矢量图的支持|
 |2021.4.20|C Effect|1.0|beta 内测版|
 |2021.3.20|C Scaling Rotation Conflict Solution|1.1|Bug Fixed|
