@@ -158,9 +158,9 @@ function pre1_chs(subtitle, selected)
         subtitle[li-1] = line_pre
 
         if line.text:match("^{") then
-            line.text = line.text:gsub("^({[^}]*})","%1"..text.." ")
+            line.text = line.text:gsub("^({[^}]*})","%1"..text.."")
         else
-            line.text = line.text:gsub("^",text.." ")
+            line.text = line.text:gsub("^",text.."")
         end
         subtitle[li] = line
     end
@@ -186,9 +186,9 @@ function pre2_chs(subtitle, selected)
         subtitle[li-2] = line_pre
 
         if line.text:match("^{") then
-            line.text = line.text:gsub("^({[^}]*})","%1"..text.." ")
+            line.text = line.text:gsub("^({[^}]*})","%1"..text.."")
         else
-            line.text = line.text:gsub("^",text.." ")
+            line.text = line.text:gsub("^",text.."")
         end
         subtitle[li] = line
     end
@@ -214,11 +214,11 @@ function next1_chs(subtitle, selected)
         subtitle[li+1] = line_next
 
         if line.text:match("\\N") then
-            line.text = line.text:gsub("\\N"," "..text.."\\N")
+            line.text = line.text:gsub("\\N",""..text.."\\N")
         elseif line.text:match("}$") then
-            line.text = line.text:gsub("({[^}]*})$"," "..text.."%1")
+            line.text = line.text:gsub("({[^}]*})$",""..text.."%1")
         else
-            line.text = line.text:gsub("$"," "..text)
+            line.text = line.text:gsub("$",""..text)
         end
         subtitle[li] = line
     end
@@ -244,11 +244,11 @@ function next2_chs(subtitle, selected)
         subtitle[li+2] = line_next
 
         if line.text:match("\\N") then
-            line.text = line.text:gsub("\\N"," "..text.."\\N")
+            line.text = line.text:gsub("\\N",""..text.."\\N")
         elseif line.text:match("}$") then
-            line.text = line.text:gsub("({[^}]*})$"," "..text.."%1")
+            line.text = line.text:gsub("({[^}]*})$",""..text.."%1")
         else
-            line.text = line.text:gsub("$"," "..text)
+            line.text = line.text:gsub("$",""..text)
         end
         subtitle[li] = line
     end
