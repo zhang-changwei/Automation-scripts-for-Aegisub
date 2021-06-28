@@ -14,7 +14,7 @@
     | C Font Resize (Mocha Deshaking) | v1.3    |
     | C Gradient                      | v2.1    |
     | C Merge Bilingual SUBS          | v1.1    |
-    | C Translation                   | v3.1    |
+    | C Translation                   | v3.2    |
     | C Smooth                        | v1.0    |
     | * C Scaling Rotation Conflict Solution | v1.1 |
     | * C Change SUB resolution to match video PATCH | v1.0 |
