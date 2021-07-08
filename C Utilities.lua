@@ -6,13 +6,14 @@ goto my repository https://github.com/zhang-changwei/Automation-scripts-for-Aegi
 ]]
 
 script_name="C Utilities"
-script_description="Utilities v1.2"
+script_description="Utilities v1.3"
 script_author="chaaaaang"
-script_version="1.2" 
+script_version="1.3" 
 
 include('karaskel.lua')
 re = require 'aegisub.re'
-clipboard = require 'aegisub.clipboard'
+-- clipboard = require 'aegisub.clipboard'
+Yutils = nil
 
 local dialog_config = {
 	{class="label",label="Options",x=0,y=0},
@@ -47,22 +48,23 @@ local dialog_config = {
 	{class="label",label="Dialog Checker",x=3,y=6,width=2},
 	{class="checkbox",label="overlap checker",name="dialog_olp",value=true,x=3,y=7,width=2},
 	{class="checkbox",label="bilang checker",name="dialog_bl",value=true,x=3,y=8,width=2},
-	{class="checkbox",label="overlength checker",name="dialog_ol",value=true,x=3,y=9,width=2},
-	{class="label",label="buffer 1",x=3,y=10},
-	{class="floatedit",name="dialog_bf1",value=0.6,x=4,y=10,hint="Buffer for CHS SUBS, Arg:0-1. ACT ON overlength checker, smaller buffer means narrower space for SUBS."},
-    {class="label",label="buffer 2",x=3,y=11},
-	{class="floatedit",name="dialog_bf2",value=0.75,x=4,y=11,hint="Buffer for ENG SUBS, Arg:0-1. ACT ON overlength checker, smaller buffer means narrower space for SUBS."},
+	{class="dropdown",name="dialog_blstyle",items={"zho\\Neng","zho\\Nany","any\\Neng","any\\Nany"},value="zho\\Neng",x=3,y=9,width=2},
+	{class="checkbox",label="overlength checker",name="dialog_ol",value=true,x=3,y=10,width=2},
+	{class="label",label="buffer 1",x=3,y=11},
+	{class="floatedit",name="dialog_bf1",value=0.6,x=4,y=11,hint="Buffer for CHS SUBS, Arg:0-1. ACT ON overlength checker, smaller buffer means narrower space for SUBS."},
+    {class="label",label="buffer 2",x=3,y=12},
+	{class="floatedit",name="dialog_bf2",value=0.75,x=4,y=12,hint="Buffer for ENG SUBS, Arg:0-1. ACT ON overlength checker, smaller buffer means narrower space for SUBS."},
     -- note
 	{class="label",label="      ",x=2,y=1},
 	
-    {class="label",label="Centralize Drawing:",x=0,y=12},
-	{class="label",label="require Yutils library, only work under \\an7 tag.",x=1,y=12,width=6},
-	{class="label",label="Delete Empty Lines:",x=0,y=13},
-	{class="label",label="the program may not terminate properly, just ignore it.",x=1,y=13,width=6},
-	{class="label",label="Dialog Checker:",x=0,y=14},
-	{class="label",label="Yutils library is required for overlength checker.",x=1,y=14,width=6},
-	{class="label",label="Move!:",x=0,y=15},
-	{class="label",label="Yutils library is required for vector clip movement.",x=1,y=15,width=6}
+    {class="label",label="Centralize Drawing:",x=0,y=13},
+	{class="label",label="require Yutils library, only work under \\an7 tag.",x=1,y=13,width=6},
+	{class="label",label="Delete Empty Lines:",x=0,y=14},
+	{class="label",label="the program may not terminate properly, just ignore it.",x=1,y=14,width=6},
+	{class="label",label="Dialog Checker:",x=0,y=15},
+	{class="label",label="Yutils library is required for overlength checker.",x=1,y=15,width=6},
+	{class="label",label="Move!:",x=0,y=16},
+	{class="label",label="Yutils library is required for clip movement.",x=1,y=16,width=6}
 }
 local buttons = {"Run","Quit"}
 
@@ -73,6 +75,14 @@ function main(subtitle, selected, active)
 
     local pressed, result = aegisub.dialog.display(dialog_config,buttons)
     if (pressed=="Quit") then aegisub.cancel() end
+
+	if result.option=="Dialog Checker" and result.dialog_ol==true then 
+		Yutils = require('Yutils')
+	elseif result.option=="Centralize Drawing" then 
+		Yutils = require('Yutils')
+	elseif result.option=="Move!" and result.move_clip==true then
+		Yutils = require('Yutils')
+	end
 
 	local log = {}
 	log.overlength,log.overlap,log.bilang = 0,0,0
@@ -109,7 +119,7 @@ function main(subtitle, selected, active)
 
         -- Centralize Drawing
         if result.option=="Centralize Drawing" then
-            local Yutils = require('Yutils')
+            -- local Yutils = require('Yutils')
 
             local posx,posy = drawing_position(linetext,line,xres,yres)
             if linetext:match("\\pos")==nil then linetext=linetext:gsub("^{","{\\pos("..posx..","..posy..")") end
@@ -176,7 +186,7 @@ function main(subtitle, selected, active)
 						log.overlength = log.overlength + 1
 					end
 				elseif count==1 then
-					local Yutils = require('Yutils')
+					-- local Yutils = require('Yutils')
 					local chs,eng = linetext:match("(.*)\\N(.*)")
 					local chss,engs = chs:gsub("{([^}]*)}",""),eng:gsub("{([^}]*)}","")
 					
@@ -190,11 +200,12 @@ function main(subtitle, selected, active)
 					local name2,scale_x2,size2,hspace2 = name,scale_x,size,hspace
 					if eng:match("\\r")~=nil then 
 						for j=1,1000 do
-							if subtitle[j].class=="style" and subtitle[j].style.name==eng:match("\\r([^\\}]+)") then
-								name2 = subtitle[j].style.fontname
-								scale_x2 = subtitle[j].style.scale_x
-								size2 = subtitle[j].style.fontsize
-								hspace2 = subtitle[j].style.spacing
+							local style = subtitle[j]
+							if style.class=="style" and style.name==eng:match("\\r([^\\}]+)") then
+								name2 = style.fontname
+								scale_x2 = style.scale_x
+								size2 = style.fontsize
+								hspace2 = style.spacing
 								break
 							end
 						end
@@ -227,13 +238,32 @@ function main(subtitle, selected, active)
 				local _,count = linetext:gsub("\\N","")
 				if count==1 then
 					local chs,eng = linetext:match("(.*)\\N(.*)")
-					chs = chs:gsub("{[^}]*}","")
-					eng = eng:gsub("{[^}]*}","")
-					eng = eng:gsub(" *","")
-					if chs:match("[\128-\191]")~=nil and eng~="" then
-					else
-						line.actor = line.actor.."bilang "
-						log.bilang = log.bilang + 1
+					chs,eng = chs:gsub("{[^}]*}",""),eng:gsub("{[^}]*}","")
+					chs,eng = chs:gsub(" +",""),eng:gsub(" +","")
+					if result.dialog_blstyle=="zho\\Neng" then
+						if chs:match("[\128-\191]")~=nil and eng:match("[\128-\191]")==nil then
+						else
+							line.actor = line.actor.."bilang "
+							log.bilang = log.bilang + 1
+						end
+					elseif result.dialog_blstyle=="zho\\Nany" then
+						if chs:match("[\128-\191]")~=nil and eng~="" then
+						else
+							line.actor = line.actor.."bilang "
+							log.bilang = log.bilang + 1
+						end
+					elseif result.dialog_blstyle=="any\\Neng" then
+						if chs~="" and eng:match("[\128-\191]")==nil then
+						else
+							line.actor = line.actor.."bilang "
+							log.bilang = log.bilang + 1
+						end
+					elseif result.dialog_blstyle=="any\\Nany" then
+						if chs~="" and eng~="" then
+						else
+							line.actor = line.actor.."bilang "
+							log.bilang = log.bilang + 1
+						end
 					end
 				else
 					line.actor = line.actor.."bilang "
@@ -241,38 +271,38 @@ function main(subtitle, selected, active)
 				end
 			end
 		elseif result.option=="Empty Mocha Data" then
-			local start_f,end_f = aegisub.frame_from_ms(line.start_time),aegisub.frame_from_ms(line.end_time)
-			local data = ""
-			data = data.."Adobe After Effects 6.0 Keyframe Data\n"
-			data = data.."\n"
-			data = data.." Units Per Second	23.976\n"
-			data = data.." Source Width	1920\n"
-			data = data.." Source Height	1080\n"
-			data = data.." Source Pixel Aspect Ratio	1\n"
-			data = data.." Comp Pixel Aspect Ratio	1\n"
-			data = data.."\n"
-			data = data.."Position\n"
-			data = data.." Frame	X pixels	Y pixels	Z pixels\n"
-			for i=0,end_f-start_f-1 do
-				data = data.." "..i.." 0 0 0\n"
-			end
-			data = data.."\n"
-			data = data.."Scale\n"
-			data = data.." Frame	X percent	Y percent	Z percent\n"
-			for i=0,end_f-start_f-1 do
-				data = data.." "..i.." 100 100 100\n"
-			end
-			data = data.."\n"
-			data = data.."Rotation\n"
-			data = data.." Frame	Degrees\n"
-			for i=0,end_f-start_f-1 do
-				data = data.." "..i.." 0\n"
-			end
-			data = data.."\n"
-			data = data.."End of Keyframe Data\n"
-			aegisub.log(data.."\nThe Mocha Data have been copied to the clipboard!")
-			clipboard.set(data)
-			aegisub.cancel()
+			-- local start_f,end_f = aegisub.frame_from_ms(line.start_time),aegisub.frame_from_ms(line.end_time)
+			-- local data = ""
+			-- data = data.."Adobe After Effects 6.0 Keyframe Data\n"
+			-- data = data.."\n"
+			-- data = data.." Units Per Second	23.976\n"
+			-- data = data.." Source Width	1920\n"
+			-- data = data.." Source Height	1080\n"
+			-- data = data.." Source Pixel Aspect Ratio	1\n"
+			-- data = data.." Comp Pixel Aspect Ratio	1\n"
+			-- data = data.."\n"
+			-- data = data.."Position\n"
+			-- data = data.." Frame	X pixels	Y pixels	Z pixels\n"
+			-- for i=0,end_f-start_f-1 do
+			-- 	data = data.." "..i.." 0 0 0\n"
+			-- end
+			-- data = data.."\n"
+			-- data = data.."Scale\n"
+			-- data = data.." Frame	X percent	Y percent	Z percent\n"
+			-- for i=0,end_f-start_f-1 do
+			-- 	data = data.." "..i.." 100 100 100\n"
+			-- end
+			-- data = data.."\n"
+			-- data = data.."Rotation\n"
+			-- data = data.." Frame	Degrees\n"
+			-- for i=0,end_f-start_f-1 do
+			-- 	data = data.." "..i.." 0\n"
+			-- end
+			-- data = data.."\n"
+			-- data = data.."End of Keyframe Data\n"
+			-- aegisub.log(data.."\nThe Mocha Data have been copied to the clipboard!")
+			-- clipboard.set(data)
+			-- aegisub.cancel()
 		elseif result.option=="Move!" then
 			if line.comment==false then
 				if result.move_pos==true then
@@ -290,7 +320,7 @@ function main(subtitle, selected, active)
 							return p.."("..a+result.move_x..","..b+result.move_y..","..c+result.move_x..","..d+result.move_y..")"
 						end)
 					else
-						local Yutils = require('Yutils')
+						-- local Yutils = require('Yutils')
 						linetext = linetext:gsub("(\\i?clip)%(([^%)]*)%)",
 						function (p,a)
 							a = Yutils.shape.filter(a,function (x,y) return x+result.move_x,y+result.move_y end)
@@ -341,6 +371,7 @@ function main(subtitle, selected, active)
 
         line.text=linetext
         subtitle[li]=line
+		aegisub.progress.set((si-1)/N*100)
     end
 
 	-- log output
