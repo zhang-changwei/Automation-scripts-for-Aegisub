@@ -6,9 +6,9 @@ goto my repository https://github.com/zhang-changwei/Automation-scripts-for-Aegi
 ]]
 
 script_name="C Utilities"
-script_description="Utilities v1.3"
+script_description="Utilities v1.4"
 script_author="chaaaaang"
-script_version="1.3" 
+script_version="1.4" 
 
 include('karaskel.lua')
 re = require 'aegisub.re'
@@ -18,7 +18,7 @@ Yutils = nil
 local dialog_config = {
 	{class="label",label="Options",x=0,y=0},
 	{class="dropdown",name="option",
-		items={"Centralize Drawing","Delete Empty Lines","Delete SDH Comment",
+		items={"AE Sequential Picture Importer","Centralize Drawing","Delete Empty Lines","Delete SDH Comment",
 		"Dialog Checker","Move!","Seperate Bilingual SUBS by \\N","Swap SUBS Splitted by \\N"},
 		x=1,y=0,width=4},
     -- Delete SDH Comment
@@ -54,27 +54,50 @@ local dialog_config = {
 	{class="floatedit",name="dialog_bf1",value=0.6,x=4,y=11,hint="Buffer for CHS SUBS, Arg:0-1. ACT ON overlength checker, smaller buffer means narrower space for SUBS."},
     {class="label",label="buffer 2",x=3,y=12},
 	{class="floatedit",name="dialog_bf2",value=0.75,x=4,y=12,hint="Buffer for ENG SUBS, Arg:0-1. ACT ON overlength checker, smaller buffer means narrower space for SUBS."},
+	-- AE Sequential Picture Importer
+	{class="label",label="AE Sequential Picture Importer",x=6,y=1,width=2},
+	{class="label",label="FPS",x=6,y=2},
+	{class="floatedit",name="ae_fps",value=23.976,x=7,y=2},
+	{class="label",label="fade in time",x=6,y=3},
+	{class="intedit",name="ae_fin",value=0,x=7,y=3},
+	{class="label",label="fade out time",x=6,y=4},
+	{class="intedit",name="ae_fout",value=0,x=7,y=4},
     -- note
 	{class="label",label="      ",x=2,y=1},
+	{class="label",label="      ",x=5,y=1},
 	
-    {class="label",label="Centralize Drawing:",x=0,y=13},
-	{class="label",label="require Yutils library, only work under \\an7 tag.",x=1,y=13,width=6},
-	{class="label",label="Delete Empty Lines:",x=0,y=14},
-	{class="label",label="the program may not terminate properly, just ignore it.",x=1,y=14,width=6},
-	{class="label",label="Dialog Checker:",x=0,y=15},
-	{class="label",label="Yutils library is required for overlength checker.",x=1,y=15,width=6},
-	{class="label",label="Move!:",x=0,y=16},
-	{class="label",label="Yutils library is required for clip movement.",x=1,y=16,width=6}
+	{class="label",label="AE Sequential Picture Importer: ",x=0,y=13,width=3},
+	{class="label",label="Press the AE button to Grab AE Sequential Picture Path and Run.",x=3,y=13,width=5},
+	{class="label",label="Please choose the file with INDEX 001 in the file picker.",x=3,y=14,width=5},
+    {class="label",label="Centralize Drawing:",x=0,y=15},
+	{class="label",label="require Yutils library, only work under \\an7 tag.",x=1,y=15,width=6},
+	{class="label",label="Delete Empty Lines:",x=0,y=16},
+	{class="label",label="the program may not terminate properly, just ignore it.",x=1,y=16,width=6},
+	{class="label",label="Dialog Checker:",x=0,y=17},
+	{class="label",label="Yutils library is required for overlength checker.",x=1,y=17,width=6},
+	{class="label",label="Move!:",x=0,y=18},
+	{class="label",label="Yutils library is required for clip movement.",x=1,y=18,width=6}
 }
-local buttons = {"Run","Quit"}
+local buttons = {"Run","AE","Quit"}
 
 --This is the main processing function that modifies the subtitles
 function main(subtitle, selected, active)
     local meta,styles=karaskel.collect_head(subtitle,false)
 	local xres, yres, ar, artype = aegisub.video_size()
+	local ae_path = nil
 
     local pressed, result = aegisub.dialog.display(dialog_config,buttons)
     if (pressed=="Quit") then aegisub.cancel() end
+	if (pressed=="AE") then
+		ae_path = aegisub.dialog.open('AE Choose the file with INDEX 001', '', '', 'PNG files (.png)|*.png|All Files (.)|.', false, true)
+	end
+	if pressed=="Run" and result.option=="AE Sequential Picture Importer" then
+		aegisub.log("Please the AE button")
+		aegisub.cancel()
+	end
+	if (pressed=="AE" and result.option~="AE Sequential Picture Importer") or (pressed=="AE" and ae_path==nil) then
+		aegisub.cancel()
+	end
 
 	if result.option=="Dialog Checker" and result.dialog_ol==true then 
 		Yutils = require('Yutils')
@@ -117,8 +140,64 @@ function main(subtitle, selected, active)
         local linetext = line.text:match("^{")~=nil and line.text or "{}"..line.text
         linetext = linetext:gsub("}{","")
 
-        -- Centralize Drawing
-        if result.option=="Centralize Drawing" then
+		if result.option=="AE Sequential Picture Importer" then
+			local ae_mid,ae_post = ae_path:match("(%d+)([^%d%.]*%.[^%.]+)$")
+			local ae_pre = ae_path:gsub("(%d+)([^%d%.]*%.[^%.]+)$","",1)
+			local ae_timeU = 1000/result.ae_fps
+			local ae_timeS,ae_timeE = line.start_time,line.end_time
+			local ae_fin,ae_fout = result.ae_fin,result.ae_fout
+			local j,ki,ko = 1,1,1
+
+			while ae_timeS+(j-0.5)*ae_timeU<ae_timeE do
+				subtitle.insert(li+j-1,line)
+				local new_line = subtitle[li+j-1]
+				new_line.start_time = ae_timeS + math.floor((j-1) * ae_timeU)
+				new_line.end_time = ae_timeS + math.floor(j * ae_timeU)
+
+				if j<10 then ae_mid = ae_mid:gsub("%d$",j)
+				elseif j<100 then ae_mid = ae_mid:gsub("%d%d$",j)
+				elseif j<1000 then ae_mid = ae_mid:gsub("%d%d%d$",j)
+				elseif j<10000 then ae_mid = ae_mid:gsub("%d%d%d%d$",j)
+				else ae_mid = ae_mid:gsub("%d%d%d%d%d$",j)
+				end
+				new_line.text = "{\\an7\\pos(0,0)\\bord0\\shad0\\fscx100\\fscy100\\1img("..ae_pre..ae_mid..ae_post..")\\p1}"
+				new_line.text = new_line.text..string.format("m 0 0 l %d 0 l %d %d l 0 %d",xres,xres,yres,yres)
+
+				subtitle[li+j-1] = new_line
+				j = j + 1
+			end
+
+			if ae_fin>0 then
+				while ae_fin>result.ae_fps or ki>=j do
+					-- first line: li
+					local new_line = subtitle[li+ki-1]
+					new_line.text = new_line.text:gsub("^{","{\\fad("..ae_fin..",0)")
+					subtitle[li+ki-1] = new_line
+					ae_fin = ae_fin - math.ceil(ae_timeU)
+					ki = ki + 1
+				end
+			end
+			if ae_fout>0 then
+				while ae_fout>result.ae_fps or ko>=j do
+					-- last line: li+j-2
+					local new_line = subtitle[li+j-2-(ko-1)]
+					if new_line.text:match("\\fad")==nil then
+						new_line.text = new_line.text:gsub("^{","{\\fad(0,"..ae_fout..")")
+					else
+						new_line.text = new_line.text:gsub("^{\\fad%((%d+),0%)","{\\fad(%1,"..ae_fout..")")
+					end
+					subtitle[li+j-2-(ko-1)] = new_line
+					ae_fout = ae_fout - math.ceil(ae_timeU)
+					ko = ko + 1
+				end
+			end
+
+			line.comment = true
+			linetext = linetext:gsub("^{}","")
+			subtitle[li+j-1] = line
+			goto loop_end
+
+        elseif result.option=="Centralize Drawing" then
             -- local Yutils = require('Yutils')
 
             local posx,posy = drawing_position(linetext,line,xres,yres)
