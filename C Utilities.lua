@@ -6,77 +6,99 @@ goto my repository https://github.com/zhang-changwei/Automation-scripts-for-Aegi
 ]]
 
 script_name="C Utilities"
-script_description="Utilities v1.4"
+script_description="Utilities v1.5"
 script_author="chaaaaang"
-script_version="1.4" 
+script_version="1.5" 
 
 include('karaskel.lua')
 re = require 'aegisub.re'
--- clipboard = require 'aegisub.clipboard'
+clipboard = require 'aegisub.clipboard'
 Yutils = nil
 
+local visualization_max_width, visualization_max_height = 180, 41
+
 local dialog_config = {
-	{class="label",label="Options",x=0,y=0},
+	{class="label",label="Options",x=0,y=0},--1
 	{class="dropdown",name="option",
 		items={"AE Sequential Picture Importer","Centralize Drawing","Delete Empty Lines","Delete SDH Comment",
-		"Dialog Checker","Move!","Seperate Bilingual SUBS by \\N","Swap SUBS Splitted by \\N"},
-		x=1,y=0,width=4},
+		"Dialog Checker","Mocha Data Visualization","Move!","Multiline Importer","Separate Bilingual SUBS by \\N","Shift Multiline","Swap SUBS Splitted by \\N","Tag Copy"},
+		x=1,y=0,width=4},--2
     -- Delete SDH Comment
-    {class="label",label="Delete SDH Comment",x=0,y=1,width=2},
-    {class="checkbox",name="SDH_m",label="[...]",value=true,x=0,y=2},
-    {class="checkbox",name="SDH_s",label="(...)",value=true,x=1,y=2},
-    {class="checkbox",name="SDH_l",label="{...}",value=false,x=0,y=3},
-    {class="checkbox",name="SDH_h",label="<...>",value=false,x=1,y=3},
-    {class="checkbox",name="SDH_M",label="【...】",value=false,x=0,y=4},
-    {class="checkbox",name="SDH_S",label="（...）",value=false,x=1,y=4},
+    {class="label",label="■ Delete SDH Comment",x=0,y=1,width=2},--3
+    {class="checkbox",name="SDH_m",label="[...]",value=true,x=0,y=2},--4
+    {class="checkbox",name="SDH_s",label="(...)",value=true,x=1,y=2},--5
+    {class="checkbox",name="SDH_l",label="{...}",value=false,x=0,y=3},--6
+    {class="checkbox",name="SDH_h",label="<...>",value=false,x=1,y=3},--7
+    {class="checkbox",name="SDH_M",label="【...】",value=false,x=0,y=4},--8
+    {class="checkbox",name="SDH_S",label="（...）",value=false,x=1,y=4},--9
 	{class="checkbox",name="SDH_speaker",label="automatically remove speaker",value=false,x=0,y=5,width=3,hint="ATTENTION: it may lead to some errors, be careful!"},
-    {class="checkbox",name="SDH_o",label="other patterns",value=false,x=0,y=6},
-    {class="edit",name="SDH_other",x=0,y=7,width=2,hint="seperate by comma without any blank"},
-    {class="label",label="to",x=0,y=8},
-    {class="edit",name="SDH_to",value=" ",x=0,y=9,width=2,hint="default: one blank"},
+    {class="checkbox",name="SDH_o",label="other patterns",value=false,x=0,y=6},--11
+    {class="edit",name="SDH_other",x=0,y=7,width=2,hint="seperate by comma without any blank"},--12
+    {class="label",label="to",x=0,y=8},--13
+    {class="edit",name="SDH_to",value=" ",x=0,y=9,width=2,hint="default: one blank"},--14
 	-- Move!
-	{class="label",label="Move!",x=3,y=1,width=2},
-	{class="checkbox",name="move_pos",label="pos",value=true,x=3,y=2},
-	{class="checkbox",name="move_clip",label="clip",value=false,x=4,y=2},
-	{class="checkbox",name="move_move",label="move",value=false,x=3,y=3},
-	{class="checkbox",name="move_move2",label="moves3/moves4",value=false,x=4,y=3},
-	{class="label",label="x",x=3,y=4},
-	{class="floatedit",name="move_x",value=0,x=4,y=4},
-	{class="label",label="y",x=3,y=5},
-	{class="floatedit",name="move_y",value=0,x=4,y=5},
+	{class="label",label="■ Move!",x=3,y=1,width=2},--15
+	{class="checkbox",name="move_pos",label="pos",value=true,x=3,y=2},--16
+	{class="checkbox",name="move_clip",label="clip",value=false,x=4,y=2},--17
+	{class="checkbox",name="move_move",label="move",value=false,x=3,y=3},--18
+	{class="checkbox",name="move_move2",label="moves3/moves4",value=false,x=4,y=3},--19
+	{class="label",label="x",x=3,y=4},--20
+	{class="floatedit",name="move_x",value=0,x=4,y=4},--21
+	{class="label",label="y",x=3,y=5},--22
+	{class="floatedit",name="move_y",value=0,x=4,y=5},--23
 	-- Dialog Checker
-	{class="label",label="Dialog Checker",x=3,y=6,width=2},
-	{class="checkbox",label="overlap checker",name="dialog_olp",value=true,x=3,y=7,width=2},
-	{class="checkbox",label="bilang checker",name="dialog_bl",value=true,x=3,y=8,width=2},
-	{class="dropdown",name="dialog_blstyle",items={"zho\\Neng","zho\\Nany","any\\Neng","any\\Nany"},value="zho\\Neng",x=3,y=9,width=2},
-	{class="checkbox",label="overlength checker",name="dialog_ol",value=true,x=3,y=10,width=2},
-	{class="label",label="buffer 1",x=3,y=11},
+	{class="label",label="■ Dialog Checker",x=3,y=6,width=2},--24
+	{class="checkbox",label="overlap checker",name="dialog_olp",value=true,x=3,y=7,width=2},--25
+	{class="checkbox",label="bilang checker",name="dialog_bl",value=true,x=3,y=8,width=2},--26
+	{class="dropdown",name="dialog_blstyle",items={"zho\\Neng","zho\\Nany","any\\Neng","any\\Nany"},value="zho\\Neng",x=3,y=9,width=2},--27
+	{class="checkbox",label="overlength checker",name="dialog_ol",value=true,x=3,y=10,width=2},--28
+	{class="label",label="buffer 1",x=3,y=11},--29
 	{class="floatedit",name="dialog_bf1",value=0.6,x=4,y=11,hint="Buffer for CHS SUBS, Arg:0-1. ACT ON overlength checker, smaller buffer means narrower space for SUBS."},
-    {class="label",label="buffer 2",x=3,y=12},
+    {class="label",label="buffer 2",x=3,y=12},--31
 	{class="floatedit",name="dialog_bf2",value=0.75,x=4,y=12,hint="Buffer for ENG SUBS, Arg:0-1. ACT ON overlength checker, smaller buffer means narrower space for SUBS."},
 	-- AE Sequential Picture Importer
-	{class="label",label="AE Sequential Picture Importer",x=6,y=1,width=2},
-	{class="label",label="FPS",x=6,y=2},
-	{class="floatedit",name="ae_fps",value=23.976,x=7,y=2},
-	{class="label",label="fade in time",x=6,y=3},
-	{class="intedit",name="ae_fin",value=0,x=7,y=3},
-	{class="label",label="fade out time",x=6,y=4},
-	{class="intedit",name="ae_fout",value=0,x=7,y=4},
+	{class="label",label="■ AE Sequential Picture Importer",x=6,y=1,width=3},--33
+	{class="label",label="FPS",x=6,y=2},--34
+	{class="floatedit",name="ae_fps",value=23.976,x=7,y=2,width=2},--35
+	{class="label",label="fade in time",x=6,y=3},--36
+	{class="intedit",name="ae_fin",value=0,x=7,y=3,width=2},--37
+	{class="label",label="fade out time",x=6,y=4},--38
+	{class="intedit",name="ae_fout",value=0,x=7,y=4,width=2},--39
+	-- Tag Copy
+	{class="label",label="■ Tag Copy",x=6,y=5,width=2},--40
+	{class="checkbox",name="copy_head",label="head",value=true,x=6,y=6},--41
+	{class="checkbox",name="copy_N",label="\\N",value=true,x=7,y=6},--42
+	{class="checkbox",name="copy_I",label="|",value=false,x=8,y=6},--43
+	{class="label",label="Copy your template line here",x=6,y=7,width=3},--44
+	{class="edit",name="copy_template",value="",x=6,y=8,width=3},--45
+	-- Mocha Data Visualization
+	{class="label",label="■ Mocha Data Visualization",x=6,y=9,width=3},--46
+	{class="label",label="mode",x=6,y=10},--47
+	{class="dropdown",name="data_mode",items={"x-t","t-x"},value="x-t",x=7,y=10,width=2},--48
+	{class="label",label="object",x=6,y=11},--49
+	{class="dropdown",name="data_obj",items={"x","y","fscx","fscy"},x=7,y=11,width=2},--50
+	{class="checkbox",name="data_num",label="show line index",value=true,x=7,y=12,width=2},--51
+	-- Shift Multiline
+	{class="label",label="■ Shift Multiline",x=0,y=10,width=2},--52
+	{class="checkbox",label="backward",name="shift_b",value=false,x=0,y=11},--53
+	{class="checkbox",label="forward",name="shift_f",value=false,x=1,y=11},--54
+	{class="floatedit",name="shift_n",value=1,x=0,y=12},--55
+	{class="label",label="line(s)",x=1,y=12},--56
     -- note
 	{class="label",label="      ",x=2,y=1},
 	{class="label",label="      ",x=5,y=1},
 	
-	{class="label",label="AE Sequential Picture Importer: ",x=0,y=13,width=3},
-	{class="label",label="Press the AE button to Grab AE Sequential Picture Path and Run.",x=3,y=13,width=5},
-	{class="label",label="Please choose the file with INDEX 001 in the file picker.",x=3,y=14,width=5},
-    {class="label",label="Centralize Drawing:",x=0,y=15},
-	{class="label",label="require Yutils library, only work under \\an7 tag.",x=1,y=15,width=6},
-	{class="label",label="Delete Empty Lines:",x=0,y=16},
-	{class="label",label="the program may not terminate properly, just ignore it.",x=1,y=16,width=6},
-	{class="label",label="Dialog Checker:",x=0,y=17},
-	{class="label",label="Yutils library is required for overlength checker.",x=1,y=17,width=6},
-	{class="label",label="Move!:",x=0,y=18},
-	{class="label",label="Yutils library is required for clip movement.",x=1,y=18,width=6}
+	{class="label",label="AE Sequential Picture Importer: ",x=0,y=14,width=3},
+	{class="label",label="Press the AE button to Grab AE Sequential Picture Path and Run.",x=3,y=14,width=6},
+	{class="label",label="Please choose the file with INDEX 001 in the file picker.",x=3,y=15,width=5},
+	{class="label",label="Centralize Drawing:",x=0,y=16},
+	{class="label",label="require Yutils library, only work under \\an7 tag.",x=1,y=16,width=5},
+	{class="label",label="Delete Empty Lines:",x=0,y=17},
+	{class="label",label="the program may not terminate properly, just ignore it.",x=1,y=17,width=6},
+	{class="label",label="Dialog Checker:",x=0,y=18},
+	{class="label",label="Yutils library is required for overlength checker.",x=1,y=18,width=6},
+	{class="label",label="Move!:",x=0,y=19},
+	{class="label",label="Yutils library is required for clip movement.",x=1,y=19,width=6}
 }
 local buttons = {"Run","AE","Quit"}
 
@@ -85,6 +107,12 @@ function main(subtitle, selected, active)
     local meta,styles=karaskel.collect_head(subtitle,false)
 	local xres, yres, ar, artype = aegisub.video_size()
 	local ae_path = nil
+	local copy_template,copy_template_2 = {},{}
+	local data = {}
+	local data_max,data_min,data_index = 0,0,1
+
+	-- change the content shown in UI
+	dialog_config[45].value = clipboard.get()
 
     local pressed, result = aegisub.dialog.display(dialog_config,buttons)
     if (pressed=="Quit") then aegisub.cancel() end
@@ -99,6 +127,7 @@ function main(subtitle, selected, active)
 		aegisub.cancel()
 	end
 
+	-- Yutils
 	if result.option=="Dialog Checker" and result.dialog_ol==true then 
 		Yutils = require('Yutils')
 	elseif result.option=="Centralize Drawing" then 
@@ -107,8 +136,10 @@ function main(subtitle, selected, active)
 		Yutils = require('Yutils')
 	end
 
+	-- log
 	local log = {}
 	log.overlength,log.overlap,log.bilang = 0,0,0
+	-- count
 	local N = #selected
 
 	-- Delete Empty Lines
@@ -131,6 +162,17 @@ function main(subtitle, selected, active)
 			end
 		end
 		goto loop_end
+	elseif result.option=="Multiline Importer" then
+		local file_path = aegisub.dialog.open('Multiline Importer', '', '', 'TEXT files (.txt)|*.txt|All Files (.)|.', false, true)
+		local file = io.open(file_path,"r")
+		for j in file:lines() do
+			j = j:gsub("^[ \t]+","")
+			j = j:gsub("[ \t]+$","")
+			if j~="" then
+				table.insert(data,j)
+			end
+		end
+		file:close()
 	end
 
     for si,li in ipairs(selected) do
@@ -382,6 +424,70 @@ function main(subtitle, selected, active)
 			-- aegisub.log(data.."\nThe Mocha Data have been copied to the clipboard!")
 			-- clipboard.set(data)
 			-- aegisub.cancel()
+		elseif result.option=="Mocha Data Visualization" then
+			linetext = linetext:gsub("^{}","")
+			if (N>visualization_max_height and result.data_mode=="x-t") or (N>visualization_max_width and result.data_mode=="t-x") then 
+				aegisub.log("too many lines")
+				aegisub.cancel()
+			end
+			if si==1 and result.data_num==true then
+				for j=1,1000 do
+					if subtitle[j].class=="dialogue" then
+						data_index = li - j + 1
+						break
+					end
+				end
+			end
+			-- get information
+			local temp = nil
+			if result.data_obj=="x" then
+				temp = tonumber(linetext:match("\\pos%(([%d%.%-]+)"))
+				table.insert(data,temp)
+			elseif result.data_obj=="y" then
+				temp = tonumber(linetext:match("\\pos%([^,]*,([%d%.%-]+)"))
+				table.insert(data,temp)
+			elseif result.data_obj=="fscx" then
+				temp = tonumber(linetext:match("\\fscx([%d%.]+)"))
+				table.insert(data,temp)
+			elseif result.data_obj=="fscy" then
+				temp = tonumber(linetext:match("\\fscy([%d%.]+)"))
+				table.insert(data,temp)
+			end
+			if si==1 then
+				data_min,data_max = temp,temp
+			else
+				data_min,data_max = math.min(temp,data_min),math.max(temp,data_max)
+			end
+		elseif result.option=="Multiline Importer" then
+			if si<=#data then
+				linetext = data[si]
+			else
+				linetext = linetext:gsub("^{}","")
+				break
+			end
+
+			if si==N and #data>N then
+				local time = line.end_time
+				if li == #subtitle then
+					for j=1,#data-N do	
+						subtitle.append(line)
+						local new = subtitle[li+j]
+						new.start_time = time+(j-1)*5000
+						new.end_time = time+j*5000
+						new.text = data[N+j]
+						subtitle[li+j] = new
+					end
+				else
+					for j=1,#data-N do	
+						subtitle.insert(li+j,line)
+						local new = subtitle[li+j]
+						new.start_time = time+(j-1)*5000
+						new.end_time = time+j*5000
+						new.text = data[N+j]
+						subtitle[li+j] = new
+					end
+				end
+			end
 		elseif result.option=="Move!" then
 			if line.comment==false then
 				if result.move_pos==true then
@@ -434,15 +540,64 @@ function main(subtitle, selected, active)
 					end)
 				end
 			end
-		elseif result.option=="Seperate Bilingual SUBS by \\N" then
+		elseif result.option=="Separate Bilingual SUBS by \\N" then
 			linetext = linetext:gsub("^{}","")
 			linetext=linetext:gsub("([\128-\191][^ ]*) +([\1-\127]+)$","%1\\N%2")
+		elseif result.option=="Shift Multiline" then
+			linetext = linetext:gsub("^{}","")
+			if (result.shift_b == true and result.shift_f == true) or (result.shift_b == false and result.shift_f == false) then
+				aegisub.cancel()
+			elseif si==1 and result.shift_b == true then
+				result.shift_n = -1* result.shift_n
+			end
+			local nli = round(li+result.shift_n)
+			local new = subtitle[nli]
+			new.actor = ""
+			new.actor = linetext
+			subtitle[nli] = new
+			linetext = ""
         elseif result.option=="Swap SUBS Splitted by \\N" then
 			linetext = linetext:gsub("^{}","")
 			if linetext:match("\\N *{[^}]*}") then
 				linetext = linetext:gsub("(.*)\\N *({[^}]*})(.*)","%3\\N%2%1")
 			else
 				linetext = linetext:gsub("(.*)\\N(.*)","%2\\N%1")
+			end
+		elseif result.option=="Tag Copy" then
+			linetext = linetext:gsub("^{}","")
+			-- first get the template
+			if si==1 then
+				result.copy_template = result.copy_template:gsub("[^,]*,","",9)
+				result.copy_template = result.copy_template:gsub("\\h","|")
+				local temp = result.copy_template:match("^{[^}]*}[ |]*")
+				temp = temp:gsub("|","\\h")
+				table.insert(copy_template,temp)
+				for j in result.copy_template:gmatch("[ |]*\\N[ |]*") do
+					j = j:gsub("|","\\h")
+					table.insert(copy_template,j)
+				end
+				result.copy_template = result.copy_template:gsub("^{[^}]*}[ |]*","")
+				result.copy_template = result.copy_template:gsub("[ |]*\\N[ |]*","")
+				for j in result.copy_template:gmatch("[ |]*{[^}]*}[ |]*") do
+					j = j:gsub("|","\\h")
+					table.insert(copy_template_2,j)
+				end
+			end
+			-- then Copy
+			if result.copy_head == true then
+				linetext = linetext:gsub("^ *",copy_template[1])
+			end
+
+			if result.copy_N == true then
+				for j=2,#copy_template do
+					linetext = linetext:gsub(" *\\N *",copy_template[j],1)
+				end
+			end
+
+			if result.copy_I ==true then
+				for j=1,#copy_template_2 do
+					linetext = linetext:gsub(" *| *",copy_template_2[j],1)
+				end
 			end
 		else
 			linetext = linetext:gsub("^{}","")
@@ -454,8 +609,71 @@ function main(subtitle, selected, active)
     end
 
 	-- log output
-	if result.option=="Dialog Checker" then
+	if result.option == "Dialog Checker" then
 		aegisub.log(log.overlength.." overlength mistake(s),\n"..log.overlap.." overlap mistake(s),\n"..log.bilang.." bilang mistake(s) have been found!")
+	-- Mocha Data Visualization
+	elseif result.option == "Mocha Data Visualization" then
+		local data_visual,data_buttons = {},{"Read"}
+
+		if result.data_mode=="x-t" then
+			local unit = (data_max-data_min)/(visualization_max_width-1)
+			-- the first line: filled with xxx
+			for j = 0,visualization_max_width+1 do
+				table.insert(data_visual,{class="label",label="x",x=j,y=0})
+			end
+
+			for j = 1,N do
+				-- the point
+				local temp = round((data[j]-data_min)/unit) + 1
+				table.insert(data_visual,{class="label",label="x",x=temp+1,y=j})
+				-- the number
+				if result.data_num==true then
+					local j1,j2 = data_index%10,math.floor((data_index%100)/10)
+					table.insert(data_visual,{class="label",label=j1,x=temp,y=j})
+					table.insert(data_visual,{class="label",label=j2,x=temp-1,y=j})
+					data_index = data_index + 1
+				end
+			end
+
+			if result.data_obj=="x" or result.data_obj=="fscx" then table.insert(data_visual,{class="label",label="X",x=visualization_max_width+2,y=0})
+			elseif result.data_obj=="y" or result.data_obj=="fscy" then table.insert(data_visual,{class="label",label="Y",x=visualization_max_width+2,y=0})
+			end
+			table.insert(data_visual,{class="label",label="T",x=0,y=N})
+		elseif result.data_mode=="t-x" then
+			local unit = (data_max-data_min)/(visualization_max_height-1)
+			-- the first line: filled with xxx
+			for j = 0,visualization_max_height+1 do
+				table.insert(data_visual,{class="label",label="x",x=0,y=j})
+			end
+
+			for j = 1,N do
+				-- the point
+				local temp = round((data[j]-data_min)/unit) + 1
+				table.insert(data_visual,{class="label",label="x",x=j,y=temp+1})
+				-- the number
+				if result.data_num==true then
+					local j1,j2 = data_index%10,math.floor((data_index%100)/10)
+					table.insert(data_visual,{class="label",label=j1,x=j,y=temp})
+					table.insert(data_visual,{class="label",label=j2,x=j,y=temp-1})
+					data_index = data_index + 1
+				end
+			end
+
+			if result.data_obj=="x" or result.data_obj=="fscx" then table.insert(data_visual,{class="label",label="X",x=0,y=visualization_max_height+2})
+			elseif result.data_obj=="y" or result.data_obj=="fscy" then table.insert(data_visual,{class="label",label="Y",x=0,y=visualization_max_height+2})
+			end
+			table.insert(data_visual,{class="label",label="T",x=N,y=0})
+		end
+
+		local data_pressed, data_result = aegisub.dialog.display(data_visual,data_buttons)
+	elseif result.option == "Shift Multiline" then
+		for si,li in ipairs(selected) do
+			local nli = round(li+result.shift_n)
+			local new = subtitle[nli]
+			new.text = new.actor
+			new.actor = ""
+			subtitle[nli] = new
+		end
 	end
 	
 	:: loop_end ::
@@ -589,6 +807,10 @@ function drawing_position(ltext,line,xres,yres)
 	end
 	center,middle = (left+right)/2, (top+bottom)/2
 	return x,y
+end
+
+function round(x)
+	return math.floor(x+0.5)
 end
 
 function macro_validation(subtitle, selected, active)

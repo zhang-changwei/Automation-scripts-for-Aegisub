@@ -18,7 +18,7 @@
     | C Smooth                        | v1.0    |
     | * C Scaling Rotation Conflict Solution | v1.1 |
     | * C Change SUB resolution to match video PATCH | v1.0 |
-    | C Utilities                     | v1.4    |
+    | C Utilities                     | v1.5    |
     > 在Automation Manager Description栏中查看脚本版本信息  
     > 若你的脚本在上述表格中且无版本信息 可能需要考虑更新脚本  
     > *表示“非主线”脚本，未列出的脚本为测试性或实验性的
@@ -163,6 +163,7 @@
 ## __INF. 更新日志__
 | Date | Script | Version | Detail |
 |------|--------|---------|--------|
+|2021.7.10|C Utilities|1.5|加入一大堆新功能|
 |2021.7.8|C Utilities|1.4|增添AE序列图导入功能|
 |2021.7.8|C Utilities|1.3|增加进度条显示，进一步细分双语checker，改变部分逻辑，加快运行速度，修正了一些bug|
 |2021.6.24|C Translation & Gradient| |将`math.power`替换为`^`，以兼容LUA 5.4|
