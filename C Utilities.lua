@@ -6,9 +6,9 @@ goto my repository https://github.com/zhang-changwei/Automation-scripts-for-Aegi
 ]]
 
 script_name="C Utilities"
-script_description="Utilities v1.5"
+script_description="Utilities v1.5.1"
 script_author="chaaaaang"
-script_version="1.5" 
+script_version="1.5.1" 
 
 include('karaskel.lua')
 re = require 'aegisub.re'
@@ -76,7 +76,7 @@ local dialog_config = {
 	{class="label",label="mode",x=6,y=10},--47
 	{class="dropdown",name="data_mode",items={"x-t","t-x"},value="x-t",x=7,y=10,width=2},--48
 	{class="label",label="object",x=6,y=11},--49
-	{class="dropdown",name="data_obj",items={"x","y","fscx","fscy"},x=7,y=11,width=2},--50
+	{class="dropdown",name="data_obj",items={"x","y","fscx","fscy","frz"},x=7,y=11,width=2},--50
 	{class="checkbox",name="data_num",label="show line index",value=true,x=7,y=12,width=2},--51
 	-- Shift Multiline
 	{class="label",label="■ Shift Multiline",x=0,y=10,width=2},--52
@@ -452,6 +452,9 @@ function main(subtitle, selected, active)
 			elseif result.data_obj=="fscy" then
 				temp = tonumber(linetext:match("\\fscy([%d%.]+)"))
 				table.insert(data,temp)
+			elseif result.data_obj=="frz" then
+				temp = tonumber(linetext:match("\\frz([%d%.%-]+)"))
+				table.insert(data,temp)
 			end
 			if si==1 then
 				data_min,data_max = temp,temp
@@ -637,6 +640,7 @@ function main(subtitle, selected, active)
 
 			if result.data_obj=="x" or result.data_obj=="fscx" then table.insert(data_visual,{class="label",label="X",x=visualization_max_width+2,y=0})
 			elseif result.data_obj=="y" or result.data_obj=="fscy" then table.insert(data_visual,{class="label",label="Y",x=visualization_max_width+2,y=0})
+			elseif result.data_obj=="frz" then table.insert(data_visual,{class="label",label="Z",x=visualization_max_width+2,y=0})
 			end
 			table.insert(data_visual,{class="label",label="T",x=0,y=N})
 		elseif result.data_mode=="t-x" then
@@ -661,6 +665,7 @@ function main(subtitle, selected, active)
 
 			if result.data_obj=="x" or result.data_obj=="fscx" then table.insert(data_visual,{class="label",label="X",x=0,y=visualization_max_height+2})
 			elseif result.data_obj=="y" or result.data_obj=="fscy" then table.insert(data_visual,{class="label",label="Y",x=0,y=visualization_max_height+2})
+			elseif result.data_obj=="frz" then table.insert(data_visual,{class="label",label="Z",x=0,y=visualization_max_height+2})
 			end
 			table.insert(data_visual,{class="label",label="T",x=N,y=0})
 		end
