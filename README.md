@@ -15,10 +15,9 @@
     | C Gradient                      | v2.1    |
     | C Merge Bilingual SUBS          | v1.1    |
     | C Translation                   | v3.2    |
-    | C Smooth                        | v1.0    |
     | * C Scaling Rotation Conflict Solution | v1.1 |
     | * C Change SUB resolution to match video PATCH | v1.0 |
-    | C Utilities                     | v1.5.1  |
+    | C Utilities                     | v1.6    |
     > 在Automation Manager Description栏中查看脚本版本信息  
     > 若你的脚本在上述表格中且无版本信息 可能需要考虑更新脚本  
     > *表示“非主线”脚本，未列出的脚本为测试性或实验性的
@@ -163,6 +162,8 @@
 ## __INF. 更新日志__
 | Date | Script | Version | Detail |
 |------|--------|---------|--------|
+|2021.7.27|C Smooth||放弃维护|
+|2021.7.27|C Utilities|1.6|SDH,AE Importer更新，Multiline Importer增加从剪切板导入，删掉了Tag Copy功能|
 |2021.7.13|C Utilities|1.5.1|摩卡可视化补上了对frz的支持|
 |2021.7.10|C Utilities|1.5|加入一大堆新功能|
 |2021.7.8|C Utilities|1.4|增添AE序列图导入功能|

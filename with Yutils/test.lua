@@ -27,21 +27,16 @@ function main(subtitle, selected)
     local meta,styles=karaskel.collect_head(subtitle,false)
 	local xres, yres, ar, artype = aegisub.video_size()
 
-	-- UI stuff
-	for j = 2,180 do
-		for k = 2,40 do
-			if k==2 then table.insert(dialog_config,{class="label",label="x",x=j,y=0}) end
-		end
-	end
-	local pressed, result = aegisub.dialog.display(dialog_config,buttons)
-    if (pressed=="Quit") then aegisub.cancel() end
+
 
 		for si,li in ipairs(selected) do
 			
 			local line=subtitle[li]
 			karaskel.preproc_line(subtitle,meta,styles,line)
 			local linetext = line.text
-				
+
+			BMP_READER = Yutils.decode.create_bmp_reader("E:\\ZiMuZu\\0_Karaoke\\Yutils\\docs\\favicon.png")
+			line.text = BMP_READER.width()
 			subtitle[li]=line
 		end
 
