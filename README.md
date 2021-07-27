@@ -11,6 +11,7 @@
 * __当前各脚本版本信息__
     | Name                            | Version |
     |---------------------------------|---------|
+    | C Fast Tools                    | v1.0    |
     | C Font Resize (Mocha Deshaking) | v1.3    |
     | C Gradient                      | v2.1    |
     | C Merge Bilingual SUBS          | v1.1    |

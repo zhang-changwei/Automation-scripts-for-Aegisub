@@ -5,7 +5,7 @@ README:
 
 --Script properties
 script_name="C Fast Tools"
-script_description="Fast Tools"
+script_description="Fast Tools v1.0"
 script_author="chaaaaang"
 script_version="1.0"
 
