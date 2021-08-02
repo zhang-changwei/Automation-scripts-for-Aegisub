@@ -11,14 +11,15 @@
 * __当前各脚本版本信息__
     | Name                            | Version |
     |---------------------------------|---------|
-    | C Fast Tools                    | v1.0    |
+    | C Fast Tools                    | v1.1    |
     | C Font Resize (Mocha Deshaking) | v1.3    |
     | C Gradient                      | v2.1    |
     | C Merge Bilingual SUBS          | v1.1    |
+    | C Jump                          | v1.0    |
     | C Translation                   | v3.2    |
     | * C Scaling Rotation Conflict Solution | v1.1 |
     | * C Change SUB resolution to match video PATCH | v1.0 |
-    | C Utilities                     | v1.6    |
+    | C Utilities                     | v1.7  |
     > 在Automation Manager Description栏中查看脚本版本信息  
     > 若你的脚本在上述表格中且无版本信息 可能需要考虑更新脚本  
     > *表示“非主线”脚本，未列出的脚本为测试性或实验性的
@@ -163,6 +164,9 @@
 ## __INF. 更新日志__
 | Date | Script | Version | Detail |
 |------|--------|---------|--------|
+|2021.8.2|C Fast Tools|1.1|实现按enter加\N的正常逻辑|
+|2021.8.2|C Jump|1.0|行间快速跳转工具|
+|2021.7.28|C Utilities|1.7|Move!模块加了一个move2pos按钮，使用更方便，增加删除注释行和调色（实验性）功能，修正了少量bug，加快了运行速度|
 |2021.7.27|C Smooth||放弃维护|
 |2021.7.27|C Utilities|1.6|SDH,AE Importer更新，Multiline Importer增加从剪切板导入，删掉了Tag Copy功能|
 |2021.7.13|C Utilities|1.5.1|摩卡可视化补上了对frz的支持|

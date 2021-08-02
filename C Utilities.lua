@@ -6,22 +6,44 @@ goto my repository https://github.com/zhang-changwei/Automation-scripts-for-Aegi
 ]]
 
 script_name="C Utilities"
-script_description="Utilities v1.6"
+script_description="Utilities v1.7"
 script_author="chaaaaang"
-script_version="1.6" 
+script_version="1.7" 
 
 include('karaskel.lua')
-re = require 'aegisub.re'
-clipboard = require 'aegisub.clipboard'
+re = nil
+util = nil
+clipboard = nil
 Yutils = nil
 
 local visualization_max_width, visualization_max_height = 180, 41
 
+local sRGB_2_XYZ_MAT = {
+	{0.4124564, 0.3575761, 0.1804375},
+ 	{0.2126829, 0.7151522, 0.0721750},
+	{0.0193339, 0.1191920, 0.9503041}	
+}
+-- local XYZ_2_sRGB_MAT = {
+-- 	{3.2409699419, -1.5373831776, -0.4986107603},
+-- 	{-0.9692436363,  1.8759675015, 0.0415550574},
+-- 	{0.0556300797, -0.2039769589, 1.0569715142}
+-- }
+-- local Rec2020_2_XYZ_MAT = {
+-- 	{0.636955, 0.144619, 0.168856},
+-- 	{0.262698, 0.678008, 0.059293},
+-- 	{0,        0.028073, 1.060830}
+-- }
+local XYZ_2_Rec2020_MAT = {
+	{ 1.716660, -0.355672, -0.253367},
+	{-0.666672,  1.616460,  0.0157678},
+	{0.0176423, -0.0427767, 0.942241}
+}
+
 local dialog_config = {
 	{class="label",label="Options",x=0,y=0},--1
 	{class="dropdown",name="option",
-		items={"AE Sequential Picture Importer","Centralize Drawing","Delete Empty Lines","Delete SDH Comment",
-		"Dialog Checker","Mocha Data Visualization","Move!","Multiline Importer","Separate Bilingual SUBS by \\N","Shift Multiline","Swap SUBS Splitted by \\N"},
+		items={"AE Sequential Picture Importer","Centralize Drawing","Delete Comment Lines","Delete Empty Lines","Delete SDH Comment",
+		"Dialog Checker","Mocha Data Visualization","Move!","Multiline Importer","Separate Bilingual SUBS by \\N","SDR2HDR ColorGrading","Shift Multiline","Swap SUBS Splitted by \\N"},
 		x=1,y=0,width=5},--2
     -- Delete SDH Comment
     {class="label",label="■ Delete SDH Comment",x=0,y=1,width=2},--3
@@ -37,7 +59,7 @@ local dialog_config = {
     {class="label",label="to",x=0,y=8},--13
     {class="edit",name="SDH_to",value=" ",x=0,y=9,width=2,hint="default: one blank"},--14
 	-- Move!
-	{class="label",label="■ Move!",x=3,y=1,width=2},--15
+	{class="label",label="■ Move!",x=3,y=1},--15
 	{class="checkbox",name="move_pos",label="pos",value=true,x=3,y=2},--16
 	{class="checkbox",name="move_clip",label="clip",value=false,x=4,y=2},--17
 	{class="checkbox",name="move_org",label="org",value=false,x=5,y=2},--18
@@ -73,13 +95,6 @@ local dialog_config = {
 	{class="label",label="■ Multiline Importer",x=7,y=7,width=2},--45
 	{class="checkbox",label="from file",name="mi_file",x=7,y=8},--46
 	{class="checkbox",label="from clipboard",value=true,name="mi_clip",x=8,y=8},--47
-	-- Tag Copy
-	-- {class="label",label="■ Tag Copy",x=7,y=5,width=2},--40
-	-- {class="checkbox",name="copy_head",label="head",value=true,x=7,y=6},--41
-	-- {class="checkbox",name="copy_N",label="\\N     ",value=true,x=8,y=6},--42
-	-- {class="checkbox",name="copy_I",label="|",value=false,x=9,y=6},--43
-	-- {class="label",label="Copy your template line here",x=7,y=7,width=3},--44
-	-- {class="edit",name="copy_template",value="",x=7,y=8,width=3},--45
 	-- Mocha Data Visualization
 	{class="label",label="■ Mocha Data Visualization",x=7,y=9,width=2},--48
 	{class="label",label="mode",x=7,y=10},--49
@@ -94,7 +109,7 @@ local dialog_config = {
 	{class="floatedit",name="shift_n",value=1,x=0,y=12},--57
 	{class="label",label="line(s)",x=1,y=12},--58
 	-- forget stuff
-	
+	{class="checkbox",label="move2pos",name="move_m2p",x=4,y=1,width=2,hint="use move data in the first line as arg x,y"},--59
     -- note
 	{class="label",label="         ",x=2,y=1},
 	{class="label",label="         ",x=6,y=1},
@@ -102,14 +117,8 @@ local dialog_config = {
 	{class="label",label="AE Sequential Picture Importer: ",x=0,y=14,width=3},
 	{class="label",label="Press the AE button to Grab AE Sequential Picture Path and Run.",x=3,y=14,width=7},
 	{class="label",label="Please choose the file with INDEX 001 in the file picker.",x=3,y=15,width=6},
-	{class="label",label="Centralize Drawing:",x=0,y=16},
-	{class="label",label="require Yutils library, only work under \\an7 tag.",x=1,y=16,width=5},
-	{class="label",label="Delete Empty Lines:",x=0,y=17},
-	{class="label",label="the program may not terminate properly, just ignore it.",x=1,y=17,width=7},
-	{class="label",label="Dialog Checker:",x=0,y=18},
-	{class="label",label="Yutils library is required for overlength checker.",x=1,y=18,width=7},
-	{class="label",label="Move!:",x=0,y=19},
-	{class="label",label="Yutils library is required for clip movement.",x=1,y=19,width=7}
+	{class="label",label="Yutils library: Is required for Centralize Drawing, Dialog Checker/overlength checker and Move!/clip",x=0,y=16,width=9},
+	{class="label",label="SDR2HDR ColorGrading: Expermiental.",x=0,y=17,width=7}
 }
 local buttons = {"Run","AE","Quit"}
 
@@ -118,13 +127,10 @@ function main(subtitle, selected, active)
     local meta,styles=karaskel.collect_head(subtitle,false)
 	local xres, yres, ar, artype = aegisub.video_size()
 	local ae_path = nil
-	-- local copy_template,copy_template_2 = {},{}
-	local data = {} -- Multiline Importer & Mocha Visualization
-	local data_max,data_min,data_index = 0,0,1
+	local data = {} -- Delete Comment Lines & Delete Empty Lines & Multiline Importer & Mocha Visualization
+	local data_max,data_min,data_index = 0,0,1 -- Mocha Visualization
 
 	-- change the content shown in UI
-	-- Tag Copy
-	-- dialog_config[45].value = clipboard.get()
 	-- AE
 	dialog_config[42].value = xres
 	dialog_config[44].value = yres
@@ -142,13 +148,19 @@ function main(subtitle, selected, active)
 		aegisub.cancel()
 	end
 
-	-- Yutils
+	-- External library
 	if result.option=="Dialog Checker" and result.dialog_ol==true then 
 		Yutils = require('Yutils')
 	elseif result.option=="Centralize Drawing" then 
 		Yutils = require('Yutils')
 	elseif result.option=="Move!" and result.move_clip==true then
 		Yutils = require('Yutils')
+	elseif result.option=="Delete SDH Comment" then
+		re = require 'aegisub.re'
+	elseif result.option=="Multiline Importer" then
+		clipboard = require 'aegisub.clipboard'
+	elseif result.option=="SDR2HDR ColorGrading" then
+		util = require 'aegisub.util'
 	end
 
 	-- log
@@ -158,25 +170,46 @@ function main(subtitle, selected, active)
 	local N = #selected
 
 	-- Stuff shaould be done before the loop
-	if result.option=="Delete Empty Lines" then
+	if result.option=="Delete Comment Lines" then
 		local i = 1
 		local total = #subtitle
 		while(i<=total) do
 			local li = subtitle[i]
 			if li.class=="dialogue" then
-				li.text = li.text:gsub("{}","")
-				li.text = li.text:gsub(" *","")
-				if li.text=="" then
+				if li.comment==true then
 					subtitle.delete(i)
 					total = total - 1
 				else
+					table.insert(data,i)
 					i = i + 1
 				end
 			else
 				i = i + 1
 			end
 		end
-		goto loop_end
+		aegisub.set_undo_point(script_name) 
+		return data
+	elseif result.option=="Delete Empty Lines" then
+		local i = 1
+		local total = #subtitle
+		while(i<=total) do
+			local li = subtitle[i]
+			if li.class=="dialogue" and li.comment==false then
+				li.text = li.text:gsub("{}","")
+				li.text = li.text:gsub(" *","")
+				if li.text=="" then
+					subtitle.delete(i)
+					total = total - 1
+				else
+					table.insert(data,i)
+					i = i + 1
+				end
+			else
+				i = i + 1
+			end
+		end
+		aegisub.set_undo_point(script_name) 
+		return data
 	elseif result.option=="Multiline Importer" then
 		if result.mi_clip==true and result.mi_file==false then
 			local file = clipboard.get()
@@ -284,10 +317,10 @@ function main(subtitle, selected, active)
             if linetext:match("\\fscy")==nil then linetext=linetext:gsub("^{","{\\fscy"..line.styleref.scale_y) end
             if linetext:match("\\fscx")==nil then linetext=linetext:gsub("^{","{\\fscx"..line.styleref.scale_x) end
 
-            if linetext:match("\\an(%d)")~="7" then 
-                aegisub.log("Please add \'\\an7\' tag first")
-                aegisub.cancel()
-            end
+            -- if linetext:match("\\an(%d)")~="7" then 
+            --     aegisub.log("Please add \'\\an7\' tag first")
+            --     aegisub.cancel()
+            -- end
 
             local pnum = linetext:match("\\p(%d)")
             local scale_x = linetext:match("\\fscx([%d%.]+)")/100
@@ -553,6 +586,14 @@ function main(subtitle, selected, active)
 				end
 			end
 		elseif result.option=="Move!" then
+			linetext = linetext:gsub("^{}","")
+			if result.move_m2p==true and si==1 then
+				local x1,y1,x2,y2 = linetext:match("\\move%(([^,]*),([^,]*),([^,]*),([^,%)]*)")
+				x1,x2,y1,y2 = tonumber(x1),tonumber(x2),tonumber(y1),tonumber(y2)
+				result.move_x,result.move_y = x2-x1,y2-y1
+				linetext = linetext:gsub("\\move%([^%)]*%)","\\pos("..x1..","..y1..")")
+			end
+
 			if line.comment==false then
 				if result.move_pos==true then
 					if linetext:match("\\move[^v]")==nil then
@@ -611,6 +652,22 @@ function main(subtitle, selected, active)
 		elseif result.option=="Separate Bilingual SUBS by \\N" then
 			linetext = linetext:gsub("^{}","")
 			linetext=linetext:gsub("([\128-\191][^ ]*) +([\1-\127]+)$","%1\\N%2")
+		elseif result.option=="SDR2HDR ColorGrading" then
+			linetext = linetext:gsub("^{}","")
+			linetext = linetext:gsub("(\\[1234]?v?c)&?H?(%x%x)(%x%x)(%x%x)&?",function (pre,b,g,r)
+				r,g,b = tonumber(r,16)/255,tonumber(g,16)/255,tonumber(b,16)/255
+				local cx,cy,cz = MAT_MUL(r,g,b,sRGB_2_XYZ_MAT)
+				::sdr2hdr::
+				r,g,b = MAT_MUL(cx,cy,cz,XYZ_2_Rec2020_MAT)
+				if r>1 or g>1 or b>1 then 
+					cy = 1
+					aegisub.log("r"..r.."g"..g.."b"..b)
+					goto sdr2hdr
+				end
+				r,g,b = round(r*255),round(g*255),round(b*255)
+				local colorstring = util.ass_color(r, g, b)
+				return pre..colorstring
+			end)
 		elseif result.option=="Shift Multiline" then
 			linetext = linetext:gsub("^{}","")
 			if (result.shift_b == true and result.shift_f == true) or (result.shift_b == false and result.shift_f == false) then
@@ -631,42 +688,6 @@ function main(subtitle, selected, active)
 			else
 				linetext = linetext:gsub("(.*)\\N(.*)","%2\\N%1")
 			end
-		elseif result.option=="Tag Copy" then
-		-- 	linetext = linetext:gsub("^{}","")
-		-- 	-- first get the template
-		-- 	if si==1 then
-		-- 		result.copy_template = result.copy_template:gsub("[^,]*,","",9)
-		-- 		result.copy_template = result.copy_template:gsub("\\h","|")
-		-- 		local temp = result.copy_template:match("^{[^}]*}[ |]*")
-		-- 		temp = temp:gsub("|","\\h")
-		-- 		table.insert(copy_template,temp)
-		-- 		for j in result.copy_template:gmatch("[ |]*\\N[ |]*") do
-		-- 			j = j:gsub("|","\\h")
-		-- 			table.insert(copy_template,j)
-		-- 		end
-		-- 		result.copy_template = result.copy_template:gsub("^{[^}]*}[ |]*","")
-		-- 		result.copy_template = result.copy_template:gsub("[ |]*\\N[ |]*","")
-		-- 		for j in result.copy_template:gmatch("[ |]*{[^}]*}[ |]*") do
-		-- 			j = j:gsub("|","\\h")
-		-- 			table.insert(copy_template_2,j)
-		-- 		end
-		-- 	end
-		-- 	-- then Copy
-		-- 	if result.copy_head == true then
-		-- 		linetext = linetext:gsub("^ *",copy_template[1])
-		-- 	end
-
-		-- 	if result.copy_N == true then
-		-- 		for j=2,#copy_template do
-		-- 			linetext = linetext:gsub(" *\\N *",copy_template[j],1)
-		-- 		end
-		-- 	end
-
-		-- 	if result.copy_I ==true then
-		-- 		for j=1,#copy_template_2 do
-		-- 			linetext = linetext:gsub(" *| *",copy_template_2[j],1)
-		-- 		end
-		-- 	end
 		else
 			linetext = linetext:gsub("^{}","")
 		end
@@ -681,7 +702,7 @@ function main(subtitle, selected, active)
 		aegisub.log(log.overlength.." overlength mistake(s),\n"..log.overlap.." overlap mistake(s),\n"..log.bilang.." bilang mistake(s) have been found!")
 	-- Mocha Data Visualization
 	elseif result.option == "Mocha Data Visualization" then
-		local data_visual,data_buttons = {},{"Read"}
+		local data_visual,data_buttons = {},{"Read",data_min.."-"..data_max}
 
 		if result.data_mode=="x-t" then
 			local unit = (data_max-data_min)/(visualization_max_width-1)
@@ -707,7 +728,7 @@ function main(subtitle, selected, active)
 			elseif result.data_obj=="y" or result.data_obj=="fscy" then table.insert(data_visual,{class="label",label="Y",x=visualization_max_width+2,y=0})
 			elseif result.data_obj=="frz" then table.insert(data_visual,{class="label",label="Z",x=visualization_max_width+2,y=0})
 			end
-			table.insert(data_visual,{class="label",label="T",x=0,y=N})
+			table.insert(data_visual,{class="label",label="T",x=0,y=N+1})
 		elseif result.data_mode=="t-x" then
 			local unit = (data_max-data_min)/(visualization_max_height-1)
 			-- the first line: filled with xxx
@@ -732,7 +753,7 @@ function main(subtitle, selected, active)
 			elseif result.data_obj=="y" or result.data_obj=="fscy" then table.insert(data_visual,{class="label",label="Y",x=0,y=visualization_max_height+2})
 			elseif result.data_obj=="frz" then table.insert(data_visual,{class="label",label="Z",x=0,y=visualization_max_height+2})
 			end
-			table.insert(data_visual,{class="label",label="T",x=N,y=0})
+			table.insert(data_visual,{class="label",label="T",x=N+1,y=0})
 		end
 
 		local data_pressed, data_result = aegisub.dialog.display(data_visual,data_buttons)
@@ -882,6 +903,40 @@ end
 function round(x)
 	return math.floor(x+0.5)
 end
+
+-- input x,y,z | output X,Y,Z
+function MAT_MUL(x,y,z,m)
+	return x*m[1][1]+y*m[1][2]+z*m[1][3], x*m[2][1]+y*m[2][2]+z*m[2][3], x*m[3][1]+y*m[3][2]+z*m[3][3]
+end
+
+-- input L | output V
+-- function Rec709_OETF(L)
+-- 	if L<=0.018 then
+-- 		return 0.45*L
+-- 	else
+-- 		return 1.099*L^0.45-0.099
+-- 	end
+-- end
+
+-- -- input V | output L
+-- function Rec709_ETOF(V)
+-- 	if V<=0.081 then
+-- 		return V/4.5
+-- 	elseif V>1 then
+-- 		return 1
+-- 	else
+-- 		return ((V+0.099)/1.099)^(1/0.45)
+-- 	end
+-- end
+
+-- function Rec2020_ETOF(V)
+-- 	local m1 = 2610/16384
+-- 	local m2 = 2523/4096*128
+-- 	local c1 = 3424/4096
+-- 	local c2 = 2413/4096*32
+-- 	local c3 = 2392/4096*32
+-- 	return 10000*(math.max(V^(1/m2)-c1,0)/(c2-c3*V^(1/m2)))^(1/m1)
+-- end
 
 function macro_validation(subtitle, selected, active)
     return true

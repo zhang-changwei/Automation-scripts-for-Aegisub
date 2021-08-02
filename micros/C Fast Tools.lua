@@ -1,13 +1,15 @@
 --[[
 README:
 
+goto my repository https://github.com/zhang-changwei/Automation-scripts-for-Aegisub for the latest version
+
 ]]
 
 --Script properties
 script_name="C Fast Tools"
-script_description="Fast Tools v1.0"
+script_description="Fast Tools v1.1"
 script_author="chaaaaang"
-script_version="1.0"
+script_version="1.1"
 
 clipboard = require 'aegisub.clipboard'
 
@@ -105,6 +107,19 @@ function fast_copy(subtitle, selected)
 	return selected
 end
 
+function fast_enter(subtitle, selected)
+    for si,li in ipairs(selected) do      
+        local line=subtitle[li]
+        local linetext = line.text
+        linetext = linetext.."\\N"
+        line.text = linetext
+        subtitle[li]=line
+    end
+	aegisub.set_undo_point(script_name)
+	return selected
+end
+
 --Register macro (no validation function required)
 aegisub.register_macro(script_name.."/fast_clip_iclip_converter",script_description,fast_clip_iclip_converter)
 aegisub.register_macro(script_name.."/fast_copy",script_description,fast_copy)
+aegisub.register_macro(script_name.."/fast_enter",script_description,fast_enter)
