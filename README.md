@@ -11,15 +11,15 @@
 * __当前各脚本版本信息__
     | Name                            | Version |
     |---------------------------------|---------|
+    | C Change SUB resolution to match video PATCH | v1.1 |
     | C Fast Tools                    | v1.1    |
     | C Font Resize (Mocha Deshaking) | v1.3    |
     | C Gradient                      | v2.1    |
     | C Merge Bilingual SUBS          | v1.1    |
     | C Jump                          | v1.0    |
     | C Translation                   | v3.2    |
+    | C Utilities                     | v1.7    |
     | * C Scaling Rotation Conflict Solution | v1.1 |
-    | * C Change SUB resolution to match video PATCH | v1.0 |
-    | C Utilities                     | v1.7  |
     > 在Automation Manager Description栏中查看脚本版本信息  
     > 若你的脚本在上述表格中且无版本信息 可能需要考虑更新脚本  
     > *表示“非主线”脚本，未列出的脚本为测试性或实验性的
@@ -164,6 +164,7 @@
 ## __INF. 更新日志__
 | Date | Script | Version | Detail |
 |------|--------|---------|--------|
+|2021.8.4|C Change SUB resolution to match video PATCH|1.1|重大更新，完全重写了代码，无需经过自带的分辨率转换（精度低，有奇妙的bug），运行脚本后手动调整分辨率即可|
 |2021.8.2|C Fast Tools|1.1|实现按enter加\N的正常逻辑|
 |2021.8.2|C Jump|1.0|行间快速跳转工具|
 |2021.7.28|C Utilities|1.7|Move!模块加了一个move2pos按钮，使用更方便，增加删除注释行和调色（实验性）功能，修正了少量bug，加快了运行速度|
