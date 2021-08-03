@@ -70,8 +70,8 @@ function main(subtitle, selected)
 
                 linetext = linetext:gsub("\\pos%(([%d%.%-]+),([%d%.%-]+)",function(a,b) return "\\pos("..a*rx..","..b*ry end)
                 linetext = linetext:gsub("\\org%(([%d%.%-]+),([%d%.%-]+)",function(a,b) return "\\org("..a*rx..","..b*ry end)
-                linetext = linetext:gsub("\\move%(([%d%.%-]+),([%d%.%-]+),([%d%.%-]+),([%d%.%-]+)",function(a,b,c,d) 
-                    return "\\move("..a*rx..","..b*ry..","..c*rx..","..d*ry end)
+                linetext = linetext:gsub("(\\movev?c?)%(([%d%.%-]+),([%d%.%-]+),([%d%.%-]+),([%d%.%-]+)",function(p,a,b,c,d) 
+                    return p.."("..a*rx..","..b*ry..","..c*rx..","..d*ry end)
                 -- moves
                 linetext = linetext:gsub("\\moves(%d)(%([^%)]*%))",function(p,a)
                     p = tonumber(p)
