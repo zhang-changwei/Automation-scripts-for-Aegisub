@@ -12,6 +12,7 @@
     | Name                            | Version |
     |---------------------------------|---------|
     | C Change SUB resolution to match video PATCH | v1.1 |
+    | C Effect                        | v1.1    |
     | C Fast Tools                    | v1.1    |
     | C Font Resize (Mocha Deshaking) | v1.3    |
     | C Gradient                      | v2.1    |
@@ -164,6 +165,8 @@
 ## __INF. 更新日志__
 | Date | Script | Version | Detail |
 |------|--------|---------|--------|
+|2021.8.7|Effect life game||一个小游戏|
+|2021.8.7|C Effect|1.1|加快运行速度，简化无用参数|
 |2021.8.4|C Change SUB resolution to match video PATCH|1.1|重大更新，完全重写了代码，无需经过自带的分辨率转换（精度低，有奇妙的bug），运行脚本后手动调整分辨率即可|
 |2021.8.2|C Fast Tools|1.1|实现按enter加\N的正常逻辑|
 |2021.8.2|C Jump|1.0|行间快速跳转工具|
