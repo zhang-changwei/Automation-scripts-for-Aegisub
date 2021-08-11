@@ -6,9 +6,9 @@ goto my repository https://github.com/zhang-changwei/Automation-scripts-for-Aegi
 ]]
 
 script_name="C Utilities"
-script_description="Utilities v1.7"
+script_description="Utilities v1.7.1"
 script_author="chaaaaang"
-script_version="1.7" 
+script_version="1.7.1" 
 
 include('karaskel.lua')
 re = nil
@@ -38,6 +38,13 @@ local XYZ_2_Rec2020_MAT = {
 	{-0.666672,  1.616460,  0.0157678},
 	{0.0176423, -0.0427767, 0.942241}
 }
+
+-- ZHO \u4e00-\u9fa5 \u3400-\u4db5
+-- KOR \u3130-\u318f \uac00-\ud7a3
+-- JPN \u0800-\u4e00
+-- 0000-007f 0xxxxxxx ASCII
+-- 0080-07ff 110xxxxx 10xxxxxx WESTERN EUROPE
+-- 0800-ffff 1110xxxx 10xxxxxx 10xxxxxx
 
 local dialog_config = {
 	{class="label",label="Options",x=0,y=0},--1
@@ -250,7 +257,7 @@ function main(subtitle, selected, active)
 			local ae_timeU = 1000/result.ae_fps
 			local ae_timeS,ae_timeE = line.start_time,line.end_time
 			local ae_fin,ae_fout = result.ae_fin,result.ae_fout
-			local j,ki,ko = 1,1,1
+			local j,k,ki,ko = 1,tonumber(ae_mid),1,1
 
 			while ae_timeS+(j-0.5)*ae_timeU<ae_timeE do
 				subtitle.insert(li+j-1,line)
@@ -258,17 +265,18 @@ function main(subtitle, selected, active)
 				new_line.start_time = ae_timeS + math.floor((j-1) * ae_timeU)
 				new_line.end_time = ae_timeS + math.floor(j * ae_timeU)
 
-				if j<10 then ae_mid = ae_mid:gsub("%d$",j)
-				elseif j<100 then ae_mid = ae_mid:gsub("%d%d$",j)
-				elseif j<1000 then ae_mid = ae_mid:gsub("%d%d%d$",j)
-				elseif j<10000 then ae_mid = ae_mid:gsub("%d%d%d%d$",j)
-				else ae_mid = ae_mid:gsub("%d%d%d%d%d$",j)
+				if k<10 then ae_mid = ae_mid:gsub("%d$",k)
+				elseif k<100 then ae_mid = ae_mid:gsub("%d%d$",k)
+				elseif k<1000 then ae_mid = ae_mid:gsub("%d%d%d$",k)
+				elseif k<10000 then ae_mid = ae_mid:gsub("%d%d%d%d$",k)
+				else ae_mid = ae_mid:gsub("%d%d%d%d%d$",k)
 				end
 				new_line.text = "{\\an7\\pos(0,0)\\bord0\\shad0\\fscx100\\fscy100\\1img("..ae_pre..ae_mid..ae_post..")\\p1}"
 				new_line.text = new_line.text..string.format("m 0 0 l %d 0 l %d %d l 0 %d",result.ae_w,result.ae_w,result.ae_h,result.ae_h)
 
 				subtitle[li+j-1] = new_line
 				j = j + 1
+				k = k + 1
 			end
 
 			if ae_fin>0 then
@@ -456,25 +464,25 @@ function main(subtitle, selected, active)
 					chs,eng = chs:gsub("{[^}]*}",""),eng:gsub("{[^}]*}","")
 					chs,eng = chs:gsub(" +",""),eng:gsub(" +","")
 					if result.dialog_blstyle=="zho\\Neng" then
-						if chs:match("[\128-\191]")~=nil and eng:match("[\128-\191]")==nil then
+						if chs:match("[\228-\233]")~=nil and chs:match("%a")==nil and eng:match("[\128-\191]")==nil then
 						else
 							line.actor = line.actor.."bilang "
 							log.bilang = log.bilang + 1
 						end
 					elseif result.dialog_blstyle=="zho\\Nany" then
-						if chs:match("[\128-\191]")~=nil and eng~="" then
+						if chs:match("[\228-\233]")~=nil and chs:match("%a")==nil and eng:match("[\228-\233]")==nil then
 						else
 							line.actor = line.actor.."bilang "
 							log.bilang = log.bilang + 1
 						end
 					elseif result.dialog_blstyle=="any\\Neng" then
-						if chs~="" and eng:match("[\128-\191]")==nil then
+						if chs:match("[\228-\233]")~=nil and eng:match("[\128-\191]")==nil then
 						else
 							line.actor = line.actor.."bilang "
 							log.bilang = log.bilang + 1
 						end
 					elseif result.dialog_blstyle=="any\\Nany" then
-						if chs~="" and eng~="" then
+						if chs:match("[\228-\233]")~=nil and eng:match("[\228-\233]")==nil then
 						else
 							line.actor = line.actor.."bilang "
 							log.bilang = log.bilang + 1
@@ -651,7 +659,7 @@ function main(subtitle, selected, active)
 			end
 		elseif result.option=="Separate Bilingual SUBS by \\N" then
 			linetext = linetext:gsub("^{}","")
-			linetext=linetext:gsub("([\128-\191][^ ]*) +([\1-\127]+)$","%1\\N%2")
+			linetext=linetext:gsub("([\228-\233][^ ]*) +([^\228-\233]+)$","%1\\N%2") -- 1110xxxx 10xxxxxx 10xxxxxx
 		elseif result.option=="SDR2HDR ColorGrading" then
 			linetext = linetext:gsub("^{}","")
 			linetext = linetext:gsub("(\\[1234]?v?c)&?H?(%x%x)(%x%x)(%x%x)&?",function (pre,b,g,r)

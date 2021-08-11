@@ -19,7 +19,7 @@
     | C Merge Bilingual SUBS          | v1.1    |
     | C Jump                          | v1.0    |
     | C Translation                   | v3.2    |
-    | C Utilities                     | v1.7    |
+    | C Utilities                     | v1.7.1  |
     | * C Scaling Rotation Conflict Solution | v1.1 |
     > 在Automation Manager Description栏中查看脚本版本信息  
     > 若你的脚本在上述表格中且无版本信息 可能需要考虑更新脚本  
@@ -165,6 +165,8 @@
 ## __INF. 更新日志__
 | Date | Script | Version | Detail |
 |------|--------|---------|--------|
+|2021.8.11|C Effect|1.1.1|bug修复|
+|2021.8.8|C Utilities|1.7.1|优化中文匹配，AE导入支持非从1开始的序列|
 |2021.8.7|Effect life game||一个小游戏|
 |2021.8.7|C Effect|1.1|加快运行速度，简化无用参数|
 |2021.8.4|C Change SUB resolution to match video PATCH|1.1|重大更新，完全重写了代码，无需经过自带的分辨率转换（精度低，有奇妙的bug），运行脚本后手动调整分辨率即可|

@@ -7,9 +7,9 @@ goto my repository https://github.com/zhang-changwei/Automation-scripts-for-Aegi
 
 --Script properties
 script_name="C Effect"
-script_description="Effect v1.1"
+script_description="Effect v1.1.1"
 script_author="chaaaaang"
-script_version="1.1"
+script_version="1.1.1"
 
 local Yutils = require('Yutils')
 include('karaskel.lua')
@@ -109,6 +109,7 @@ function main(subtitle, selected)
 				line.text = line.text:match("^{") and line.text or "{}"..line.text
 
 				-- Yutils
+				fontsize,scale_x,scale_y,spacing,angle = tonumber(fontsize),tonumber(scale_x),tonumber(scale_y),tonumber(spacing),tonumber(angle)
 				local font_handle = Yutils.decode.create_font(font,bold,italic,underline,strikeout,fontsize,scale_x/100,scale_y/100,spacing)
 				local shape = font_handle.text_to_shape(ltxtstripped)
 				local pixels = Yutils.shape.to_pixels(shape)
@@ -849,7 +850,7 @@ function position(ltext,line,xres,yres)
 end
 
 function positionL(angle,x,y,t,l,b,r)
-	angle = tonumber(angle)/180*math.pi
+	angle = angle/180*math.pi
 	local r1 = x + (r-x)*math.cos(angle) + (b-y)*math.sin(angle)
 	local r2 = x + (r-x)*math.cos(angle) - (y-t)*math.sin(angle)
 	local l1 = x - (x-l)*math.cos(angle) + (b-y)*math.sin(angle)
@@ -864,7 +865,7 @@ end
 
 -- output relative position for Yutils
 function posL2pos(angle,x,y,t,l,posx,posy)
-	angle = tonumber(angle)/180*math.pi
+	angle = angle/180*math.pi
 	return (posx-l) + (x-posx)*math.cos(angle)-(y-posy)*math.sin(angle),(posy-t) + (y-posy)*math.cos(angle)+(x-posx)*math.sin(angle)
 end
 
