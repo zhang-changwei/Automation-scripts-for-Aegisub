@@ -20,6 +20,7 @@
     | C Jump                          | v1.0    |
     | C Translation                   | v3.2    |
     | C Utilities                     | v1.7.1  |
+    | C XML Analyzer                  | v1.0    |
     | * C Scaling Rotation Conflict Solution | v1.1 |
     > 在Automation Manager Description栏中查看脚本版本信息  
     > 若你的脚本在上述表格中且无版本信息 可能需要考虑更新脚本  
@@ -28,6 +29,7 @@
     + 将LUA脚本复制到`C:\Program Files (x86)\Aegisub\automation\autoload`路径下，或你的Aegisub安装位置
     + 在 Aegisub Automation 项中可以发现添加的脚本
     + `C Effect & C Utilities`脚本部分功能依赖Yutils库，请先安装相关组件，传送门[https://github.com/Youka/Yutils](https://github.com/Youka/Yutils)，感谢原作者。
+    + `C XML Analyzer`脚本依赖`xmlSimple`库，原作者[https://github.com/Cluain/Lua-Simple-XML-Parser](https://github.com/Cluain/Lua-Simple-XML-Parser)，本人作了一点修改，存放在lib文件夹下。
 * __该仓库本人长期维护，欢迎star与fork。__  
 * 2021.3.20 Mocha三件套`(Font Resize,Gradient,Translation)`已基本趋于稳定
 * 2021 7月初可能会有一次release，敬请期待
@@ -165,6 +167,7 @@
 ## __INF. 更新日志__
 | Date | Script | Version | Detail |
 |------|--------|---------|--------|
+|2021.8.22|C XML Analyzer|1.0|原盘DIY辅助脚本上线，大幅优化过水、肉酱分割过程|
 |2021.8.11|C Effect|1.1.1|bug修复|
 |2021.8.8|C Utilities|1.7.1|优化中文匹配，AE导入支持非从1开始的序列|
 |2021.8.7|Effect life game||一个小游戏|
