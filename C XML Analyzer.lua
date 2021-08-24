@@ -6,9 +6,9 @@ goto my repository https://github.com/zhang-changwei/Automation-scripts-for-Aegi
 ]]
 
 script_name="C XML Analyzer"
-script_description="XML Analyzer v1.0"
+script_description="XML Analyzer v1.1"
 script_author="chaaaaang"
-script_version="1.0" 
+script_version="1.1" 
 
 local xmlsimple = require("xmlSimple").newParser()
 local lfs = require "lfs"
@@ -248,8 +248,8 @@ function slicecutter(subtitle, selected, active)
     local video_format = xml.BDN.Description.Format["@VideoFormat"]
     event_count,fps = tonumber(event_count),tonumber(fps)
     local FPS = fps
-    if fps==23.976 then fps=24000/1001 
-    elseif fps==29.97 then fps=30000/1001 end
+    -- if fps==23.976 then fps=24000/1001 
+    -- elseif fps==29.97 then fps=30000/1001 end
 
     -- read clipboard
     local slices = {}
@@ -301,13 +301,18 @@ function slicecutter(subtitle, selected, active)
     -- slice count
     local slice_count = 1 -- max: #slices
     local intc_now,outtc_now = slices[1].time_S,slices[1].time_E
-    local firsteventintc,lasteventouttc = events.Event[1]["@InTC"],""
+    local firsteventintc,lasteventouttc = events.Event[1]["@InTC"],events.Event[1]["@InTC"]
+    if NDFcompare(firsteventintc,outtc_now)<0 then
+    else
+        firsteventintc,lasteventouttc = intc_now,intc_now
+    end
     local eventINslice_count = 0
     local trigger = false
 
     -- loop begin
     if events.Event[event_count]["@InTC"]=="00:00:00:00" then event_count = event_count - 1 end -- delete first black frame
-    for i=1,event_count do
+    local i = 1
+    while i<=event_count do
         local intc = events.Event[i]["@InTC"]
         local outtc = events.Event[i]["@OutTC"]
         local graphics = events.Event[i].Graphic
@@ -316,7 +321,6 @@ function slicecutter(subtitle, selected, active)
         if NDFcompare(outtc,outtc_now)<=0 then -- do nothing
         elseif NDFcompare(intc,outtc_now)>=0 then 
             -- output
-            lasteventouttc = events.Event[i-1]["@OutTC"]
             xml_head = xml_head:gsub('ContentInTC="[%d:]+"',string.format('ContentInTC="%s"','00:00:00:00'))
             xml_head = xml_head:gsub('ContentOutTC="[%d:]+"',string.format('ContentOutTC="%s"',NDFminus(outtc_now,intc_now,fps)))
             xml_head = xml_head:gsub('FirstEventInTC="[%d:]+"',string.format('FirstEventInTC="%s"',NDFminus(firsteventintc,intc_now,fps)))
@@ -333,38 +337,24 @@ function slicecutter(subtitle, selected, active)
             intc_now,outtc_now = slices[slice_count].time_S,slices[slice_count].time_E
             --clear
             xml_mid = ''
-            firsteventintc = intc
+            if NDFcompare(intc,outtc_now)<0 then 
+                firsteventintc,lasteventouttc = intc,intc
+            else
+                firsteventintc,lasteventouttc = intc_now,intc_now
+            end
             eventINslice_count = 0
+            goto again
         elseif NDFcompare(intc,outtc_now)<0 and NDFcompare(outtc,outtc_now)>0 then
             if trigger==false then
                 -- enter the first time
                 trigger = true
                 outtc = outtc_now
-                i = i - 1
             else
                 -- enter the second time
                 trigger = false
                 intc = outtc_now
-                -- output
                 lasteventouttc = outtc_now
-                xml_head = xml_head:gsub('ContentInTC="[%d:]+"',string.format('ContentInTC="%s"', '00:00:00:00'))
-                xml_head = xml_head:gsub('ContentOutTC="[%d:]+"',string.format('ContentOutTC="%s"', NDFminus(outtc_now,intc_now,fps)))
-                xml_head = xml_head:gsub('FirstEventInTC="[%d:]+"',string.format('FirstEventInTC="%s"',NDFminus(firsteventintc,intc_now,fps)))
-                xml_head = xml_head:gsub('LastEventOutTC="[%d:]+"',string.format('LastEventOutTC="%s"',NDFminus(lasteventouttc,intc_now,fps)))
-                xml_head = xml_head:gsub('NumberofEvents="%d+"',string.format('NumberofEvents="%d"',eventINslice_count))
-
-                xml_head = xml_head:gsub('Title="[^"]+"',string.format('Title="%s_slice%s_clip%s"',title,slice_count,slices[slice_count].text))
-                local path_new = path:gsub("%.xml$",string.format("_slice%s_clip%s.xml",slice_count,slices[slice_count].text))
-                local file = io.open(path_new,"w")
-                file:write(xml_head,xml_mid,xml_tail)
-                file:close()
-                -- update
-                slice_count = slice_count + 1
-                intc_now,outtc_now = slices[slice_count].time_S,slices[slice_count].time_E
-                --clear
-                xml_mid = ''
-                firsteventintc = intc
-                eventINslice_count = 0
+                goto again
             end
         end
 
@@ -387,12 +377,12 @@ function slicecutter(subtitle, selected, active)
         -- write data tail
         xml_mid = xml_mid..'</Event>\n'
 
+        lasteventouttc = events.Event[i]["@OutTC"]
         eventINslice_count = eventINslice_count + 1
         aegisub.progress.set(i/event_count*100)
 
         -- output last clip
         if i==event_count then
-            lasteventouttc = events.Event[i]["@OutTC"]
             xml_head = xml_head:gsub('ContentInTC="[%d:]+"',string.format('ContentInTC="%s"','00:00:00:00'))
             xml_head = xml_head:gsub('ContentOutTC="[%d:]+"',string.format('ContentOutTC="%s"',NDFminus(outtc_now,intc_now,fps)))
             xml_head = xml_head:gsub('FirstEventInTC="[%d:]+"',string.format('FirstEventInTC="%s"',NDFminus(firsteventintc,intc_now,fps)))
@@ -404,7 +394,10 @@ function slicecutter(subtitle, selected, active)
             local file = io.open(path_new,"w")
             file:write(xml_head,xml_mid,xml_tail)
             file:close()
+            break
         end
+
+        if trigger==false then i = i + 1 end
     end
     -- loop end
     aegisub.log("succeeded")
@@ -415,8 +408,6 @@ end
 -- NDF 2 Real time(ms)
 function totime(t,fps)
     local h,m,s,ms = t:match("(%d%d):(%d%d):(%d%d):(%d%d)")
-    -- h,m,s,ms = tonumber(h),tonumber(m),tonumber(s),tonumber(ms)/fps*1000
-    -- return h*3600*1000 + m*60*1000 + s*1000 + ms
     h,m,s,ms = tonumber(h),tonumber(m),tonumber(s),tonumber(ms)
     local f = ms + s*math.ceil(fps) + m*60*math.ceil(fps) + h*3600*math.ceil(fps)
     return f*1000/fps

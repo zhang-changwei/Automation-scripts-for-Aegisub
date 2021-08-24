@@ -6,9 +6,9 @@ goto my repository https://github.com/zhang-changwei/Automation-scripts-for-Aegi
 ]]
 
 script_name="C Utilities"
-script_description="Utilities v1.7.1"
+script_description="Utilities v1.7.2"
 script_author="chaaaaang"
-script_version="1.7.1" 
+script_version="1.7.2" 
 
 include('karaskel.lua')
 re = nil
@@ -17,27 +17,6 @@ clipboard = nil
 Yutils = nil
 
 local visualization_max_width, visualization_max_height = 180, 41
-
-local sRGB_2_XYZ_MAT = {
-	{0.4124564, 0.3575761, 0.1804375},
- 	{0.2126829, 0.7151522, 0.0721750},
-	{0.0193339, 0.1191920, 0.9503041}	
-}
--- local XYZ_2_sRGB_MAT = {
--- 	{3.2409699419, -1.5373831776, -0.4986107603},
--- 	{-0.9692436363,  1.8759675015, 0.0415550574},
--- 	{0.0556300797, -0.2039769589, 1.0569715142}
--- }
--- local Rec2020_2_XYZ_MAT = {
--- 	{0.636955, 0.144619, 0.168856},
--- 	{0.262698, 0.678008, 0.059293},
--- 	{0,        0.028073, 1.060830}
--- }
-local XYZ_2_Rec2020_MAT = {
-	{ 1.716660, -0.355672, -0.253367},
-	{-0.666672,  1.616460,  0.0157678},
-	{0.0176423, -0.0427767, 0.942241}
-}
 
 -- ZHO \u4e00-\u9fa5 \u3400-\u4db5
 -- KOR \u3130-\u318f \uac00-\ud7a3
@@ -50,7 +29,7 @@ local dialog_config = {
 	{class="label",label="Options",x=0,y=0},--1
 	{class="dropdown",name="option",
 		items={"AE Sequential Picture Importer","Centralize Drawing","Delete Comment Lines","Delete Empty Lines","Delete SDH Comment",
-		"Dialog Checker","Mocha Data Visualization","Move!","Multiline Importer","Separate Bilingual SUBS by \\N","SDR2HDR ColorGrading","Shift Multiline","Swap SUBS Splitted by \\N"},
+		"Dialog Checker","Mocha Data Visualization","Move!","Multiline Importer","Separate Bilingual SUBS by \\N","Shift Multiline","Swap SUBS Splitted by \\N"},
 		x=1,y=0,width=5},--2
     -- Delete SDH Comment
     {class="label",label="■ Delete SDH Comment",x=0,y=1,width=2},--3
@@ -87,28 +66,28 @@ local dialog_config = {
     {class="label",label="buffer 2",x=3,y=12},--32
 	{class="floatedit",name="dialog_bf2",value=0.75,x=4,y=12,width=2,hint="Buffer for ENG SUBS, Arg:0-1. ACT ON overlength checker, smaller buffer means narrower space for SUBS."},
 	-- AE Sequential Picture Importer
-	{class="label",label="■ AE Sequential Picture Importer",x=7,y=1,width=2},--34
+	{class="label",label="■ AE Sequential Picture Importer",x=7,y=1,width=3},--34
 	{class="label",label="FPS",x=7,y=2},--35
-	{class="floatedit",name="ae_fps",value=23.976,x=8,y=2},--36
+	{class="floatedit",name="ae_fps",value=23.976,x=8,y=2,width=2},--36
 	{class="label",label="fade in time",x=7,y=3},--37
-	{class="intedit",name="ae_fin",value=0,x=8,y=3},--38
+	{class="intedit",name="ae_fin",value=0,x=8,y=3,width=2},--38
 	{class="label",label="fade out time",x=7,y=4},--39
-	{class="intedit",name="ae_fout",value=0,x=8,y=4},--40
+	{class="intedit",name="ae_fout",value=0,x=8,y=4,width=2},--40
 	{class="label",label="picture width",x=7,y=5},--41
-	{class="intedit",name="ae_w",value=1920,x=8,y=5},--42
+	{class="intedit",name="ae_w",value=1920,x=8,y=5,width=2},--42
 	{class="label",label="picture height",x=7,y=6},--43
-	{class="intedit",name="ae_h",value=1080,x=8,y=6},--44
+	{class="intedit",name="ae_h",value=1080,x=8,y=6,width=2},--44
 	-- Multiline Importer
-	{class="label",label="■ Multiline Importer",x=7,y=7,width=2},--45
+	{class="label",label="■ Multiline Importer          ",x=7,y=7,width=2},--45
 	{class="checkbox",label="from file",name="mi_file",x=7,y=8},--46
-	{class="checkbox",label="from clipboard",value=true,name="mi_clip",x=8,y=8},--47
+	{class="checkbox",label="from clipboard",value=true,name="mi_clip",x=8,y=8,width=2},--47
 	-- Mocha Data Visualization
-	{class="label",label="■ Mocha Data Visualization",x=7,y=9,width=2},--48
+	{class="label",label="■ Mocha Data Visualization",x=7,y=9,width=3},--48
 	{class="label",label="mode",x=7,y=10},--49
-	{class="dropdown",name="data_mode",items={"x-t","t-x"},value="x-t",x=8,y=10},--50
+	{class="dropdown",name="data_mode",items={"x-t","t-x"},value="x-t",x=8,y=10,width=2},--50
 	{class="label",label="object",x=7,y=11},--51
-	{class="dropdown",name="data_obj",items={"x","y","fscx","fscy","frz"},x=8,y=11},--52
-	{class="checkbox",name="data_num",label="show line index",value=true,x=8,y=12},--53
+	{class="dropdown",name="data_obj",items={"x","y","fscx","fscy","frz"},x=8,y=11,width=2},--52
+	{class="checkbox",name="data_num",label="show line index",value=true,x=8,y=12,width=2},--53
 	-- Shift Multiline
 	{class="label",label="■ Shift Multiline",x=0,y=10,width=2},--54
 	{class="checkbox",label="backward",name="shift_b",value=false,x=0,y=11},--55
@@ -117,17 +96,30 @@ local dialog_config = {
 	{class="label",label="line(s)",x=1,y=12},--58
 	-- forget stuff
 	{class="checkbox",label="move2pos",name="move_m2p",x=4,y=1,width=2,hint="use move data in the first line as arg x,y"},--59
+	{class="checkbox",label="crop",name="ae_crop",x=9,y=7,hint="use imagemagick to crop pictures"},--60
     -- note
 	{class="label",label="         ",x=2,y=1},
 	{class="label",label="         ",x=6,y=1},
 	
 	{class="label",label="AE Sequential Picture Importer: ",x=0,y=14,width=3},
 	{class="label",label="Press the AE button to Grab AE Sequential Picture Path and Run.",x=3,y=14,width=7},
-	{class="label",label="Please choose the file with INDEX 001 in the file picker.",x=3,y=15,width=6},
-	{class="label",label="Yutils library: Is required for Centralize Drawing, Dialog Checker/overlength checker and Move!/clip",x=0,y=16,width=9},
-	{class="label",label="SDR2HDR ColorGrading: Expermiental.",x=0,y=17,width=7}
+	{class="label",label="Please choose the file with the smallest INDEX in the file picker.",x=3,y=15,width=7},
+	{class="label",label="Yutils library: Is required for Centralize Drawing, Dialog Checker/overlength checker and Move!/clip",x=0,y=16,width=10}
 }
 local buttons = {"Run","AE","Quit"}
+
+local ae_dialog_config = {
+	{class="label",label="crop",x=0,y=0},--1
+	{class="label",label="left x",x=0,y=3},--2
+	{class="intedit",name="l",value=0,x=1,y=3},--3
+	{class="label",label="top y",x=2,y=1},--4
+	{class="intedit",name="t",value=0,x=2,y=2},--5
+	{class="label",label="right x",x=3,y=3},--6
+	{class="intedit",name="r",value=0,x=4,y=3},--7
+	{class="label",label="bottom y",x=2,y=4},--8
+	{class="intedit",name="b",value=0,x=2,y=5}--9
+}
+local ae_buttons = {"Run","Quit"}
 
 --This is the main processing function that modifies the subtitles
 function main(subtitle, selected, active)
@@ -141,11 +133,18 @@ function main(subtitle, selected, active)
 	-- AE
 	dialog_config[42].value = xres
 	dialog_config[44].value = yres
+	ae_dialog_config[7].value = xres
+	ae_dialog_config[9].value = yres
 
     local pressed, result = aegisub.dialog.display(dialog_config,buttons)
+	local ae_pressed, ae_result -- ae crop
     if (pressed=="Quit") then aegisub.cancel() end
 	if (pressed=="AE") then
-		ae_path = aegisub.dialog.open('AE Choose the file with INDEX 001', '', '', 'PNG files (.png)|*.png|All Files (.)|.', false, true)
+		if result.ae_crop==true then
+			ae_pressed, ae_result = aegisub.dialog.display(ae_dialog_config,ae_buttons)
+			if ae_pressed=="Quit" then aegisub.cancel() end
+		end
+		ae_path = aegisub.dialog.open('AE Choose the file with the smallest INDEX', '', '', 'PNG files (.png)|*.png|All Files (.)|.', false, true)
 	end
 	if pressed=="Run" and result.option=="AE Sequential Picture Importer" then
 		aegisub.log("Please the AE button")
@@ -271,8 +270,18 @@ function main(subtitle, selected, active)
 				elseif k<10000 then ae_mid = ae_mid:gsub("%d%d%d%d$",k)
 				else ae_mid = ae_mid:gsub("%d%d%d%d%d$",k)
 				end
-				new_line.text = "{\\an7\\pos(0,0)\\bord0\\shad0\\fscx100\\fscy100\\1img("..ae_pre..ae_mid..ae_post..")\\p1}"
-				new_line.text = new_line.text..string.format("m 0 0 l %d 0 l %d %d l 0 %d",result.ae_w,result.ae_w,result.ae_h,result.ae_h)
+
+				if result.ae_crop==true then
+					local command = string.format("magick %s -crop %dx%d+%d+%d +repage %s",
+						ae_pre..ae_mid..ae_post,ae_result.r-ae_result.l,ae_result.b-ae_result.t,ae_result.l,ae_result.t,ae_pre.."crop_"..ae_mid..ae_post)
+					local temp = io.popen(command)
+					new_line.text = string.format("m %d %d l %d %d l %d %d l %d %d",
+						ae_result.l,ae_result.t,ae_result.r,ae_result.t,ae_result.r,ae_result.b,ae_result.l,ae_result.b)
+						new_line.text = "{\\an7\\pos(0,0)\\bord0\\shad0\\fscx100\\fscy100\\1img("..ae_pre.."crop_"..ae_mid..ae_post..")\\p1}"..new_line.text
+				else
+					new_line.text = string.format("m 0 0 l %d 0 l %d %d l 0 %d",result.ae_w,result.ae_w,result.ae_h,result.ae_h)
+					new_line.text = "{\\an7\\pos(0,0)\\bord0\\shad0\\fscx100\\fscy100\\1img("..ae_pre..ae_mid..ae_post..")\\p1}"..new_line.text
+				end
 
 				subtitle[li+j-1] = new_line
 				j = j + 1
@@ -660,22 +669,6 @@ function main(subtitle, selected, active)
 		elseif result.option=="Separate Bilingual SUBS by \\N" then
 			linetext = linetext:gsub("^{}","")
 			linetext=linetext:gsub("([\228-\233][^ ]*) +([^\228-\233]+)$","%1\\N%2") -- 1110xxxx 10xxxxxx 10xxxxxx
-		elseif result.option=="SDR2HDR ColorGrading" then
-			linetext = linetext:gsub("^{}","")
-			linetext = linetext:gsub("(\\[1234]?v?c)&?H?(%x%x)(%x%x)(%x%x)&?",function (pre,b,g,r)
-				r,g,b = tonumber(r,16)/255,tonumber(g,16)/255,tonumber(b,16)/255
-				local cx,cy,cz = MAT_MUL(r,g,b,sRGB_2_XYZ_MAT)
-				::sdr2hdr::
-				r,g,b = MAT_MUL(cx,cy,cz,XYZ_2_Rec2020_MAT)
-				if r>1 or g>1 or b>1 then 
-					cy = 1
-					aegisub.log("r"..r.."g"..g.."b"..b)
-					goto sdr2hdr
-				end
-				r,g,b = round(r*255),round(g*255),round(b*255)
-				local colorstring = util.ass_color(r, g, b)
-				return pre..colorstring
-			end)
 		elseif result.option=="Shift Multiline" then
 			linetext = linetext:gsub("^{}","")
 			if (result.shift_b == true and result.shift_f == true) or (result.shift_b == false and result.shift_f == false) then
@@ -911,40 +904,6 @@ end
 function round(x)
 	return math.floor(x+0.5)
 end
-
--- input x,y,z | output X,Y,Z
-function MAT_MUL(x,y,z,m)
-	return x*m[1][1]+y*m[1][2]+z*m[1][3], x*m[2][1]+y*m[2][2]+z*m[2][3], x*m[3][1]+y*m[3][2]+z*m[3][3]
-end
-
--- input L | output V
--- function Rec709_OETF(L)
--- 	if L<=0.018 then
--- 		return 0.45*L
--- 	else
--- 		return 1.099*L^0.45-0.099
--- 	end
--- end
-
--- -- input V | output L
--- function Rec709_ETOF(V)
--- 	if V<=0.081 then
--- 		return V/4.5
--- 	elseif V>1 then
--- 		return 1
--- 	else
--- 		return ((V+0.099)/1.099)^(1/0.45)
--- 	end
--- end
-
--- function Rec2020_ETOF(V)
--- 	local m1 = 2610/16384
--- 	local m2 = 2523/4096*128
--- 	local c1 = 3424/4096
--- 	local c2 = 2413/4096*32
--- 	local c3 = 2392/4096*32
--- 	return 10000*(math.max(V^(1/m2)-c1,0)/(c2-c3*V^(1/m2)))^(1/m1)
--- end
 
 function macro_validation(subtitle, selected, active)
     return true

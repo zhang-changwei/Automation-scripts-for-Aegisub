@@ -18,9 +18,10 @@
     | C Gradient                      | v2.1    |
     | C Merge Bilingual SUBS          | v1.1    |
     | C Jump                          | v1.0    |
+    | C Picture Tracker               | v1.2    |
     | C Translation                   | v3.2    |
-    | C Utilities                     | v1.7.1  |
-    | C XML Analyzer                  | v1.0    |
+    | C Utilities                     | v1.7.2  |
+    | C XML Analyzer                  | v1.1    |
     | * C Scaling Rotation Conflict Solution | v1.1 |
     > 在Automation Manager Description栏中查看脚本版本信息  
     > 若你的脚本在上述表格中且无版本信息 可能需要考虑更新脚本  
@@ -167,6 +168,9 @@
 ## __INF. 更新日志__
 | Date | Script | Version | Detail |
 |------|--------|---------|--------|
+|2021.8.24|C Picture Tracker|1.2|图片追踪神器|
+|2021.8.24|C Utilities|1.7.2|增加批量裁剪AE图片功能|
+|2021.8.24|C XML Anakyzer|1.1|修复肉酱分割时存在的一些问题|
 |2021.8.22|C XML Analyzer|1.0|原盘DIY辅助脚本上线，大幅优化过水、肉酱分割过程|
 |2021.8.11|C Effect|1.1.1|bug修复|
 |2021.8.8|C Utilities|1.7.1|优化中文匹配，AE导入支持非从1开始的序列|
