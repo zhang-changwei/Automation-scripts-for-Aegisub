@@ -13,14 +13,14 @@
     |---------------------------------|---------|
     | C Change SUB resolution to match video PATCH | v1.1 |
     | C Effect                        | v1.1    |
-    | C Fast Tools                    | v1.1    |
+    | C Fast Tools                    | v1.2    |
     | C Font Resize (Mocha Deshaking) | v1.3    |
     | C Gradient                      | v2.1    |
     | C Merge Bilingual SUBS          | v1.1    |
     | C Jump                          | v1.0    |
     | C Picture Tracker               | v1.3    |
     | C Translation                   | v3.2    |
-    | C Utilities                     | v1.7.2  |
+    | C Utilities                     | v1.7.3  |
     | C XML Analyzer                  | v1.2    |
     | * C Scaling Rotation Conflict Solution | v1.1 |
     > 在Automation Manager Description栏中查看脚本版本信息  
@@ -167,6 +167,8 @@
 ## __INF. 更新日志__
 | Date | Script | Version | Detail |
 |------|--------|---------|--------|
+|2021.9.3|C Fast Tools|1.3|增加fad序列功能|
+|2021.9.3|C Utilities|1.7.3|自动获取视频fps信息|
 |2021.9.2|C Picture Tracker|1.3|支持clip追踪|
 |2021.9.2|C XML Analyzer|1.2|优化过水，增加时间计算器工具|
 |2021.8.24|C Picture Tracker|1.2|图片追踪神器|

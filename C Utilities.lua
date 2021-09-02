@@ -6,9 +6,9 @@ goto my repository https://github.com/zhang-changwei/Automation-scripts-for-Aegi
 ]]
 
 script_name="C Utilities"
-script_description="Utilities v1.7.2"
+script_description="Utilities v1.7.3"
 script_author="chaaaaang"
-script_version="1.7.2" 
+script_version="1.7.3" 
 
 include('karaskel.lua')
 re = nil
@@ -131,6 +131,7 @@ function main(subtitle, selected, active)
 
 	-- change the content shown in UI
 	-- AE
+	dialog_config[36].value = fpsgen()
 	dialog_config[42].value = xres
 	dialog_config[44].value = yres
 	ae_dialog_config[7].value = xres
@@ -903,6 +904,14 @@ end
 
 function round(x)
 	return math.floor(x+0.5)
+end
+
+function fpsgen()
+	local f = 10000
+	local t = (aegisub.ms_from_frame(f)+aegisub.ms_from_frame(f+1))/2
+	-- f = t/(1000/fps) = t/1000*fps
+	local fps = f/t*1000
+	return round(fps*1000)/1000
 end
 
 function macro_validation(subtitle, selected, active)

@@ -7,9 +7,9 @@ goto my repository https://github.com/zhang-changwei/Automation-scripts-for-Aegi
 
 --Script properties
 script_name="C Fast Tools"
-script_description="Fast Tools v1.1"
+script_description="Fast Tools v1.2"
 script_author="chaaaaang"
-script_version="1.1"
+script_version="1.2"
 
 clipboard = require 'aegisub.clipboard'
 
@@ -119,7 +119,43 @@ function fast_enter(subtitle, selected)
 	return selected
 end
 
+function fast_fad_seq_in(subtitle, selected)
+    local N = #selected
+    local all = subtitle[selected[N]].end_time - subtitle[selected[1]].start_time
+    local init = subtitle[selected[1]].start_time
+    for si,li in ipairs(selected) do
+        local line = subtitle[li]
+        local time = round((aegisub.ms_from_frame(aegisub.frame_from_ms(line.start_time))+aegisub.ms_from_frame(aegisub.frame_from_ms(line.end_time)))/2)
+        local t = time - line.start_time
+        local i = time - init
+        local x = round(t/(i/all))
+        line.text = line.text:gsub("^{","{\\fad("..x..",0)")
+        subtitle[li] = line
+    end
+end
+
+function fast_fad_seq_out(subtitle, selected)
+    local N = #selected
+    local all = subtitle[selected[N]].end_time - subtitle[selected[1]].start_time
+    local init = subtitle[selected[N]].end_time
+    for si,li in ipairs(selected) do
+        local line = subtitle[li]
+        local time = round((aegisub.ms_from_frame(aegisub.frame_from_ms(line.start_time))+aegisub.ms_from_frame(aegisub.frame_from_ms(line.end_time)))/2)
+        local t = line.end_time - time
+        local i = init - time
+        local x = round(t/(i/all))
+        line.text = line.text:gsub("^{","{\\fad(0,"..x..")")
+        subtitle[li] = line
+    end
+end
+
+function round(x)
+	return math.floor(x+0.5)
+end
+
 --Register macro (no validation function required)
 aegisub.register_macro(script_name.."/fast_clip_iclip_converter",script_description,fast_clip_iclip_converter)
 aegisub.register_macro(script_name.."/fast_copy",script_description,fast_copy)
 aegisub.register_macro(script_name.."/fast_enter",script_description,fast_enter)
+aegisub.register_macro(script_name.."/fast_fad_sequence(in)",script_description,fast_fad_seq_in)
+aegisub.register_macro(script_name.."/fast_fad_sequence(out)",script_description,fast_fad_seq_out)
