@@ -6,9 +6,9 @@ goto my repository https://github.com/zhang-changwei/Automation-scripts-for-Aegi
 ]]
 
 script_name="C XML Analyzer"
-script_description="XML Analyzer v1.1"
+script_description="XML Analyzer v1.2"
 script_author="chaaaaang"
-script_version="1.1" 
+script_version="1.2" 
 
 local xmlsimple = require("xmlSimple").newParser()
 local lfs = require "lfs"
@@ -161,8 +161,8 @@ function borderadder(subtitle, selected, active)
                         l,t,r,b = math.min(l,k.x),math.min(t,k.y),math.max(r,k.w+k.x),math.max(b,k.h+k.y)
                     end
                     if trigger>=3 then
-                        line.start_time = starttime(j[1].f,fps)
-                        line.end_time   = endtime(j[#j].f,fps)
+                        line.start_time = NDF2starttime(j[1].i,fps)
+                        line.end_time   = NDF2endtime(j[#j].o,fps)
                         line.text = string.format("{\\an7\\pos(0,0)\\fscx100\\fscy100\\bord1\\shad0\\1aFF\\3aFD\\p1}m %d %d l %d %d %d %d %d %d",l,t,r,t,r,b,l,b)
                         subtitle.append(line)
                     end
@@ -185,21 +185,26 @@ function borderadder(subtitle, selected, active)
                 png_frame = png_frame:gsub("_%d+%.png$","")
                 png_frame = tonumber(png_frame)
 
-                local distance = 3000
+                local distance,dx,dy = 3000,2000,2000
                 local index = 0
+                local w,h = tw,th
                 for _,j in ipairs(items) do
-                    local temp = length(j[#j].x,j[#j].y,tx,ty)
-                    if temp<distance then
-                        distance = temp
-                        index = _
+                    if j[#j].o==t_intc then
+                        local temp = length(j[#j].x,j[#j].y+j[#j].h, tx,ty+th)
+                        if temp<distance then
+                            distance = temp
+                            dx,dy = math.abs(j[#j].x-tx),math.abs(j[#j].y+j[#j].h -ty-th)
+                            w,h = j[#j].w,j[#j].h
+                            index = _
+                        end
                     end
                 end
 
-                if distance>math.min(tw,th) then
+                if dx>w or dy>h then
                     table.insert(items,{})
-                    table.insert(items[#items],{f=png_frame,x=tx,y=ty,w=tw,h=th})
+                    table.insert(items[#items],{f=png_frame,x=tx,y=ty,w=tw,h=th,i=t_intc,o=t_outtc})
                 else
-                    table.insert(items[index],{f=png_frame,x=tx,y=ty,w=tw,h=th})
+                    table.insert(items[index],{f=png_frame,x=tx,y=ty,w=tw,h=th,i=t_intc,o=t_outtc})
                 end
             end
         else
@@ -211,21 +216,26 @@ function borderadder(subtitle, selected, active)
             png_frame = png_frame:gsub("_%d+%.png$","")
             png_frame = tonumber(png_frame)
 
-            local distance = 3000
+            local distance,dx,dy = 3000,2000,2000
             local index = 0
+            local w,h = tw,th
             for _,j in ipairs(items) do
-                local temp = length(j[#j].x,j[#j].y,tx,ty)
-                if temp<distance then
-                    distance = temp
-                    index = _
+                if j[#j].o==t_intc then
+                    local temp = length(j[#j].x,j[#j].y+j[#j].h, tx,ty+th)
+                    if temp<distance then
+                        distance = temp
+                        dx,dy = math.abs(j[#j].x-tx),math.abs(j[#j].y+j[#j].h -ty-th)
+                        w,h = j[#j].w,j[#j].h
+                        index = _
+                    end
                 end
             end
 
-            if distance>math.min(tw,th) then
+            if dx>w or dy>h then
                 table.insert(items,{})
-                table.insert(items[#items],{f=png_frame,x=tx,y=ty,w=tw,h=th})
+                table.insert(items[#items],{f=png_frame,x=tx,y=ty,w=tw,h=th,i=t_intc,o=t_outtc})
             else
-                table.insert(items[index],{f=png_frame,x=tx,y=ty,w=tw,h=th})
+                table.insert(items[index],{f=png_frame,x=tx,y=ty,w=tw,h=th,i=t_intc,o=t_outtc})
             end
         end
 
@@ -405,7 +415,63 @@ function slicecutter(subtitle, selected, active)
     return selected 
 end
 
--- NDF 2 Real time(ms)
+function timecalculator(subtitle, selected, active)
+    local dialog_config = {
+        {class="label",label="Source Format",x=0,y=0},--1
+        {class="dropdown",name="s",items={"RealTime: X:XX:XX.XXX","NDFTime: XX:XX:XX:XX"},value="NDFTime: XX:XX:XX:XX",x=1,y=0},
+        {class="label",label="Operation",x=0,y=1},--3
+        {class="dropdown",name="o",items={"Add","Minus","Convert->RealTime","Convert->NDFTime","Convert->Frame"},value="Convert->Frame",x=1,y=1},
+        {class="label",label="FPS",x=0,y=2},--5
+        {class="floatedit",name="fps",value=23.976,x=1,y=2},--6
+
+        {class="label",label="T1",x=0,y=3},--7
+        {class="edit",name="t1",value="",x=1,y=3},--8
+        {class="label",label="T2",x=0,y=4},--9
+        {class="edit",name="t2",x=1,value="",y=4},--10
+        {class="label",label="Result",x=0,y=5},--11
+        {class="edit",name="r",value="",x=1,y=5}--12
+    }
+    local buttons = {"Run","Quit"}
+    ::UI::
+    local pressed, result = aegisub.dialog.display(dialog_config,buttons)
+	if pressed=="Quit" then aegisub.cancel()
+    elseif pressed=="Run" then
+        local fps = result.fps
+        local t
+        if result.s=="RealTime: X:XX:XX.XXX" then
+            if result.o=="Add" then
+                t = Realadd(result.t1,result.t2)
+            elseif result.o=="Minus" then
+                t = Realminus(result.t1,result.t2)
+            elseif result.o=="Convert->NDFTime" then
+                t = toNDF(result.t1,fps)
+            elseif result.o=="Convert->Frame" then
+                t= Real2frame(result.t1,fps)
+            end
+        elseif result.s=="NDFTime: XX:XX:XX:XX" then
+            if result.o=="Add" then
+                t = NDFadd(result.t1,result.t2,fps)
+            elseif result.o=="Minus" then
+                t = NDFminus(result.t1,result.t2,fps)
+            elseif result.o=="Convert->RealTime" then
+                t = NDF2real(result.t1,fps)
+            elseif result.o=="Convert->Frame" then
+                t = NDF2frame(result.t1,fps)
+            end
+        end
+        dialog_config[2].value = result.s
+        dialog_config[4].value = result.o
+        dialog_config[6].value = result.fps
+        dialog_config[8].value = result.t1
+        dialog_config[10].value= result.t2
+        dialog_config[12].value= t
+        goto UI
+    end
+    aegisub.set_undo_point(script_name) 
+    return selected 
+end
+
+-- NDF 2 Real time (ms)
 function totime(t,fps)
     local h,m,s,ms = t:match("(%d%d):(%d%d):(%d%d):(%d%d)")
     h,m,s,ms = tonumber(h),tonumber(m),tonumber(s),tonumber(ms)
@@ -413,6 +479,7 @@ function totime(t,fps)
     return f*1000/fps
 end
 
+-- Real time 2 NDF
 function toNDF(t,fps)
     local h,m,s,ms = t:match("(%d+):(%d%d):(%d%d)%.(%d%d%d)")
     h,m,s,ms = tonumber(h),tonumber(m),tonumber(s),tonumber(ms)
@@ -498,14 +565,80 @@ function length(x1,y1,x2,y2)
     return math.sqrt((x2-x1)^2+(y2-y1)^2)
 end
 
+-- frame 2 starttime (ms)
 function starttime(frame,fps)
     local t = 1000/fps
     return math.floor((frame*t - t/2)/10)*10
 end
 
+-- frame 2 endtime (ms)
 function endtime(frame,fps)
     local t = 1000/fps
     return math.floor((frame*t + t/2)/10)*10
+end
+
+function NDF2starttime(t,fps)
+    local f = NDF2frame(t,fps)
+    local time = starttime(f,fps)
+    return time
+end
+
+function NDF2endtime(t,fps)
+    local f = NDF2frame(t,fps) - 1
+    local time = endtime(f,fps)
+    return time
+end
+
+function NDF2frame(t,fps)
+    local h,m,s,ms = t:match("(%d+):(%d%d):(%d%d):(%d%d)")
+    h,m,s,ms = tonumber(h),tonumber(m),tonumber(s),tonumber(ms)
+    return ms + s*math.ceil(fps) + m*60*math.ceil(fps) + h*3600*math.ceil(fps)
+end
+
+function NDF2real(t,fps)
+    local tinms = totime(t,fps)
+    tinms = round(tinms)
+    local h,m,s,ms = math.floor(tinms/1000/3600),math.floor(tinms/1000/60)%60,math.floor(tinms/1000)%60,tinms%1000
+    return string.format("%d:%02d:%02d.%03d",h,m,s,ms)
+end
+
+function Real2frame(t,fps)
+    local h,m,s,ms = t:match("(%d+):(%d%d):(%d%d)%.(%d%d%d)")
+    h,m,s,ms = tonumber(h),tonumber(m),tonumber(s),tonumber(ms)
+    local f = (ms+s*1000+m*60*1000+h*3600*1000)/(1000/fps)
+    return round(f)
+end
+
+function Realadd(t1,t2)
+    local h1,m1,s1,ms1 = t1:match("(%d+):(%d%d):(%d%d)%.(%d%d%d)")
+    local h2,m2,s2,ms2 = t2:match("(%d+):(%d%d):(%d%d)%.(%d%d%d)")
+    h1,m1,s1,ms1 = tonumber(h1),tonumber(m1),tonumber(s1),tonumber(ms1)
+    h2,m2,s2,ms2 = tonumber(h2),tonumber(m2),tonumber(s2),tonumber(ms2)
+    local temp1,temp2,temp3 = 0,0,0
+    if ms1+ms2>=1000 then temp1=1 end
+    ms1 = (ms1+ms2)%1000
+    if s1+s2+temp1>=60 then temp2=1 end
+    s1 = (s1+s2+temp1)%60
+    if m1+m2+temp2>=60 then temp3=1 end
+    m1 = (m1+m2+temp2)%60
+    h1 = (h1+h2+temp3)
+    return string.format("%d:%02d:%02d.%03d",h1,m1,s1,ms1)
+end
+
+function Realminus(t1,t2)
+    local h1,m1,s1,ms1 = t1:match("(%d+):(%d%d):(%d%d)%.(%d%d%d)")
+    local h2,m2,s2,ms2 = t2:match("(%d+):(%d%d):(%d%d)%.(%d%d%d)")
+    h1,m1,s1,ms1 = tonumber(h1),tonumber(m1),tonumber(s1),tonumber(ms1)
+    h2,m2,s2,ms2 = tonumber(h2),tonumber(m2),tonumber(s2),tonumber(ms2)
+    local temp1,temp2,temp3 = 0,0,0
+    if ms1-ms2<0 then temp1=1 end
+    ms1 = (ms1-ms2+1000)%1000
+    if s1-s2-temp1<0 then temp2=1 end
+    s1 = (s1-s2-temp1+60)%60
+    if m1-m2-temp2<0 then temp3=1 end
+    m1 = (m1-m2-temp2+60)%60
+    h1 = (h1-h2-temp3)
+    return string.format("%d:%02d:%02d.%03d",h1,m1,s1,ms1)
 end
 
 function round(x)
@@ -520,3 +653,4 @@ end
 aegisub.register_macro(script_name.."/simulator",script_description,simulator,macro_validation)
 aegisub.register_macro(script_name.."/borderadder",script_description,borderadder,macro_validation)
 aegisub.register_macro(script_name.."/slicecutter",script_description,slicecutter,macro_validation)
+aegisub.register_macro(script_name.."/timecalculator",script_description,timecalculator,macro_validation)

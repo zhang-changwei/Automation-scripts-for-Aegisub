@@ -18,10 +18,10 @@
     | C Gradient                      | v2.1    |
     | C Merge Bilingual SUBS          | v1.1    |
     | C Jump                          | v1.0    |
-    | C Picture Tracker               | v1.2    |
+    | C Picture Tracker               | v1.3    |
     | C Translation                   | v3.2    |
     | C Utilities                     | v1.7.2  |
-    | C XML Analyzer                  | v1.1    |
+    | C XML Analyzer                  | v1.2    |
     | * C Scaling Rotation Conflict Solution | v1.1 |
     > 在Automation Manager Description栏中查看脚本版本信息  
     > 若你的脚本在上述表格中且无版本信息 可能需要考虑更新脚本  
@@ -33,7 +33,6 @@
     + `C XML Analyzer`脚本依赖`xmlSimple`库，原作者[https://github.com/Cluain/Lua-Simple-XML-Parser](https://github.com/Cluain/Lua-Simple-XML-Parser)，本人作了一点修改，存放在lib文件夹下。
 * __该仓库本人长期维护，欢迎star与fork。__  
 * 2021.3.20 Mocha三件套`(Font Resize,Gradient,Translation)`已基本趋于稳定
-* 2021 7月初可能会有一次release，敬请期待
 
 -------------------------------------------
 ## __1. C Font Resize__
@@ -168,9 +167,11 @@
 ## __INF. 更新日志__
 | Date | Script | Version | Detail |
 |------|--------|---------|--------|
+|2021.9.2|C Picture Tracker|1.3|支持clip追踪|
+|2021.9.2|C XML Analyzer|1.2|优化过水，增加时间计算器工具|
 |2021.8.24|C Picture Tracker|1.2|图片追踪神器|
 |2021.8.24|C Utilities|1.7.2|增加批量裁剪AE图片功能|
-|2021.8.24|C XML Anakyzer|1.1|修复肉酱分割时存在的一些问题|
+|2021.8.24|C XML Analyzer|1.1|修复肉酱分割时存在的一些问题|
 |2021.8.22|C XML Analyzer|1.0|原盘DIY辅助脚本上线，大幅优化过水、肉酱分割过程|
 |2021.8.11|C Effect|1.1.1|bug修复|
 |2021.8.8|C Utilities|1.7.1|优化中文匹配，AE导入支持非从1开始的序列|

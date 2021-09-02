@@ -19,9 +19,9 @@ get info: ffprobe -i path1 -show_streams > otput.txt
 
 --Script properties
 script_name="C Picture Tracker"
-script_description="Picture Tracker v1.2"
+script_description="Picture Tracker v1.3"
 script_author="chaaaaang"
-script_version="1.2"
+script_version="1.3"
 
 include("karaskel.lua")
 clipboard = require 'aegisub.clipboard'
@@ -38,15 +38,17 @@ local dialog_config = {
 	{class="checkbox",name="x",label="pos",value=true,x=0,y=1},
 	{class="checkbox",name="s",label="scale",x=0,y=2},
 	{class="checkbox",name="r",label="rotate",x=0,y=3},
+	{class="checkbox",name="cl",label="clip",x=0,y=4},
+	{class="checkbox",name="r2v",label="rect2vec",x=1,y=4},
 
-	{class="label",label="effect",x=0,y=4},
-	{class="dropdown",name="e",items={"none","paint, default: 5","spread, default: 5,5","swirl, default 360","custom command"},value="none",x=0,y=5,width=2},
-	{class="dropdown",name="m",items={"gradient","random"},value="gradient",x=2,y=5},
-	{class="edit",name="c",x=0,y=6,width=3,value="custom command:",hint="custom command: use input & output for file path, use \\d for argument"},
-	{class="label",label="strength from/min",x=0,y=7,width=2},
-	{class="edit",name="argf",x=2,y=7,hint="strength for preview, separate by comma"},
-	{class="label",label="strength to/max",x=0,y=8,width=2},
-	{class="edit",name="argt",x=2,y=8,hint="separate by comma"}
+	{class="label",label="effect",x=0,y=5},
+	{class="dropdown",name="e",items={"none","paint, recommend: 5","spread, recommend: 5,5","swirl, recommend 360","custom command"},value="none",x=0,y=6,width=2},
+	{class="dropdown",name="m",items={"gradient","random"},value="gradient",x=2,y=6},
+	{class="edit",name="c",x=0,y=7,width=3,value="custom command:",hint="custom command: use input & output for file path, use \\d for argument"},
+	{class="label",label="strength from/min",x=0,y=8,width=2},
+	{class="edit",name="argf",x=2,y=8,hint="strength for preview, separate by comma"},
+	{class="label",label="strength to/max",x=0,y=9,width=2},
+	{class="edit",name="argt",x=2,y=9,hint="separate by comma"}
 }
 local buttons = {"Track","Preview","Quit"}
 
@@ -116,7 +118,12 @@ function main(subtitle,selected,active)
 
 	--UI
 	dialog_config[1].label = "expected frame count: "..count_f..", mocha frame count: "..count_m
-	dialog_config[3].value = frame_S
+	-- dialog_config[3].value = frame_S
+	-- local tt = aegisub.project_properties()
+	-- for key,value in pairs(tt) do
+	-- 	aegisub.log(key.." "..value.."\n")
+	-- end
+	dialog_config[3].value = aegisub.project_properties().video_position
 	local pressed, result = aegisub.dialog.display(dialog_config,buttons)
 	if pressed=="Quit" then aegisub.cancel()		
 	elseif pressed=="Track" then 
@@ -128,10 +135,12 @@ function main(subtitle,selected,active)
 		subtitle[active] = line
 		line.comment = false
 		local tag = line.text:match("^{[^}]*}")
+		tag = tag:gsub("\\1img%([^%)]*%)","")
 		local align = (tag:match("\\an%d")~=nil) and tag:match("\\an(%d)") or line.styleref.align
 		local posx,posy = tag:match("\\pos%(([%d%.%-]+),([%d%.%-]+)")
 		local orgx,orgy = tag:match("\\org%(([%d%.%-]+),([%d%.%-]+)")
-		local fin,fout =  tag:match("\\fad%(([%d%.%-]+),([%d%.%-]+)")
+		local fin,fout  = tag:match("\\fad%(([%d%.%-]+),([%d%.%-]+)")
+		local clip_head,clip_shape = tag:match("(\\i?clip)%(([^%)]*)%)")
 		if posx==nil then posx = line.x end
 		if posy==nil then posy = line.y end
 		align,posx,posy = tonumber(align),tonumber(posx),tonumber(posy)
@@ -140,15 +149,22 @@ function main(subtitle,selected,active)
 		tag = "{\\an"..align.."\\bord0\\shad0"
 		local frame_ref = result.f-frame_S+1
 
+		-- clip rect2vec
+		if result.cl==true and result.r2v==true and clip_shape:match(",")~=nil then
+			local cx1,cy1,cx2,cy2 = clip_shape:match("([^,]+),([^,]+),([^,]+),([^,]+)")
+			cx1,cy1,cx2,cy2 = tonumber(cx1),tonumber(cy1),tonumber(cx2),tonumber(cy2)
+			clip_shape = string.format("m %.1f %.1f l %.1f %.1f %.1f %.1f %.1f %.1f",cx1,cy1, cx2,cy1, cx2,cy2, cx1,cy2)
+		end
+
 		-- effect
 		local argfs,argts = {},{}
 		local command0
 		if result.e~="none" then 
-			if result.e=="paint, default: 5" then
+			if result.e=="paint, recommend: 5" then
 				command0 = "-paint \\d "
-			elseif result.e=="spread, default: 5,5" then
+			elseif result.e=="spread, recommend: 5,5" then
 				command0 = "-blur \\d -spread \\d "
-			elseif result.e=="swirl, default 360" then
+			elseif result.e=="swirl, recommend 360" then
 				command0 = "-swirl \\d "
 			elseif result.e=="custom command" then
 				command0 = result.c:gsub("^ *magick +input +","")
@@ -213,7 +229,6 @@ function main(subtitle,selected,active)
 				end
 
 				command1 =command1..path_o
-				aegisub.log(command1.."\n")
 				local command2 = string.format('magick %s -format "%%wx%%h" info:',path_o)
 				os.execute(command1)
 				file = io.popen(command2)
@@ -264,6 +279,38 @@ function main(subtitle,selected,active)
 				end
 			end
 
+			-- clip
+			if result.cl==true then
+				local scale = 1
+				local clip_shape_copy = clip_shape
+				if result.s==true then scale = scaledata[index]/scaledata[frame_ref] end
+				-- clip position
+				if result.x==true then
+					clip_shape_copy = filter(clip_shape_copy, posdata[index].x, posdata[index].y, posdata[frame_ref].x, posdata[frame_ref].y, scale)
+				end
+				-- clip scale
+				if result.s==true and orgx~=nil then 
+					local temp1,temp2 = draw:match("\\org%(([%d%.%-]+),([%d%.%-]+)")
+					temp1,temp2 = tonumber(temp1),tonumber(temp2)
+					clip_shape_copy =filter_s(clip_shape_copy, temp1, temp2, scale)
+				elseif result.s==true then  
+					local temp1,temp2 = draw:match("\\pos%(([%d%.%-]+),([%d%.%-]+)")
+					temp1,temp2 = tonumber(temp1),tonumber(temp2)
+					clip_shape_copy =filter_s(clip_shape_copy, temp1, temp2, scale) 
+				end
+				-- clip rotation
+				if result.r==true and orgx~=nil then 
+					local temp1,temp2 = draw:match("\\org%(([%d%.%-]+),([%d%.%-]+)")
+					temp1,temp2 = tonumber(temp1),tonumber(temp2)
+					clip_shape_copy =filter_r(clip_shape_copy, temp1, temp2, rotationdata[index]-rotationdata[frame_ref])
+				elseif result.r==true then  
+					local temp1,temp2 = draw:match("\\pos%(([%d%.%-]+),([%d%.%-]+)")
+					temp1,temp2 = tonumber(temp1),tonumber(temp2)
+					clip_shape_copy =filter_r(clip_shape_copy, temp1, temp2, rotationdata[index]-rotationdata[frame_ref]) 
+				end
+				draw = draw..clip_head.."("..clip_shape_copy..")"
+			end
+
 			-- output
 			draw = draw..string.format("\\fscx100\\fscy100\\frz0\\p1\\1img(%s)}m 0 0 l %d 0 l %d %d l 0 %d", path_o, w-result.hs, w-result.hs, h-result.vs, h-result.vs)
 			l.text = tag..draw
@@ -302,11 +349,11 @@ function main(subtitle,selected,active)
 	elseif pressed=="Preview" then
 		local command0
 		if result.e=="none" then aegisub.cancel() 
-		elseif result.e=="paint, default: 5" then
+		elseif result.e=="paint, recommend: 5" then
 			command0 = "magick input -paint \\d output"
-		elseif result.e=="spread, default: 5,5" then
+		elseif result.e=="spread, recommend: 5,5" then
 			command0 = "magick input -blur \\d -spread \\d output"
-		elseif result.e=="swirl, default 360" then
+		elseif result.e=="swirl, recommend 360" then
 			command0 = "magick input -swirl \\d output"
 		elseif result.e=="custom command" then
 			command0 = result.c
@@ -376,6 +423,48 @@ function interpolate(head,tail,N,i,accel)
     return (tail-head)*bias+head
 end
 
+-- scale = 1
+function filter(shape, xn, yn, xref, yref, scale)
+	local s = ""
+	for p,x,y in shape:gmatch("([^%d%.%-]+)([%d%.%-]+) +([%d%.%-]+)") do
+		x,y = tonumber(x),tonumber(y)
+		local xdev,ydev = (x-xref)*scale,(y-yref)*scale
+		s = s..p..string.format("%.1f %.1f", xn+xdev, yn+ydev)
+	end
+	return s
+end
+
+function filter_s(shape, cx, cy, scale)
+	local s = ""
+	for p,x,y in shape:gmatch("([^%d%.%-]+)([%d%.%-]+) +([%d%.%-]+)") do
+		x,y = tonumber(x),tonumber(y)
+		local xdev,ydev = (x-cx)*scale,(y-cy)*scale
+		s = s..p..string.format("%.1f %.1f", cx+xdev, cy+ydev)
+	end
+	return s
+end
+
+function filter_r(shape, cx, cy, theta)
+	local s = ""
+	for p,x,y in shape:gmatch("([^%d%.%-]+)([%d%.%-]+) +([%d%.%-]+)") do
+		x,y = tonumber(x),tonumber(y)
+		x,y = rotation(x,y,cx,cy,theta)
+		s = s..p..string.format("%.1f %.1f", x, y)
+	end
+	return s
+end
+
+function rotation(x, y, cx, cy, theta)
+	theta = math.rad(theta)
+	local r = math.sqrt((x-cx)^2+(y-cy)^2)
+	if r<0.0001 then return x,y end
+	-- cos(t1+t2) = cost1 *cost2 - sint1 *sint2
+	-- sin(t1+t2) = sint1 *cost2 + cost1 *sint2
+	local cost = (x-cx)/r * math.cos(theta) - (y-cy)/r * math.sin(theta)
+	local sint = (y-cy)/r * math.cos(theta) + (x-cx)/r * math.sin(theta)
+	return r*cost+cx, r*sint+cy
+end
+
 --Register macro (no validation function required)
 aegisub.register_macro(script_name,script_description,main)
 
@@ -390,8 +479,24 @@ sketch
 stainedglass
 vintage
 
- -blur 5 -spread 5 毛玻璃
- -paint 5
- -swirl 180
- -charcoal 1
+-blur 5 -spread 5
+-paint 5
+-swirl 180
+-charcoal 1
+
+aegisub.project_properties() ->table
+export_encoding 
+timecodes_file 
+audio_file 
+ar_mode 0
+ar_value 1.7777777777778
+style_storage 
+active_row 0
+automation_scripts 
+video_file ?dummy:23.976000:400000:1920:1080:0:0:0:
+video_zoom 0.5
+keyframes_file 
+video_position 6
+scroll_position 0
+export_filters 
 ]]
