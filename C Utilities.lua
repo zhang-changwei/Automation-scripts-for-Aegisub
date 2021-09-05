@@ -166,8 +166,6 @@ function main(subtitle, selected, active)
 		re = require 'aegisub.re'
 	elseif result.option=="Multiline Importer" then
 		clipboard = require 'aegisub.clipboard'
-	elseif result.option=="SDR2HDR ColorGrading" then
-		util = require 'aegisub.util'
 	end
 
 	-- log
@@ -503,39 +501,6 @@ function main(subtitle, selected, active)
 					log.bilang = log.bilang + 1
 				end
 			end
-		elseif result.option=="Empty Mocha Data" then
-			-- local start_f,end_f = aegisub.frame_from_ms(line.start_time),aegisub.frame_from_ms(line.end_time)
-			-- local data = ""
-			-- data = data.."Adobe After Effects 6.0 Keyframe Data\n"
-			-- data = data.."\n"
-			-- data = data.." Units Per Second	23.976\n"
-			-- data = data.." Source Width	1920\n"
-			-- data = data.." Source Height	1080\n"
-			-- data = data.." Source Pixel Aspect Ratio	1\n"
-			-- data = data.." Comp Pixel Aspect Ratio	1\n"
-			-- data = data.."\n"
-			-- data = data.."Position\n"
-			-- data = data.." Frame	X pixels	Y pixels	Z pixels\n"
-			-- for i=0,end_f-start_f-1 do
-			-- 	data = data.." "..i.." 0 0 0\n"
-			-- end
-			-- data = data.."\n"
-			-- data = data.."Scale\n"
-			-- data = data.." Frame	X percent	Y percent	Z percent\n"
-			-- for i=0,end_f-start_f-1 do
-			-- 	data = data.." "..i.." 100 100 100\n"
-			-- end
-			-- data = data.."\n"
-			-- data = data.."Rotation\n"
-			-- data = data.." Frame	Degrees\n"
-			-- for i=0,end_f-start_f-1 do
-			-- 	data = data.." "..i.." 0\n"
-			-- end
-			-- data = data.."\n"
-			-- data = data.."End of Keyframe Data\n"
-			-- aegisub.log(data.."\nThe Mocha Data have been copied to the clipboard!")
-			-- clipboard.set(data)
-			-- aegisub.cancel()
 		elseif result.option=="Mocha Data Visualization" then
 			linetext = linetext:gsub("^{}","")
 			if (N>visualization_max_height and result.data_mode=="x-t") or (N>visualization_max_width and result.data_mode=="t-x") then 

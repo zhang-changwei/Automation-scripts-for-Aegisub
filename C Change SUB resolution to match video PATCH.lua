@@ -20,18 +20,18 @@ Change SUB resolution to match video PATCH
 
 --Script properties
 script_name="C Change SUB resolution to match video PATCH"
-script_description="Change SUB resolution to match video PATCH v1.1"
+script_description="Change SUB resolution to match video PATCH v1.1.1"
 script_author="chaaaaang"
-script_version="1.1"
+script_version="1.1.1"
 
 include('karaskel.lua')
 
 --GUI
 dialog_config={
     {class="label",label="input resolution",x=0,y=0,width=1},
-    {class="dropdown",name="i",items={"384x288","640x480","720x480","800x480","1024x576","1280x720","1440x810","1920x1080","3820x2160","7680x4320"},value="384x288",x=1,y=0},
+    {class="dropdown",name="i",items={"384x288","640x480","720x480","800x480","1024x576","1280x720","1440x810","1920x1080","3840x2160","7680x4320"},value="384x288",x=1,y=0},
     {class="label",label="output resolution",x=0,y=1,width=1},
-    {class="dropdown",name="o",items={"384x288","640x480","720x480","800x480","1024x576","1280x720","1440x810","1920x1080","3820x2160","7680x4320"},value="1920x1080",x=1,y=1},
+    {class="dropdown",name="o",items={"384x288","640x480","720x480","800x480","1024x576","1280x720","1440x810","1920x1080","3840x2160","7680x4320"},value="1920x1080",x=1,y=1},
     {class="checkbox",name="e",label="scale \\blur, \\be, \\bord and \\shad",value=false,x=0,y=2,width=2,hint="recommend: off"}
 }
 buttons={"Run","Quit"}

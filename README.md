@@ -11,7 +11,7 @@
 * __当前各脚本版本信息__
     | Name                            | Version |
     |---------------------------------|---------|
-    | C Change SUB resolution to match video PATCH | v1.1 |
+    | C Change SUB resolution to match video PATCH | v1.1.1 |
     | C Effect                        | v1.1    |
     | C Fast Tools                    | v1.2    |
     | C Font Resize (Mocha Deshaking) | v1.3    |
@@ -167,6 +167,7 @@
 ## __INF. 更新日志__
 | Date | Script | Version | Detail |
 |------|--------|---------|--------|
+|2021.9.5|C Change SUB resolution to match video PATCH|1.1.1|2160p分辨率尺寸写错了现已改正|
 |2021.9.3|C Fast Tools|1.3|增加fad序列功能|
 |2021.9.3|C Utilities|1.7.3|自动获取视频fps信息|
 |2021.9.2|C Picture Tracker|1.3|支持clip追踪|
