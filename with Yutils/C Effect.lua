@@ -7,9 +7,9 @@ goto my repository https://github.com/zhang-changwei/Automation-scripts-for-Aegi
 
 --Script properties
 script_name="C Effect"
-script_description="Effect v1.1.1"
+script_description="Effect v1.2"
 script_author="chaaaaang"
-script_version="1.1.1"
+script_version="1.2"
 
 local Yutils = require('Yutils')
 include('karaskel.lua')
@@ -25,19 +25,16 @@ function main(subtitle, selected)
 	local xres, yres, ar, artype = aegisub.video_size()
 	-- math.randomseed(os.time())
 
-	local l0 = nil
-	for si,li in ipairs(selected) do				
-		l0 = li
-		break
-	end
+	local l0 = selected[1]
 
+	-- UI
 	local pressed, result = aegisub.dialog.display(dialog_config,buttons)
-    if (pressed=="Quit") then aegisub.cancel()
-	elseif (pressed=="Detail") then
-		local daughter_dialog_config,daughter_buttons = daughter_dialog(result["effect"])
+    if pressed=="Quit" then aegisub.cancel()
+	elseif pressed=="Detail" then
+		local daughter_dialog_config,daughter_buttons = daughter_dialog(result.effect)
 		local d_pressed, d_res = aegisub.dialog.display(daughter_dialog_config,daughter_buttons)
-		if (d_pressed=="Quit") then aegisub.cancel() 
-		elseif (d_pressed=="Run") then
+		if d_pressed=="Quit" then aegisub.cancel() 
+		elseif d_pressed=="Run" then
 
 			-- get style snum, style
 			local snum = 1
@@ -57,6 +54,8 @@ function main(subtitle, selected)
 				
 				-- line
 				local ltxtstripped = line.text_stripped
+				ltxtstripped = ltxtstripped:gsub("^ +","")
+				ltxtstripped = ltxtstripped:gsub(" +$","")
 				local ltext = line.text:match("^{") and line.text or "{}"..line.text
 				local ldur = line.duration
 				local lsta = line.start_time
@@ -88,7 +87,10 @@ function main(subtitle, selected)
 				local borderstyle = line.styleref.borderstyle
 				local outline = tag_strip_t:match("\\bord") and tag_strip_t:match("\\bord([%d%.]+)") or line.styleref.outline
 				local shadow = tag_strip_t:match("\\shad") and tag_strip_t:match("\\shad([%d%.%-]+)") or line.styleref.shadow
-				local align = tag_strip_t:match("\\an") and tag_strip_t:match("\\an%d") or line.styleref.align
+				local xshad,yshad = shadow,shadow
+				if tag_strip_t:match("\\xshad") then xshad = tag_strip_t:match("\\xshad([%d%.%-]+)") end
+				if tag_strip_t:match("\\yshad") then yshad = tag_strip_t:match("\\yshad([%d%.%-]+)") end
+				local align = tag_strip_t:match("\\an%d") and tag_strip_t:match("\\an%d") or line.styleref.align
 				-- color alpha
 				local c1 = tag_strip_t:match("\\1?c&?H?%x") and "&H"..tag_strip_t:match("\\1?c&?H?([%x]+)&?").."&" or "&H"..ca1:match("%x%x(%x%x%x%x%x%x)").."&"
 				local c2 = tag_strip_t:match("\\2c") and "&H"..tag_strip_t:match("\\2c&?H?([%x]+)&?").."&" or "&H"..ca2:match("%x%x(%x%x%x%x%x%x)").."&"
@@ -96,8 +98,12 @@ function main(subtitle, selected)
 				local c4 = tag_strip_t:match("\\4c") and "&H"..tag_strip_t:match("\\4c&?H?([%x]+)&?").."&" or "&H"..ca4:match("%x%x(%x%x%x%x%x%x)").."&"
 				local alpha = tag_strip_t:match("\\1?al?p?h?a?&?H?%x") and "&H"..tag_strip_t:match("\\1?al?p?h?a?&?H?([%x]+)&?").."&" or "&H"..ca1:match("(%x%x)%x%x%x%x%x%x").."&"
 				
+				-- tonumber
+				fontsize,scale_x,scale_y,spacing,angle,outline,shadow,xshad,yshad,align = tonumber(fontsize),tonumber(scale_x),tonumber(scale_y),tonumber(spacing),tonumber(angle),tonumber(outline),tonumber(shadow),tonumber(xshad),tonumber(yshad),tonumber(align)
+
 				-- position
-				local posx,posy,top,left,bottom,right,center,middle = position(ltext,line,xres,yres)
+				local width,height = widthheight(ltxtstripped,line,font,fontsize,bold,italic,underline,strikeout,scale_x,scale_y,spacing,outline,shadow)
+				local posx,posy,top,left,bottom,right,center,middle = position(ltext,line,xres,yres,width,height)
 				local topL,leftL,bottomL,rightL,centerL,middleL = positionL(angle,posx,posy,top,left,bottom,right)-- consider \\frz
 
 				-- comment the original line
@@ -109,16 +115,25 @@ function main(subtitle, selected)
 				line.text = line.text:match("^{") and line.text or "{}"..line.text
 
 				-- Yutils
-				fontsize,scale_x,scale_y,spacing,angle = tonumber(fontsize),tonumber(scale_x),tonumber(scale_y),tonumber(spacing),tonumber(angle)
 				local font_handle = Yutils.decode.create_font(font,bold,italic,underline,strikeout,fontsize,scale_x/100,scale_y/100,spacing)
 				local shape = font_handle.text_to_shape(ltxtstripped)
 				local pixels = Yutils.shape.to_pixels(shape)
+				-- handle shadow (now outline cannot be handled)
+				local shape_shad,pixels_shad
+				if xshad~=0 or yshad~=0 then 
+					shape_shad = Yutils.shape.filter(shape,function (x,y) return x+xshad,y+yshad end)
+					pixels_shad = Yutils.shape.to_pixels(shape_shad)
+				end
+				-- handle outline (pseudo)
+				local shape_bord,pixels_bord
+				if outline~=0 then 
+					shape_bord = Yutils.shape.to_outline(shape,outline)
+					pixels_bord = Yutils.shape.to_pixels(shape_bord)
+				end
 
 				-- particle effect (using tag_strip_pos)
 				if result.effect=="particle" then
-					if (d_res.fade_in==true and d_res.fade_out==true) or (d_res.fade_in==false and d_res.fade_out==false) then
-						aegisub.cancel()
-					end
+					if (d_res.fade_in==true and d_res.fade_out==true) or (d_res.fade_in==false and d_res.fade_out==false) then aegisub.cancel() end
 
 					local bound_left,bound_top,bound_right,bound_bottom,bound_pixels
 					if d_res.shape=="others" then 
@@ -126,7 +141,7 @@ function main(subtitle, selected)
 						bound_pixels = Yutils.shape.to_pixels(d_res.shape_code)
 					end
 					-- content
-					if (d_res.fade_in==true) then 
+					if d_res.fade_in==true then 
 						for j=1,#pixels do
 							subtitle.append(line)
 							local new_line = subtitle[#subtitle]
@@ -194,34 +209,84 @@ function main(subtitle, selected)
 					end
 				-- dissolve
 				elseif result.effect=="dissolve" then
-					if (d_res.fade_in==false and d_res.fade_out==false) then
-						aegisub.cancel()
-					end
+					if d_res.fade_in==false and d_res.fade_out==false then aegisub.cancel() end
 					if d_res.fade_in==false then d_res.fin_t=0 end
 					if d_res.fade_out==false then d_res.fout_t=0 end
-					for i=leftL, rightL, d_res.step do
-						for j=topL, bottomL, d_res.step do
+					-- the middle part
+					subtitle.append(line)
+					local line_m = subtitle[#subtitle]
+					line_m.start_time = lsta + d_res.fin_t
+					line_m.end_time   = lend - d_res.fout_t
+					subtitle[#subtitle] = line_m
+					-- kill fad in linetext
+					line.text = line.text:gsub("\\fade?%([^%)]+%)","")
+
+					for i=math.floor(leftL), math.floor(rightL), d_res.step do
+						for j=math.floor(topL), math.floor(bottomL), d_res.step do
 							--judge: false-> no operation
-							local judge = true
+							local judge = false
 							if d_res.yu==true then
 								local ii,jj = posL2pos(angle,i,j,top,left,posx,posy)
-								if M.pt_in_shape2(ii,jj,pixels)==false then judge = false end
+								if M.pt_in_shape2(ii,jj,pixels)==true then judge = true goto dissolve_judge end
+								ii,jj = posL2pos(angle,i+d_res.step,j,top,left,posx,posy)
+								if M.pt_in_shape2(ii,jj,pixels)==true then judge = true goto dissolve_judge end
+								ii,jj = posL2pos(angle,i,j+d_res.step,top,left,posx,posy)
+								if M.pt_in_shape2(ii,jj,pixels)==true then judge = true goto dissolve_judge end
+								ii,jj = posL2pos(angle,i+d_res.step,j+d_res.step,top,left,posx,posy)
+								if M.pt_in_shape2(ii,jj,pixels)==true then judge = true goto dissolve_judge end
+								-- shad
+								if xshad~=0 or yshad~=0 then
+									ii,jj = posL2pos(angle,i,j,top,left,posx,posy)
+									if M.pt_in_shape2(ii,jj,pixels_shad)==true then judge = true goto dissolve_judge end
+									ii,jj = posL2pos(angle,i+d_res.step,j,top,left,posx,posy)
+									if M.pt_in_shape2(ii,jj,pixels_shad)==true then judge = true goto dissolve_judge end
+									ii,jj = posL2pos(angle,i,j+d_res.step,top,left,posx,posy)
+									if M.pt_in_shape2(ii,jj,pixels_shad)==true then judge = true goto dissolve_judge end
+									ii,jj = posL2pos(angle,i+d_res.step,j+d_res.step,top,left,posx,posy)
+									if M.pt_in_shape2(ii,jj,pixels_shad)==true then judge = true goto dissolve_judge end
+								end
+								-- outline
+								if outline~=0 then
+									ii,jj = posL2pos(angle,i,j,top,left,posx,posy)
+									if M.pt_in_shape2(ii,jj,pixels_bord)==true then judge = true goto dissolve_judge end
+									ii,jj = posL2pos(angle,i+d_res.step,j,top,left,posx,posy)
+									if M.pt_in_shape2(ii,jj,pixels_bord)==true then judge = true goto dissolve_judge end
+									ii,jj = posL2pos(angle,i,j+d_res.step,top,left,posx,posy)
+									if M.pt_in_shape2(ii,jj,pixels_bord)==true then judge = true goto dissolve_judge end
+									ii,jj = posL2pos(angle,i+d_res.step,j+d_res.step,top,left,posx,posy)
+									if M.pt_in_shape2(ii,jj,pixels_bord)==true then judge = true goto dissolve_judge end
+								end
+							else judge = true --disenable
 							end
+							::dissolve_judge::
 							if judge==true then
-								subtitle.append(line)
-								local new_line = subtitle[#subtitle]
-
 								local rand1,rand2,rand3,rand4 = math.random(0,d_res.fin_t),math.random(0,d_res.fin_t),math.random(0,d_res.fout_t),math.random(0,d_res.fout_t)
 								rand1,rand2 = math.min(rand1,rand2),math.max(rand1,rand2)
 								rand3,rand4 = math.min(rand3,rand4),math.max(rand3,rand4)
-								new_line.text = new_line.text:gsub("^{([^}]*)}",
+								-- head
+								if d_res.fin_t~=0 then
+									subtitle.append(line)
+									local new_line = subtitle[#subtitle]
+									new_line.text = new_line.text:gsub("^{([^}]*)}",
 									function (a)
-										return string.format("{\\alpha&HFF&\\t(%d,%d,\\alpha&H00&)%s\\t(%d,%d,\\alpha&HFF&)\\clip(%d,%d,%d,%d)}",
-											rand1,rand2,a,ldur-rand4,ldur-rand3,i,j,i+d_res.step,j+d_res.step)
+										return string.format("{\\alpha&HFF&\\t(%d,%d,\\alpha&H00&)%s\\clip(%d,%d,%d,%d)}",
+											rand1,rand2,a,i,j,i+d_res.step,j+d_res.step)
 									end)
-								new_line.text = new_line.text:gsub("\\alpha&HFF&\\t%(0,0,\\alpha&H00&%)","")
-								new_line.text = new_line.text:gsub("\\t%("..ldur..","..ldur..",\\alpha&HFF&%)","")
-								subtitle[#subtitle] = new_line
+									new_line.end_time = lsta + d_res.fin_t
+									subtitle[#subtitle] = new_line
+								end
+								-- tail
+								if d_res.fout_t~=0 then
+									subtitle.append(line)
+									local new_line = subtitle[#subtitle]
+									new_line.text = new_line.text:gsub("^{([^}]*)}",
+									function (a)
+										return string.format("{%s\\t(%d,%d,\\alpha&HFF&)\\clip(%d,%d,%d,%d)}",
+											a,d_res.fout_t-rand4,d_res.fout_t-rand3,i,j,i+d_res.step,j+d_res.step)
+									end)
+									new_line.start_time = lend - d_res.fout_t
+									subtitle[#subtitle] = new_line
+								end							
 							end
 						end
 						aegisub.progress.set((i-left)/(right-left)*100)
@@ -681,34 +746,9 @@ function daughter_dialog(effect)
 end
 
 function num2bool(a)
-	if tonumber(a)~=0 then
-		return true
-	else
-		return false
+	if tonumber(a)~=0 then return true
+	else return false
 	end
-end
-
--- abandoned
-function generate_style(style,name,font,fontsize,ca1,ca2,ca3,ca4,bold,italic,underline,strikeout,scale_x,scale_y,spacing,angle,borderstyle,outline,shadow,align)
-	style.name = name
-	style.fontname = font
-	style.fontsize = fontsize
-	style.color1 = ca1
-	style.color2 = ca2
-	style.color3 = ca3
-	style.color4 = ca4
-	style.bold = bold
-	style.italic = italic
-	style.underline = underline
-	style.strikeout = strikeout
-	style.scale_x = scale_x
-	style.scale_y = scale_y
-	style.spacing = spacing
-	style.angle = angle
-	style.borderstyle = borderstyle
-	style.outline = outline
-	style.shadow = shadow
-	style.align = align
 end
 
 function color_html2ass(c)
@@ -721,22 +761,26 @@ function ca_html2ass(c)
 	return "&H"..b..g..r.."&","&H"..a.."&"
 end
 
-function position(ltext,line,xres,yres)
+function widthheight(ltext,line,font,fontsize,bold,italic,underline,strikeout,scale_x,scale_y,spacing,outline,shadow)
+	local style = line.styleref
+	style.fontname = font
+	style.fontsize = fontsize
+	style.bold = bold
+	style.italic = italic
+	style.underline = underline
+	style.strikeout = strikeout
+	style.scale_x = scale_x
+	style.scale_y = scale_y
+	style.spacing = spacing
+	style.outline = outline
+	style.shadow = shadow
+	local w,h = aegisub.text_extents(style,ltext)
+	return w,h
+end
+
+function position(ltext,line,xres,yres,width,height)
 	local x,y,top,left,bottom,right,center,middle = 0,0,0,0,0,0,0,0
 
-	local ratiox,ratioy = 1,1
-	if (ltext:match("\\fs%d")~=nil) then
-		ratiox = tonumber(ltext:match("\\fs([%d%.]+)")) / line.styleref.fontsize
-		ratioy = tonumber(ltext:match("\\fs([%d%.]+)")) / line.styleref.fontsize
-	end
-	if (ltext:match("\\fscx")~=nil) then 
-		ratiox = ratiox * tonumber(ltext:match("\\fscx([%d%.]+)")) / line.styleref.scale_x
-	end
-	if (ltext:match("\\fscy")~=nil) then 
-		ratioy = ratioy * tonumber(ltext:match("\\fscy([%d%.]+)")) / line.styleref.scale_y
-	end
-	local width = line.width * ratiox
-	local height = line.height * ratioy
 	local an = ltext:match("\\an%d") and tonumber(ltext:match("\\an(%d)")) or line.styleref.align
 	if     (an == 1) then
 		if (ltext:match("\\pos")~=nil) then

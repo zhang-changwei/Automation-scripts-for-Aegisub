@@ -6,13 +6,12 @@ goto my repository https://github.com/zhang-changwei/Automation-scripts-for-Aegi
 ]]
 
 script_name="C Utilities"
-script_description="Utilities v1.7.3"
+script_description="Utilities v1.7.4"
 script_author="chaaaaang"
-script_version="1.7.3" 
+script_version="1.7.4" 
 
 include('karaskel.lua')
 re = nil
-util = nil
 clipboard = nil
 Yutils = nil
 
@@ -28,7 +27,7 @@ local visualization_max_width, visualization_max_height = 180, 41
 local dialog_config = {
 	{class="label",label="Options",x=0,y=0},--1
 	{class="dropdown",name="option",
-		items={"AE Sequential Picture Importer","Centralize Drawing","Delete Comment Lines","Delete Empty Lines","Delete SDH Comment",
+		items={"AE Sequential Picture Importer","Centralize Drawing","Delete Blank Lines (Global)","Delete Comment Lines (Global)","Delete SDH Comment",
 		"Dialog Checker","Mocha Data Visualization","Move!","Multiline Importer","Separate Bilingual SUBS by \\N","Shift Multiline","Swap SUBS Splitted by \\N"},
 		x=1,y=0,width=5},--2
     -- Delete SDH Comment
@@ -57,10 +56,10 @@ local dialog_config = {
 	{class="floatedit",name="move_y",value=0,x=4,y=5,width=2},--24
 	-- Dialog Checker
 	{class="label",label="■ Dialog Checker",x=3,y=6,width=2},--25
-	{class="checkbox",label="overlap checker",name="dialog_olp",value=true,x=3,y=7,width=2},--26
-	{class="checkbox",label="bilang checker",name="dialog_bl",value=true,x=3,y=8,width=2},--27
+	{class="checkbox",label="overlap checker",name="dialog_olp",value=false,x=3,y=7,width=2},--26
+	{class="checkbox",label="bilang checker",name="dialog_bl",value=false,x=3,y=8,width=2},--27
 	{class="dropdown",name="dialog_blstyle",items={"zho\\Neng","zho\\Nany","any\\Neng","any\\Nany"},value="zho\\Neng",x=3,y=9,width=3},--28
-	{class="checkbox",label="overlength checker",name="dialog_ol",value=true,x=3,y=10,width=3},--29
+	{class="checkbox",label="overlength checker",name="dialog_ol",value=false,x=3,y=10,width=3},--29
 	{class="label",label="buffer 1",x=3,y=11},--30
 	{class="floatedit",name="dialog_bf1",value=0.6,x=4,y=11,width=2,hint="Buffer for CHS SUBS, Arg:0-1. ACT ON overlength checker, smaller buffer means narrower space for SUBS."},
     {class="label",label="buffer 2",x=3,y=12},--32
@@ -101,10 +100,13 @@ local dialog_config = {
 	{class="label",label="         ",x=2,y=1},
 	{class="label",label="         ",x=6,y=1},
 	
+	{class="label",label="--Utilities v1.7.4--",x=8,y=0,width=2},
 	{class="label",label="AE Sequential Picture Importer: ",x=0,y=14,width=3},
 	{class="label",label="Press the AE button to Grab AE Sequential Picture Path and Run.",x=3,y=14,width=7},
 	{class="label",label="Please choose the file with the smallest INDEX in the file picker.",x=3,y=15,width=7},
-	{class="label",label="Yutils library: Is required for Centralize Drawing, Dialog Checker/overlength checker and Move!/clip",x=0,y=16,width=10}
+	{class="label",label="ImageMagick is required for AE/crop",x=3,y=16,width=7},
+	{class="label",label="Yutils library:",x=0,y=17},
+	{class="label",label="Is required for Centralize Drawing.",x=1,y=17,width=9}
 }
 local buttons = {"Run","AE","Quit"}
 
@@ -126,6 +128,7 @@ function main(subtitle, selected, active)
     local meta,styles=karaskel.collect_head(subtitle,false)
 	local xres, yres, ar, artype = aegisub.video_size()
 	local ae_path = nil
+	local ae_pressed, ae_result -- ae crop
 	local data = {} -- Delete Comment Lines & Delete Empty Lines & Multiline Importer & Mocha Visualization
 	local data_max,data_min,data_index = 0,0,1 -- Mocha Visualization
 
@@ -138,29 +141,10 @@ function main(subtitle, selected, active)
 	ae_dialog_config[9].value = yres
 
     local pressed, result = aegisub.dialog.display(dialog_config,buttons)
-	local ae_pressed, ae_result -- ae crop
-    if (pressed=="Quit") then aegisub.cancel() end
-	if (pressed=="AE") then
-		if result.ae_crop==true then
-			ae_pressed, ae_result = aegisub.dialog.display(ae_dialog_config,ae_buttons)
-			if ae_pressed=="Quit" then aegisub.cancel() end
-		end
-		ae_path = aegisub.dialog.open('AE Choose the file with the smallest INDEX', '', '', 'PNG files (.png)|*.png|All Files (.)|.', false, true)
-	end
-	if pressed=="Run" and result.option=="AE Sequential Picture Importer" then
-		aegisub.log("Please the AE button")
-		aegisub.cancel()
-	end
-	if (pressed=="AE" and result.option~="AE Sequential Picture Importer") or (pressed=="AE" and ae_path==nil) then
-		aegisub.cancel()
-	end
+    if not (pressed=="Run" or pressed=="AE") then aegisub.cancel() end
 
 	-- External library
-	if result.option=="Dialog Checker" and result.dialog_ol==true then 
-		Yutils = require('Yutils')
-	elseif result.option=="Centralize Drawing" then 
-		Yutils = require('Yutils')
-	elseif result.option=="Move!" and result.move_clip==true then
+	if result.option=="Centralize Drawing" then 
 		Yutils = require('Yutils')
 	elseif result.option=="Delete SDH Comment" then
 		re = require 'aegisub.re'
@@ -175,7 +159,13 @@ function main(subtitle, selected, active)
 	local N = #selected
 
 	-- Stuff shaould be done before the loop
-	if result.option=="Delete Comment Lines" then
+	if result.option=="AE Sequential Picture Importer" then
+		if result.ae_crop==true then
+			ae_pressed, ae_result = aegisub.dialog.display(ae_dialog_config,ae_buttons)
+			if ae_pressed=="Quit" then aegisub.cancel() end
+		end
+		ae_path = aegisub.dialog.open('AE Choose the file with the smallest INDEX', '', '', 'PNG files (.png)|*.png|All Files (.)|.', false, true)
+	elseif result.option=="Delete Comment Lines (Global)" then
 		local i = 1
 		local total = #subtitle
 		while(i<=total) do
@@ -194,7 +184,7 @@ function main(subtitle, selected, active)
 		end
 		aegisub.set_undo_point(script_name) 
 		return data
-	elseif result.option=="Delete Empty Lines" then
+	elseif result.option=="Delete Blank Lines (Global)" then
 		local i = 1
 		local total = #subtitle
 		while(i<=total) do
@@ -263,11 +253,13 @@ function main(subtitle, selected, active)
 				new_line.start_time = ae_timeS + math.floor((j-1) * ae_timeU)
 				new_line.end_time = ae_timeS + math.floor(j * ae_timeU)
 
-				if k<10 then ae_mid = ae_mid:gsub("%d$",k)
-				elseif k<100 then ae_mid = ae_mid:gsub("%d%d$",k)
-				elseif k<1000 then ae_mid = ae_mid:gsub("%d%d%d$",k)
-				elseif k<10000 then ae_mid = ae_mid:gsub("%d%d%d%d$",k)
-				else ae_mid = ae_mid:gsub("%d%d%d%d%d$",k)
+				if     k<10      then ae_mid = ae_mid:gsub("%d$",k)
+				elseif k<100     then ae_mid = ae_mid:gsub("%d%d$",k)
+				elseif k<1000    then ae_mid = ae_mid:gsub("%d%d%d$",k)
+				elseif k<10000   then ae_mid = ae_mid:gsub("%d%d%d%d$",k)
+				elseif k<100000  then ae_mid = ae_mid:gsub("%d%d%d%d%d$",k)
+				elseif k<1000000 then ae_mid = ae_mid:gsub("%d%d%d%d%d%d$",k)
+				else                  ae_mid = ae_mid:gsub("%d%d%d%d%d%d%d$",k)
 				end
 
 				if result.ae_crop==true then
@@ -417,19 +409,19 @@ function main(subtitle, selected, active)
 						log.overlength = log.overlength + 1
 					end
 				elseif count==1 then
-					-- local Yutils = require('Yutils')
 					local chs,eng = linetext:match("(.*)\\N(.*)")
 					local chss,engs = chs:gsub("{([^}]*)}",""),eng:gsub("{([^}]*)}","")
 					
-					local name,scale_x,size,hspace = line.styleref.fontname,line.styleref.scale_x,line.styleref.fontsize,line.styleref.spacing
+					local stylename,name,scale_x,size,hspace = line.style,line.styleref.fontname,line.styleref.scale_x,line.styleref.fontsize,line.styleref.spacing
 					if chs:match("\\fn")~=nil then name=chs:match("\\fn([^\\}]+)") end
 					if chs:match("\\fsc[%d%.]")~=nil then scale_x=chs:match("\\fsc([%d%.]+)") end
 					if chs:match("\\fscx[%d%.]")~=nil then scale_x=chs:match("\\fscx([%d%.]+)") end
 					if chs:match("\\fs[%d%.]")~=nil then size=chs:match("\\fs([%d%.]+)") end
 					if chs:match("\\fsp[%d%.%-]")~=nil then hspace=chs:match("\\fs([%d%.%-]+)") end
 
-					local name2,scale_x2,size2,hspace2 = name,scale_x,size,hspace
+					local stylename2,name2,scale_x2,size2,hspace2 = stylename,name,scale_x,size,hspace
 					if eng:match("\\r")~=nil then 
+						stylename2 = eng:match("\\r([^\\}]+)")
 						for j=1,1000 do
 							local style = subtitle[j]
 							if style.class=="style" and style.name==eng:match("\\r([^\\}]+)") then
@@ -447,9 +439,19 @@ function main(subtitle, selected, active)
 					if eng:match("\\fs[%d%.]")~=nil then size2=eng:match("\\fs([%d%.]+)") end
 					if eng:match("\\fsp[%d%.%-]")~=nil then hspace2=eng:match("\\fs([%d%.%-]+)") end
 					
-					local CHS_HANDLE = Yutils.decode.create_font(name,false,false,false,false,size,scale_x/100,1,hspace)
-					local ENG_HANDLE = Yutils.decode.create_font(name2,false,false,false,false,size2,scale_x2/100,1,hspace2)
-					local w1,w2 = CHS_HANDLE.text_extents(chss).width,ENG_HANDLE.text_extents(engs).width
+					-- find the style
+					local style1,style2
+					for j=1,1000 do
+						if subtitle[j].class=="dialogue" then break end
+						if subtitle[j].class=="style" and subtitle[j].name==stylename then style1=subtitle[j] end
+						if subtitle[j].class=="style" and subtitle[j].name==stylename2 then style2=subtitle[j] end
+					end
+					style1.fontname,style2.fontname = name,name2
+					style1.scale_x,style2.scale_x = scale_x,scale_x2
+					style1.fontsize,style2.fontsize = size,size2
+					style1.spacing,style2.spacing = hspace,hspace2
+					local w1 = aegisub.text_extents(style1,chss)
+					local w2 = aegisub.text_extents(style2,engs)
 
 					if w1>=xres*result.dialog_bf1 or w2>=xres*result.dialog_bf2 then
 						line.actor = line.actor.."overlength "
@@ -597,10 +599,9 @@ function main(subtitle, selected, active)
 							return p.."("..a+result.move_x..","..b+result.move_y..","..c+result.move_x..","..d+result.move_y..")"
 						end)
 					else
-						-- local Yutils = require('Yutils')
 						linetext = linetext:gsub("(\\i?clip)%(([^%)]*)%)",
 						function (p,a)
-							a = Yutils.shape.filter(a,function (x,y) return x+result.move_x,y+result.move_y end)
+							a = a:gsub("([%d%.%-]+) +([%d%.%-]+)",function (x,y) return x+result.move_x.." "..y+result.move_y end)
 							return p.."("..a..")"
 						end)
 					end
@@ -873,6 +874,7 @@ end
 
 function fpsgen()
 	local f = 10000
+	if aegisub.ms_from_frame(f)==nil then return 23.976 end
 	local t = (aegisub.ms_from_frame(f)+aegisub.ms_from_frame(f+1))/2
 	-- f = t/(1000/fps) = t/1000*fps
 	local fps = f/t*1000

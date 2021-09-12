@@ -167,6 +167,8 @@
 ## __INF. 更新日志__
 | Date | Script | Version | Detail |
 |------|--------|---------|--------|
+|2021.9.12|C Effect|1.2|修复fsp宽度计算问题，加快dissolve渲染速度|
+|2021.9.12|C Utilities|1.7.4|界面美化，稳定dialog checker性能，兼容aegisub 3.3.0|
 |2021.9.5|C Change SUB resolution to match video PATCH|1.1.1|2160p分辨率尺寸写错了现已改正|
 |2021.9.3|C Fast Tools|1.3|增加fad序列功能|
 |2021.9.3|C Utilities|1.7.3|自动获取视频fps信息|
