@@ -4,7 +4,6 @@
   - [__1. C Font Resize__](#1-c-font-resize)
   - [__2. C Gradient__](#2-c-gradient)
   - [__3. C Translation__](#3-c-translation)
-  - [__4. C Scaling Rotation Conflict Solution__](#4-c-scaling-rotation-conflict-solution)
   - [__INF. 更新日志__](#INF-更新日志)
 
 ## __0. 前言__
@@ -18,11 +17,10 @@
     | C Gradient                      | v2.1    |
     | C Merge Bilingual SUBS          | v1.1    |
     | C Jump                          | v1.0    |
-    | C Picture Tracker               | v1.3    |
+    | C Picture Tracker               | v1.4    |
     | C Translation                   | v3.2    |
-    | C Utilities                     | v1.7.3  |
-    | C XML Analyzer                  | v1.2    |
-    | * C Scaling Rotation Conflict Solution | v1.1 |
+    | C Utilities                     | v1.7.4  |
+    | C XML Analyzer                  | v1.3    |
     > 在Automation Manager Description栏中查看脚本版本信息  
     > 若你的脚本在上述表格中且无版本信息 可能需要考虑更新脚本  
     > *表示“非主线”脚本，未列出的脚本为测试性或实验性的
@@ -32,7 +30,6 @@
     + `C Effect & C Utilities`脚本部分功能依赖Yutils库，请先安装相关组件，传送门[https://github.com/Youka/Yutils](https://github.com/Youka/Yutils)，感谢原作者。
     + `C XML Analyzer`脚本依赖`xmlSimple`库，原作者[https://github.com/Cluain/Lua-Simple-XML-Parser](https://github.com/Cluain/Lua-Simple-XML-Parser)，本人作了一点修改，存放在lib文件夹下。
 * __该仓库本人长期维护，欢迎star与fork。__  
-* 2021.3.20 Mocha三件套`(Font Resize,Gradient,Translation)`已基本趋于稳定
 
 -------------------------------------------
 ## __1. C Font Resize__
@@ -139,34 +136,14 @@
 * __Warning__  
     不支持 `\t(\clip)` 标签  
 
-<!-- ## __4. C Smooth__  
-> 脚本的逻辑与 `C Translation/Smooth` 不同，   
-> `C Translation/Smooth` 通过手动添置轨迹反向偏移，以实现平滑的目的  
-> `C Smooth` 通过识别快速变化标签行，对其强制线性化，以实现滤去强烈抖动的标签，达到平滑效果，注意若反复使用该脚本，最终会导致选中行标签线性变化，而并不一定能与画面完美贴合。 -->
-## __4. C Scaling Rotation Conflict Solution__
-* __Feature__  
-    解决拉伸代码 `\fscx \fscy` 与旋转代码 `\frx fry` 生成SUP时冲突的问题  
-    将拉伸代码 `\fscx \fscy` 写入样式表中，并以后缀区分新增样式
-* __Usage__  
-    选中一行(多行)字幕，运行LUA脚本，设置 suffix 数值即可
-* __GUI__  
-    __suffix (int number):__  
-    首行新样式名后缀
-* __Example__  
-    `1 Default {\fscx120\fscy130\frx1\fry2\frz5}example`  
-    `2 Default {\fscx130\fscy140\frx2\fry3\frz5}example`  
-    `3 Default {\fscx140\fscy150\frx3\fry4\frz5}example`  
-    -> After running (`suffix=1`)  
-    `1 Default_1 {\frx1\fry2\frz5}example`  
-    `2 Default_2 {\frx2\fry3\frz5}example`   
-    `3 Default_3 {\frx3\fry4\frz5}example`  
-* __Warning__  
-    选中每行字幕有且只能有一组拉伸代码
-    > 程序会在样式表中产生大量样式，谨慎使用
 --------------------------------------------
 ## __INF. 更新日志__
 | Date | Script | Version | Detail |
 |------|--------|---------|--------|
+|2021.9.16|C XML Analyzer|1.4.1|优化过水|
+|2021.9.14|C XML Analyzer|1.3|优化了epoch判断机制|
+|2021.9.12|C Picture Tracker|1.4|修复当贴图超出边界时贴图错位|
+|2021.9.12|C Scaling Rotating Conflict Solution|1.1|废弃|
 |2021.9.12|C Effect|1.2|修复fsp宽度计算问题，加快dissolve渲染速度|
 |2021.9.12|C Utilities|1.7.4|界面美化，稳定dialog checker性能，兼容aegisub 3.3.0|
 |2021.9.5|C Change SUB resolution to match video PATCH|1.1.1|2160p分辨率尺寸写错了现已改正|

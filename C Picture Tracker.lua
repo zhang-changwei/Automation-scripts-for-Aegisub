@@ -19,9 +19,9 @@ get info: ffprobe -i path1 -show_streams > otput.txt
 
 --Script properties
 script_name="C Picture Tracker"
-script_description="Picture Tracker v1.3"
+script_description="Picture Tracker v1.4"
 script_author="chaaaaang"
-script_version="1.3"
+script_version="1.4"
 
 include("karaskel.lua")
 clipboard = require 'aegisub.clipboard'
@@ -54,6 +54,7 @@ local buttons = {"Track","Preview","Quit"}
 
 function main(subtitle,selected,active)
 	local meta,styles=karaskel.collect_head(subtitle,false)
+	local xres, yres, ar, artype = aegisub.video_size()
 	-- first get png path
 	local path = subtitle[active].text:match("\\1img%(([^,%)]+)")
 	path = path:gsub("/","\\")
@@ -311,6 +312,21 @@ function main(subtitle,selected,active)
 				draw = draw..clip_head.."("..clip_shape_copy..")"
 			end
 
+			-- handle picture out of boundry
+			local bottom = getbottom(posdata[index].y+ydev, h, align)
+			if bottom>yres then
+				local path_o2 = path_head.."_"..i..".png"
+				local h_temp = math.floor(h-(bottom-yres))
+				if h_temp>result.vs then
+					h = h_temp
+					local commandcrop = string.format("magick %s -crop %dx%d+0+0 +repage %s",path_o,w,h,path_o2)
+					os.execute(commandcrop)
+					path_o = path_o2
+				else
+					l.comment = true
+				end
+			end
+
 			-- output
 			draw = draw..string.format("\\fscx100\\fscy100\\frz0\\p1\\1img(%s)}m 0 0 l %d 0 l %d %d l 0 %d", path_o, w-result.hs, w-result.hs, h-result.vs, h-result.vs)
 			l.text = tag..draw
@@ -392,6 +408,16 @@ function main(subtitle,selected,active)
 	::bottom::
 	aegisub.set_undo_point(script_name)
 	return selected
+end
+
+function getbottom(posy, height, align)
+	if align==1 or align==2 or align==3 then
+		return posy 
+	elseif align==4 or align==5 or align==6 then
+		return posy + height/2
+	elseif align==7 or align==8 or align==9 then
+		return posy + height
+	end
 end
 
 function starttime(f,fps)
