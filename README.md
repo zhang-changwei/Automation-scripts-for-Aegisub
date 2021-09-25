@@ -10,7 +10,7 @@
 * __当前各脚本版本信息__
     | Name                            | Version |
     |---------------------------------|---------|
-    | C Change SUB resolution to match video PATCH | v1.1.1 |
+    | C Change SUB resolution to match video PATCH | v1.2 |
     | C Effect                        | v1.1    |
     | C Fast Tools                    | v1.2    |
     | C Font Resize (Mocha Deshaking) | v1.3    |
@@ -20,7 +20,7 @@
     | C Picture Tracker               | v1.4    |
     | C Translation                   | v3.2    |
     | C Utilities                     | v1.7.4  |
-    | C XML Analyzer                  | v1.3    |
+    | C XML Analyzer                  | v1.4.3  |
     > 在Automation Manager Description栏中查看脚本版本信息  
     > 若你的脚本在上述表格中且无版本信息 可能需要考虑更新脚本  
     > *表示“非主线”脚本，未列出的脚本为测试性或实验性的
@@ -140,6 +140,8 @@
 ## __INF. 更新日志__
 | Date | Script | Version | Detail |
 |------|--------|---------|--------|
+|2021.9.16|C XML Analyzer|1.4.3|bug修复|
+|2021.9.25|C Change SUB resolution to match video PATCH|1.2|增加图片缩放适配分辨率|
 |2021.9.16|C XML Analyzer|1.4.1|优化过水|
 |2021.9.14|C XML Analyzer|1.3|优化了epoch判断机制|
 |2021.9.12|C Picture Tracker|1.4|修复当贴图超出边界时贴图错位|

@@ -20,9 +20,9 @@ Change SUB resolution to match video PATCH
 
 --Script properties
 script_name="C Change SUB resolution to match video PATCH"
-script_description="Change SUB resolution to match video PATCH v1.1.1"
+script_description="Change SUB resolution to match video PATCH v1.2"
 script_author="chaaaaang"
-script_version="1.1.1"
+script_version="1.2"
 
 include('karaskel.lua')
 
@@ -32,14 +32,17 @@ dialog_config={
     {class="dropdown",name="i",items={"384x288","640x480","720x480","800x480","1024x576","1280x720","1440x810","1920x1080","3840x2160","7680x4320"},value="384x288",x=1,y=0},
     {class="label",label="output resolution",x=0,y=1,width=1},
     {class="dropdown",name="o",items={"384x288","640x480","720x480","800x480","1024x576","1280x720","1440x810","1920x1080","3840x2160","7680x4320"},value="1920x1080",x=1,y=1},
-    {class="checkbox",name="e",label="scale \\blur, \\be, \\bord and \\shad",value=false,x=0,y=2,width=2,hint="recommend: off"}
+    {class="checkbox",name="e",label="scale \\blur, \\be, \\bord and \\shad",value=false,x=0,y=2,width=2,hint="recommend: off"},
+    {class="checkbox",name="p",label="scale \\1img",value=false,x=0,y=3,hint="imagemagick required"},
+    {class="checkbox",name="f",label="\\1img->\\5img",value=false,x=0,y=4},
+    {class="label",label="   SUB Resolution\n          Reset v1.2",x=1,y=3,height=2}
 }
 buttons={"Run","Quit"}
 
 function main(subtitle, selected)
     local meta,styles=karaskel.collect_head(subtitle,false)
 
-    pressed, result = aegisub.dialog.display(dialog_config,buttons)
+    local pressed, result = aegisub.dialog.display(dialog_config,buttons)
     if (pressed=="Quit") then 
         aegisub.cancel() 
     else
@@ -102,6 +105,32 @@ function main(subtitle, selected)
                         karaskel.preproc_line(subtitle,meta,styles,line)
                         linetext = linetext:gsub("^","{\\fscx"..line.styleref.scale_x*rx.."}")
                         linetext = linetext:gsub("}{","")
+                    end
+                    -- 1img
+                    if result.p==true and result.f==false then
+                        linetext = linetext:gsub("\\1img%( *([^%)]+) *%)",function (a)
+                            if a:match(",")~=nil then
+                                local path, xdev,ydev = a:gsub("([^,]+),([^,]+),(.*)")
+                                if path~="png" then
+                                    path = path:gsub("%.png$","")
+                                    local cmd = string.format('magick %s -resize %f%% %s',path..".png", ry*100, path.."_"..oh..".png")
+                                    os.execute(cmd)
+                                    xdev,ydev = tonumber(xdev)*rx,tonumber(ydev)*ry
+                                    a = path.."_"..oh..".png,"..xdev..","..ydev
+                                else
+                                    xdev,ydev = tonumber(xdev)*rx,tonumber(ydev)*ry
+                                    a = "png,"..xdev..","..ydev
+                                end
+                            else
+                                local path = a:gsub("%.png$","")
+                                local cmd = string.format('magick %s -resize %f%% %s',path..".png", ry*100, path.."_"..oh..".png")
+                                os.execute(cmd)
+                                a = path.."_"..oh..".png"
+                            end
+                            return "\\1img("..a..")"
+                        end)
+                    elseif result.p==true and result.f==true then 
+                        linetext = linetext:gsub("\\1img","\\5img")
                     end
                 end
                 if result.e==true then
