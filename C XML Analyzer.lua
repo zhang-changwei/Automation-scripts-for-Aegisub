@@ -481,55 +481,6 @@ function patch_overlapjoiner(subtitle, selected, active)
     return selected
 end
 
-function partial_avs2bdnxml(subtitle, selected, active)
-    local xres, yres, ar, artype = aegisub.video_size()
-    local dialog_config = {
-        {class="label",label="vsfiltermod path",x=0,y=0},
-        {class="edit",name="mod_path",value="",x=1,y=0,width=2},
-        {class="label",label="ass path",x=0,y=1},
-        {class="edit",name="ass_path",value="",x=1,y=1,width=2},
-        {class="label",label="首帧提前",x=0,y=2},
-        {class="intedit",name="pre",value=25,x=1,y=2},
-        {class="label",label="尾帧延后",x=0,y=3},
-        {class="intedit",name="post",value=25,x=1,y=3},
-        {class="checkbox",label="remember",name="r",x=2,y=2}
-    }
-    local buttons = {"Run","Quit"}
-
-    config_read_xml(dialog_config)
-    local pressed, result = aegisub.dialog.display(dialog_config,buttons)
-    if not (pressed=="Run") then aegisub.cancel() end
-    if result.r==true then config_write_xml(result) end
-
-    local fps = fpsgen()
-    fps = tostring(fps)
-    local frame_S,frame_E = 100000000,0
-    for si,li in ipairs(selected) do
-        if subtitle[li].comment == false then
-            frame_S = math.min(frame_S, aegisub.frame_from_ms(subtitle[li].start_time))
-            frame_E = math.max(frame_E, aegisub.frame_from_ms(subtitle[li].end_time))
-        end
-    end
-    frame_S,frame_E = frame_S-result.pre,frame_E+result.post
-    if frame_S<0 then frame_S = 0 end
-
-    -- write avs
-    local output = result.ass_path:gsub("[^\\]*$","")
-    output = output.."output_"..frame_S.."_"..frame_E
-    lfs.mkdir(output)
-    local avs = output.."\\output.avs"
-    local file = io.open(avs, "w")
-    file:write('LoadPlugin("'..result.mod_path..'")\n')
-    file:write(string.format('MaskSubMod("%s", %d, %d, %s, %d)\n', result.ass_path, xres, yres, fps, frame_E))
-    file:write(string.format('LanczosResize(%d, %d)\n', xres, yres))
-    file:close()
-
-    local cmd = string.format("avs2bdnxml -t Undefined -l zho -v %dp -f %s -a1 -p1 -b0 -m3 -u0 -e0 -n0 -z0 -j%d -o '%s' '%s'",
-        yres, fps, frame_S, output.."\\output.xml", output.."\\output.avs")
-    aegisub.log(cmd.."\n")
-    os.execute(cmd)
-end
-
 function slicecutter(subtitle, selected, active)
     -- input xml
 	local path = aegisub.dialog.open('XML Analyzer', '', '', 'XML files (.xml)|*.xml|All Files (.)|.', false, true)
@@ -1014,48 +965,6 @@ function config_write(path,result)
     file:write("manual: "..bool2str(result.man).."\n")
     file:write("remember: "..bool2str(result.r).."\n")
     file:write("proportion: "..result.mp)
-    file:close()
-end
-
-function config_read_xml(dialog_config)
-    local path = aegisub.decode_path("?user").."\\xml_analyzer_config.xml"
-    local file = io.open(path, "r")
-    if file~=nil then
-        file:close()
-        local config = require("xmlSimple").newParser():loadFile(path)
-        for si,li in ipairs(dialog_config) do
-            for sj,lj in pairs(li) do
-                if sj=="class" and lj~="label" then
-                    local name = li.name
-                    local item = config.Config[name]
-                    if item["@Type"]=="boolean" then 
-                        dialog_config[si].value = str2bool(item["@Value"])
-                    elseif item["@Type"]=="number" then 
-                        dialog_config[si].value = tonumber(item["@Value"])
-                    elseif item["@Type"]=="string" then 
-                        dialog_config[si].value = item["@Value"]
-                    end
-                    break
-                end
-            end
-        end
-    else
-        return nil
-    end
-end
-
-function config_write_xml(result)
-    local path = aegisub.decode_path("?user").."\\xml_analyzer_config.xml"
-    local file = io.open(path, "w")
-    file:write('<?xml version="1.0" encoding="UTF-8"?>\n<Config>\n')
-    for key,value in pairs(result) do
-        if type(value)=="boolean" then 
-            file:write(string.format('<%s Type="%s" Value="%s"/>\n', key, type(value), bool2str(value)))
-        else
-            file:write(string.format('<%s Type="%s" Value="%s"/>\n', key, type(value), value))
-        end
-    end
-    file:write('</Config>')
     file:close()
 end
 

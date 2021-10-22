@@ -19,9 +19,9 @@ get info: ffprobe -i path1 -show_streams > otput.txt
 
 --Script properties
 script_name="C Picture Tracker"
-script_description="Picture Tracker v1.4"
+script_description="Picture Tracker v1.4.1"
 script_author="chaaaaang"
-script_version="1.4"
+script_version="1.4.1"
 
 include("karaskel.lua")
 clipboard = require 'aegisub.clipboard'
@@ -36,19 +36,20 @@ local dialog_config = {
 	{class="intedit",name="hs",value=0,x=2,y=3},--7
 
 	{class="checkbox",name="x",label="pos",value=true,x=0,y=1},
-	{class="checkbox",name="s",label="scale",x=0,y=2},
-	{class="checkbox",name="r",label="rotate",x=0,y=3},
-	{class="checkbox",name="cl",label="clip",x=0,y=4},
-	{class="checkbox",name="r2v",label="rect2vec",x=1,y=4},
+	{class="checkbox",name="s",label="scale",value=false,x=0,y=2},
+	{class="checkbox",name="r",label="rotate",value=false,x=0,y=3},
+	{class="checkbox",name="cl",label="clip",value=false,x=0,y=4},
+	{class="checkbox",name="r2v",label="rect2vec",value=false,x=1,y=4},
+	{class="checkbox",name="rem",label="remember",value=false,x=2,y=4,hint="xmlsimple required"},
 
 	{class="label",label="effect",x=0,y=5},
 	{class="dropdown",name="e",items={"none","paint, recommend: 5","spread, recommend: 5,5","swirl, recommend 360","custom command"},value="none",x=0,y=6,width=2},
 	{class="dropdown",name="m",items={"gradient","random"},value="gradient",x=2,y=6},
 	{class="edit",name="c",x=0,y=7,width=3,value="custom command:",hint="custom command: use input & output for file path, use \\d for argument"},
 	{class="label",label="strength from/min",x=0,y=8,width=2},
-	{class="edit",name="argf",x=2,y=8,hint="strength for preview, separate by comma"},
+	{class="edit",name="argf",x=2,y=8,value="0",hint="strength for preview, separate by comma"},
 	{class="label",label="strength to/max",x=0,y=9,width=2},
-	{class="edit",name="argt",x=2,y=9,hint="separate by comma"}
+	{class="edit",name="argt",x=2,y=9,value="0",hint="separate by comma"}
 }
 local buttons = {"Track","Preview","Quit"}
 
@@ -118,16 +119,17 @@ function main(subtitle,selected,active)
 	local count_f = frame_E + 1 - frame_S
 
 	--UI
+	config_read_xml(dialog_config)
 	dialog_config[1].label = "expected frame count: "..count_f..", mocha frame count: "..count_m
-	-- dialog_config[3].value = frame_S
-	-- local tt = aegisub.project_properties()
-	-- for key,value in pairs(tt) do
-	-- 	aegisub.log(key.." "..value.."\n")
-	-- end
 	dialog_config[3].value = aegisub.project_properties().video_position
 	local pressed, result = aegisub.dialog.display(dialog_config,buttons)
-	if pressed=="Quit" then aegisub.cancel()		
-	elseif pressed=="Track" then 
+	if pressed=="Quit" then aegisub.cancel() end
+	if result.rem==true then config_write_xml(result) end
+
+	if fps==23.976 then fps = 24000/1001 
+	elseif fps==29.97 then fps = 30000/1001 end
+
+	if pressed=="Track" then 
 		if count_f~=count_m then aegisub.cancel() end
 		-- ref frame
 		local line = subtitle[active]
@@ -489,6 +491,58 @@ function rotation(x, y, cx, cy, theta)
 	local cost = (x-cx)/r * math.cos(theta) - (y-cy)/r * math.sin(theta)
 	local sint = (y-cy)/r * math.cos(theta) + (x-cx)/r * math.sin(theta)
 	return r*cost+cx, r*sint+cy
+end
+
+function config_read_xml(dialog_config)
+    local path = aegisub.decode_path("?user").."\\picture_tracker_config.xml"
+    local file = io.open(path, "r")
+    if file~=nil then
+        file:close()
+        local config = require("xmlSimple").newParser():loadFile(path)
+        for si,li in ipairs(dialog_config) do
+            for sj,lj in pairs(li) do
+                if sj=="class" and lj~="label" then
+                    local name = li.name
+                    local item = config.Config[name]
+                    if item["@Type"]=="boolean" then 
+                        dialog_config[si].value = str2bool(item["@Value"])
+                    elseif item["@Type"]=="number" then 
+                        dialog_config[si].value = tonumber(item["@Value"])
+                    elseif item["@Type"]=="string" then 
+                        dialog_config[si].value = item["@Value"]
+                    end
+                    break
+                end
+            end
+        end
+    else
+        return nil
+    end
+end
+
+function config_write_xml(result)
+    local path = aegisub.decode_path("?user").."\\picture_tracker_config.xml"
+    local file = io.open(path, "w")
+    file:write('<?xml version="1.0" encoding="UTF-8"?>\n<Config>\n')
+    for key,value in pairs(result) do
+        if type(value)=="boolean" then 
+            file:write(string.format('<%s Type="%s" Value="%s"/>\n', key, type(value), bool2str(value)))
+        else
+            file:write(string.format('<%s Type="%s" Value="%s"/>\n', key, type(value), value))
+        end
+    end
+    file:write('</Config>')
+    file:close()
+end
+
+function str2bool(str)
+    if str=="true" then return true
+    else return false end
+end
+
+function bool2str(bool)
+    if bool==true then return "true"
+    else return "false" end
 end
 
 --Register macro (no validation function required)

@@ -7,9 +7,9 @@ goto my repository https://github.com/zhang-changwei/Automation-scripts-for-Aegi
 
 --Script properties
 script_name="C Fast Tools"
-script_description="Fast Tools v1.2"
+script_description="Fast Tools v1.2.1"
 script_author="chaaaaang"
-script_version="1.2"
+script_version="1.2.1"
 
 clipboard = require 'aegisub.clipboard'
 
@@ -149,6 +149,14 @@ function fast_fad_seq_out(subtitle, selected)
     end
 end
 
+function fast_selection_onward(subtitle, selected)
+    local tt = {}
+    for i=selected[1],#subtitle do
+        table.insert(tt, i)
+    end
+    return tt
+end
+
 function round(x)
 	return math.floor(x+0.5)
 end
@@ -159,3 +167,4 @@ aegisub.register_macro(script_name.."/fast_copy",script_description,fast_copy)
 aegisub.register_macro(script_name.."/fast_enter",script_description,fast_enter)
 aegisub.register_macro(script_name.."/fast_fad_sequence(in)",script_description,fast_fad_seq_in)
 aegisub.register_macro(script_name.."/fast_fad_sequence(out)",script_description,fast_fad_seq_out)
+aegisub.register_macro(script_name.."/fast_selection_onward",script_description,fast_selection_onward)

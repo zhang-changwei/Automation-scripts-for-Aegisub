@@ -12,12 +12,12 @@
     |---------------------------------|---------|
     | C Change SUB resolution to match video PATCH | v1.2 |
     | C Effect                        | v1.1    |
-    | C Fast Tools                    | v1.2    |
+    | C Fast Tools                    | v1.2.1  |
     | C Font Resize (Mocha Deshaking) | v1.3    |
     | C Gradient                      | v2.1    |
     | C Merge Bilingual SUBS          | v1.1    |
     | C Jump                          | v1.0    |
-    | C Picture Tracker               | v1.4    |
+    | C Picture Tracker               | v1.4.1  |
     | C Translation                   | v3.2    |
     | C Utilities                     | v1.7.4  |
     | C XML Analyzer                  | v1.4.3  |
@@ -27,9 +27,11 @@
 * __使用方法__
     + 将LUA脚本复制到`C:\Program Files (x86)\Aegisub\automation\autoload`路径下，或你的Aegisub安装位置
     + 在 Aegisub Automation 项中可以发现添加的脚本
+    + `C Picture Tracker & C Utilities > AE Importer > crop`依赖`imagemagick`，需自行下载
     + `C Effect & C Utilities`脚本部分功能依赖Yutils库，请先安装相关组件，传送门[https://github.com/Youka/Yutils](https://github.com/Youka/Yutils)，感谢原作者。
-    + `C XML Analyzer`脚本依赖`xmlSimple`库，原作者[https://github.com/Cluain/Lua-Simple-XML-Parser](https://github.com/Cluain/Lua-Simple-XML-Parser)，本人作了一点修改，存放在lib文件夹下。
+    + `C XML Analyzer & C Picture Tracker`脚本依赖`xmlSimple`库，原作者[https://github.com/Cluain/Lua-Simple-XML-Parser](https://github.com/Cluain/Lua-Simple-XML-Parser)，本人作了一点修改，存放在lib文件夹下。
 * __该仓库本人长期维护，欢迎star与fork。__  
+* __目前脚本改进的方向：Translation & Gradient等老脚本界面美化；Effect记忆功能__
 
 -------------------------------------------
 ## __1. C Font Resize__
@@ -140,6 +142,8 @@
 ## __INF. 更新日志__
 | Date | Script | Version | Detail |
 |------|--------|---------|--------|
+|2021.10.22|C Fast Tools|1.2.1|增加selection onward|
+|2021.10.5|C Picture Tracker|1.4.1|使用xml记忆config|
 |2021.9.16|C XML Analyzer|1.4.3|bug修复|
 |2021.9.25|C Change SUB resolution to match video PATCH|1.2|增加图片缩放适配分辨率|
 |2021.9.16|C XML Analyzer|1.4.1|优化过水|
