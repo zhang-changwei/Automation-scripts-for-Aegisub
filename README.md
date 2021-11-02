@@ -11,7 +11,7 @@
     | Name                            | Version |
     |---------------------------------|---------|
     | C Change SUB resolution to match video PATCH | v1.2 |
-    | C Effect                        | v1.1    |
+    | C Effect                        | v1.4    |
     | C Fast Tools                    | v1.2.1  |
     | C Font Resize (Mocha Deshaking) | v1.3    |
     | C Gradient                      | v2.1    |
@@ -142,6 +142,7 @@
 ## __INF. 更新日志__
 | Date | Script | Version | Detail |
 |------|--------|---------|--------|
+|2021.11.2|C Effect|1.4|大幅更新|
 |2021.10.22|C Fast Tools|1.2.1|增加selection onward|
 |2021.10.5|C Picture Tracker|1.4.1|使用xml记忆config|
 |2021.9.16|C XML Analyzer|1.4.3|bug修复|

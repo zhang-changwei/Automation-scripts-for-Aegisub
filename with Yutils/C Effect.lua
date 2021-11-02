@@ -7,16 +7,16 @@ goto my repository https://github.com/zhang-changwei/Automation-scripts-for-Aegi
 
 --Script properties
 script_name="C Effect"
-script_description="Effect v1.3.1"
+script_description="Effect v1.4"
 script_author="chaaaaang"
-script_version="1.3.1"
+script_version="1.4"
 
 local Yutils = require('Yutils')
 include('karaskel.lua')
 
 local dialog_config = {
 	{class="label",label="effect",x=0,y=0},
-	{class="dropdown",name="effect",items={"particle","dissolve","spotlight","clip_blur","clip_gradient","component_split","pixelize","text2shape","bord_contour","shape2bord"},value="particle",x=0,y=1,width=2}
+	{class="dropdown",name="effect",items={"particle","dissolve","clip_blur","clip_gradient","component_split","pixelize","text2shape","bord_contour","shape2bord"},value="particle",x=0,y=1,width=2}
 }
 local buttons = {"Detail","Quit"}
 
@@ -927,7 +927,7 @@ function daughter_dialog(effect)
 			{class="label",label="step",x=0,y=2},
 			{class="intedit",name="step",value=3,x=1,y=2},
 			{class="label",label="color",x=0,y=3},
-			{class="color",name="color",value="",x=1,y=3}
+			{class="color",name="color",value="&H000000&",x=1,y=3}
 		}
 	elseif effect=="component_split" then
 		dialog_conf = {
@@ -991,7 +991,8 @@ end
 function custom_config(conf, effect)
 	if effect=="clip_blur" then
 		conf[7].value = conf[7].value:gsub("#(%x%x)(%x%x)(%x%x)(%x%x)", function (r,g,b,a) return "&H"..a..b..g..r.."&" end)
-	else
+	elseif effect=="clip_gradient" then
+		conf[7].value = conf[7].value:gsub("#(%x%x)(%x%x)(%x%x)", function (r,g,b) return "&H"..b..g..r.."&" end)
 	end
 end
 
