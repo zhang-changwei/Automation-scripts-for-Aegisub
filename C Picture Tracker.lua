@@ -493,23 +493,23 @@ function rotation(x, y, cx, cy, theta)
 	return r*cost+cx, r*sint+cy
 end
 
-function config_read_xml(dialog_config)
+function config_read_xml(dialog)
     local path = aegisub.decode_path("?user").."\\picture_tracker_config.xml"
     local file = io.open(path, "r")
     if file~=nil then
         file:close()
         local config = require("xmlSimple").newParser():loadFile(path)
-        for si,li in ipairs(dialog_config) do
+        for si,li in ipairs(dialog) do
             for sj,lj in pairs(li) do
                 if sj=="class" and lj~="label" then
                     local name = li.name
                     local item = config.Config[name]
                     if item["@Type"]=="boolean" then 
-                        dialog_config[si].value = str2bool(item["@Value"])
+                        dialog[si].value = str2bool(item["@Value"])
                     elseif item["@Type"]=="number" then 
-                        dialog_config[si].value = tonumber(item["@Value"])
+                        dialog[si].value = tonumber(item["@Value"])
                     elseif item["@Type"]=="string" then 
-                        dialog_config[si].value = item["@Value"]
+                        dialog[si].value = item["@Value"]
                     end
                     break
                 end
