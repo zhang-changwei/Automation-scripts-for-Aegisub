@@ -7,16 +7,16 @@ goto my repository https://github.com/zhang-changwei/Automation-scripts-for-Aegi
 
 --Script properties
 script_name="C Effect"
-script_description="Effect v1.4"
+script_description="Effect v1.5.1"
 script_author="chaaaaang"
-script_version="1.4"
+script_version="1.5.1"
 
 local Yutils = require('Yutils')
 include('karaskel.lua')
 
 local dialog_config = {
 	{class="label",label="effect",x=0,y=0},
-	{class="dropdown",name="effect",items={"particle","dissolve","clip_blur","clip_gradient","component_split","pixelize","text2shape","bord_contour","shape2bord"},value="particle",x=0,y=1,width=2}
+	{class="dropdown",name="effect",items={"particle","dissolve","clip_blur","clip_gradient","component_split","typewriter","pixelize","text2shape","bord_contour","shape2bord","template: CD"},value="particle",x=0,y=1,width=2}
 }
 local buttons = {"Detail","Quit"}
 
@@ -35,7 +35,7 @@ function main(subtitle, selected)
 	local daughter_config,daughter_buttons = daughter_dialog(result.effect)	
 	if result.effect==last_effect then config_read_xml(daughter_config) end
 	-- custom config
-	custom_config(daughter_config, result.effect)
+	custom_config(daughter_config, result.effect, subtitle[l0])
 	local d_pressed, d_res = aegisub.dialog.display(daughter_config,daughter_buttons)
 	if d_pressed~="Run" then aegisub.cancel() end
 	config_write_xml(result, d_res)
@@ -119,13 +119,15 @@ function main(subtitle, selected)
 		line.text = line.text:match("^{") and line.text or "{}"..line.text
 
 		--  Yutils stuff, judge input shape|text
-		local shape, shape_bord, pixels_bord, shape_shad, pixels_shad
-		if result.effect~="bord_contour" and result.effect~="shape2bord" then 
-			local font_handle = Yutils.decode.create_font(font,bold,italic,underline,strikeout,fontsize,scale_x/100,scale_y/100,spacing)
-			shape = font_handle.text_to_shape(ltxtstripped) -- text
-		else
+		local shape, pixels, shape_bord, pixels_bord, shape_shad, pixels_shad
+		if result.effect:match("template")~=nil or result.effect=="typewriter" then 
+			goto yutilsJUMP
+		elseif result.effect=="bord_contour" or result.effect=="shape2bord" then 
 			shape = ltext:gsub("{[^}]*}","") -- shape
 			goto bordshadJUMP
+		else
+			local font_handle = Yutils.decode.create_font(font,bold,italic,underline,strikeout,fontsize,scale_x/100,scale_y/100,spacing)
+			shape = font_handle.text_to_shape(ltxtstripped) -- text
 		end
 		-- handle outline (pseudo)
 		if outline~=0 then 
@@ -143,7 +145,7 @@ function main(subtitle, selected)
 			pixels_shad = Yutils.shape.to_pixels(shape_shad)
 		end
 		::bordshadJUMP::
-		local pixels = Yutils.shape.to_pixels(shape)
+		pixels = Yutils.shape.to_pixels(shape)
 		::yutilsJUMP::
 
 		-- particle effect (using tag_strip_pos)
@@ -151,6 +153,8 @@ function main(subtitle, selected)
 			if (d_res.fade_in==true and d_res.fade_out==true) or (d_res.fade_in==false and d_res.fade_out==false) then aegisub.cancel() end
 
 			local disX,disY = d_res.move_x+d_res.rx, d_res.move_y+d_res.ry
+			if tag_strip_pos:match("\\an%d")~=nil then tag_strip_pos = tag_strip_pos:gsub("\\an%d","\\an7")
+			else tag_strip_pos = tag_strip_pos:gsub("^{","{\\an7") end
 
 			-- content
 			if d_res.adv==false then 
@@ -568,8 +572,10 @@ function main(subtitle, selected)
 				tag_strip_pos = tag_strip_pos:gsub("^{",string.format("{\\blur3\\t(0,%d,\\blur0)", d_res.fin_t)) end
 			if d_res.fout_cb==true then d_res.fin_t = 0
 				tag_strip_pos = tag_strip_pos:gsub("}$",string.format("\\t(%d,%d,\\blur3)", ldur-d_res.fout_t,ldur)) end
-			tag_strip_pos = tag_strip_pos:gsub("^{",string.format("{\\an7\\fad(%d,%d)",d_res.fin_t,d_res.fout_t))
+			tag_strip_pos = tag_strip_pos:gsub("^{",string.format("{\\fad(%d,%d)",d_res.fin_t,d_res.fout_t))
 			tag_strip_pos = tag_strip_pos:gsub("}$",string.format("\\pos(%d,%d)\\p1}", left,top))
+			if tag_strip_pos:match("\\an%d")~=nil then tag_strip_pos = tag_strip_pos:gsub("\\an%d","\\an7")
+			else tag_strip_pos = tag_strip_pos:gsub("^{","{\\an7") end
 
 			local Ncomp = #components
 			for nj,sj in ipairs(components) do
@@ -648,8 +654,94 @@ function main(subtitle, selected)
 				subtitle[#subtitle] = new_line
 				aegisub.progress.set(nj/Ncomp*100)
 			end
+		elseif result.effect=="typewriter" then
+			local chs,eng = d_res.chs, d_res.eng
+			local _,wordC = chs:gsub("[^ ]+","")
+			local _,charC = eng:gsub("[a-zA-Z]","")
+			local puncC = 0
+
+			local words = {}
+			for j=1,wordC do
+				local tc,te,tp = chs:match("[^ ]+"), eng:match("[^ ]+"), ""
+				if tc:match("..$")=="·" then tp,tc,puncC = tc:match("..$"),tc:gsub("..$",""),puncC+1
+				else
+					local tctail = tc:match("...$")
+					if stupid_punctuation_judge(tctail) then tp,tc,puncC = tctail,tc:gsub("...$",""),puncC+1 end
+				end
+				chs = chs:gsub("[^ ]+","",1)
+				eng = eng:gsub("[^ ]+","",1)
+				table.insert(words, {chs=tc,eng=te,p=tp})
+			end
+
+			local timeU = 1000/fps
+			local count = round((d_res.t)/timeU)
+
+			if count-wordC*d_res.t2-puncC*d_res.t3<=0 then aegisub.log("time is too short") 
+				aegisub.cancel() end
+			local CHARperTIME = charC/(count - wordC * d_res.t2 - puncC * d_res.t3)
+			local charNOW = 0
+			local tableI = 1 -- table index			
+			local str, str2 = "","" -- show str, str2 contain only chinese
+
+			local j,jsta,k = 1,1,1 -- j: frame in typewriting, k: frame in pinyin
+			while true do
+				local charADD = round(CHARperTIME*k) - charNOW
+				if round(CHARperTIME*(k+1))==round(CHARperTIME*k) then
+					j = j + 1
+					k = k + 1
+				else
+					subtitle.append(line)
+					local new_line = subtitle[#subtitle]
+					new_line.start_time = lsta + math.floor((jsta-1) * timeU)
+					new_line.end_time = lsta + math.floor(j * timeU)
+	
+					local add = words[tableI].eng:sub(1, charADD)
+					str = str..add
+					new_line.text = tag..str..d_res.c
+					subtitle[#subtitle] = new_line
+	
+					words[tableI].eng = words[tableI].eng:gsub(add,"",1)
+					charNOW = charNOW + add:len()
+	
+					if words[tableI].eng=="" then
+						str2 = str2..words[tableI].chs
+						str = str2
+						subtitle.append(line)
+						new_line = subtitle[#subtitle]
+						new_line.start_time = lsta + math.floor(j * timeU)
+						new_line.end_time = lsta + math.floor((j+d_res.t2) * timeU)
+						new_line.text = tag..str..d_res.c
+						subtitle[#subtitle] = new_line
+
+						if words[tableI].p~="" then
+							str2 = str2..words[tableI].p
+							str = str2
+							subtitle.append(line)
+							new_line = subtitle[#subtitle]
+							new_line.start_time = lsta + math.floor((j+d_res.t2) * timeU)
+							new_line.end_time = lsta + math.floor((j+d_res.t2*2) * timeU)
+							new_line.text = tag..str..d_res.c
+							subtitle[#subtitle] = new_line
+							j = j + d_res.t2
+						end
+	
+						tableI = tableI + 1
+						if tableI>#words then break end
+						j = j + d_res.t2
+					end
+					j = j + 1
+					jsta = j
+					k = k + 1
+				end
+			end
+			subtitle.append(line)
+			local post_line = subtitle[#subtitle]
+			post_line.start_time = lsta + math.floor((j+d_res.t2) * timeU)
+			subtitle[#subtitle] = post_line
 		elseif result.effect=="text2shape" then
-			line.text = tag_strip_pos.."{\\an7\\p1\\pos("..left..","..top..")\\fsc100\\bord0\\shad0}"..shape
+			if tag_strip_pos:match("\\an%d")~=nil then tag_strip_pos = tag_strip_pos:gsub("\\an%d","\\an7")
+			else tag_strip_pos = tag_strip_pos:gsub("^{","{\\an7") end
+			line.text = tag_strip_pos.."{\\p1\\pos("..left..","..top..")\\fsc100\\bord0\\shad0}"..shape
 			line.text = line.text:gsub("}{","")
 			subtitle[li] = line
 		elseif result.effect=="pixelize" then
@@ -801,6 +893,102 @@ function main(subtitle, selected)
 					end
 				end
 			end
+		elseif result.effect=="template: CD" then
+			local t1,t2,y0,y,x,x2,w,h,hratio = d_res.t1, d_res.t1+d_res.t2, d_res.y0, d_res.y, 960-(d_res.w/2)+5, 960-(d_res.w/2), d_res.w, d_res.h/2, d_res.h/130
+			line.end_time = lsta + ldur/2
+
+			-- step 1: go up
+			subtitle.insert(li, line)
+			local new_line = line
+			new_line.text = string.format("{\\t(%d,%d,\\alphaFF)\\an7\\p1\\fsc%d\\c&H0B6DA0&\\t(\\frz-540)\\move(960,%d,960,%d,0,%d)}m 0 -20 b 11 -20 20 -11 20 0 b 20 11 11 20 0 20 l 0 60 b 33 60 60 33 60 0 b 60 -33 33 -60 0 -60",
+				t1,t1, 32*hratio, y0,y,t1)
+			new_line.layer = 2
+			subtitle[li] = new_line
+
+			subtitle.insert(li+1, line)
+			new_line.text = string.format("{\\t(%d,%d,\\alphaFF)\\an7\\p1\\fsc%d\\c&H05A9B6&\\frz180\\t(\\frz-360)\\move(960,%d,960,%d,0,%d)}m 0 -20 b 11 -20 20 -11 20 0 b 20 11 11 20 0 20 l 0 60 b 33 60 60 33 60 0 b 60 -33 33 -60 0 -60",
+				t1,t1, 32*hratio, y0,y,t1)
+			new_line.layer = 2
+			subtitle[li+1] = new_line
+
+			subtitle.insert(li+2, line)
+			new_line.text = string.format("{\\t(%d,%d,\\alphaFF)\\an7\\p1\\fsc%d\\1vc(1d1d1d,090909,1d1d1d,1d1d1d)\\bord1\\blur5\\3c&H646464&\\move(960,%d,960,%d,0,%d)}m 0 -20 b 11 -20 20 -11 20 0 b 20 11 11 20 0 20 b -11 20 -20 11 -20 0 b -20 -11 -11 -20 0 -20",
+				t1,t1, 200*hratio, y0,y,t1)
+			new_line.layer = 1
+			subtitle[li+2] = new_line
+
+			-- step 2: go left
+			subtitle.insert(li+3, line)
+			new_line.text = string.format("{\\alphaFF\\t(%d,%d,\\alpha00)\\an7\\p1\\fsc%d\\c&H0B6DA0&\\t(\\frz-540)\\move(%d,%d,%d,%d,%d,%d)}m 0 -20 b 11 -20 20 -11 20 0 b 20 11 11 20 0 20 l 0 60 b 33 60 60 33 60 0 b 60 -33 33 -60 0 -60",
+				t1,t1, 32*hratio, 960,y,x,y,t1,t2)
+			new_line.layer = 2
+			subtitle[li+3] = new_line
+
+			subtitle.insert(li+4, line)
+			new_line.text = string.format("{\\alphaFF\\t(%d,%d,\\alpha00)\\an7\\p1\\fsc%d\\c&H05A9B6&\\frz180\\t(\\frz-360)\\move(%d,%d,%d,%d,%d,%d)}m 0 -20 b 11 -20 20 -11 20 0 b 20 11 11 20 0 20 l 0 60 b 33 60 60 33 60 0 b 60 -33 33 -60 0 -60",
+				t1,t1, 32*hratio, 960,y,x,y,t1,t2)
+			new_line.layer = 2
+			subtitle[li+4] = new_line
+
+			subtitle.insert(li+5, line)
+			new_line.text = string.format("{\\alphaFF\\t(%d,%d,\\alpha00)\\an7\\p1\\fsc%d\\1vc(1d1d1d,090909,1d1d1d,1d1d1d)\\bord1\\blur5\\3c&H646464&\\move(%d,%d,%d,%d,%d,%d)}m 0 -20 b 11 -20 20 -11 20 0 b 20 11 11 20 0 20 b -11 20 -20 11 -20 0 b -20 -11 -11 -20 0 -20",
+				t1,t1, 200*hratio, 960,y,x,y,t1,t2)
+			new_line.layer = 1
+			subtitle[li+5] = new_line
+
+			subtitle.insert(li+6, line)
+			new_line.text = string.format("{\\an7\\p1\\c&H1D1D1D&\\bord%f\\3c&H1D1D1D&\\move(%d,%d,%d,%d,%d,%d)\\fscx1\\alphaFF\\t(%d,%d,\\fscx%d\\1a&H40&\\3a&H40&)}m 0 0 l 100 0 100 1 0 1",
+				h, 960,y,x2,y,t1,t2, t1,t2, w)
+			new_line.layer = 0
+			subtitle[li+6] = new_line
+
+			------------------------------------------------------ PART TWO ----------------------------------------------------
+			new_line.start_time, new_line.end_time = lsta + ldur/2, lend
+			t1, t2 = ldur/2-t2, ldur/2-t1
+			-- step 3: go right
+			subtitle.insert(li+7, line)
+			new_line.text = string.format("{\\t(%d,%d,\\alphaFF)\\an7\\p1\\fsc%d\\c&H0B6DA0&\\frz-540\\t(\\frz-1080)\\move(%d,%d,%d,%d,%d,%d)}m 0 -20 b 11 -20 20 -11 20 0 b 20 11 11 20 0 20 l 0 60 b 33 60 60 33 60 0 b 60 -33 33 -60 0 -60",
+				t2,t2, 32*hratio, x,y,960,y,t1,t2)
+			new_line.layer = 2
+			subtitle[li+7] = new_line
+
+			subtitle.insert(li+8, line)
+			new_line.text = string.format("{\\t(%d,%d,\\alphaFF)\\an7\\p1\\fsc%d\\c&H05A9B6&\\frz-360\\t(\\frz-900)\\move(%d,%d,%d,%d,%d,%d)}m 0 -20 b 11 -20 20 -11 20 0 b 20 11 11 20 0 20 l 0 60 b 33 60 60 33 60 0 b 60 -33 33 -60 0 -60",
+				t2,t2, 32*hratio, x,y,960,y,t1,t2)
+			new_line.layer = 2
+			subtitle[li+8] = new_line
+
+			subtitle.insert(li+9, line)
+			new_line.text = string.format("{\\t(%d,%d,\\alphaFF)\\an7\\p1\\fsc%d\\1vc(1d1d1d,090909,1d1d1d,1d1d1d)\\bord1\\blur5\\3c&H646464&\\move(%d,%d,%d,%d,%d,%d)}m 0 -20 b 11 -20 20 -11 20 0 b 20 11 11 20 0 20 b -11 20 -20 11 -20 0 b -20 -11 -11 -20 0 -20",
+				t2,t2, 200*hratio, x,y,960,y,t1,t2)
+			new_line.layer = 1
+			subtitle[li+9] = new_line
+
+			subtitle.insert(li+10, line)
+			new_line.text = string.format("{\\an7\\p1\\c&H1D1D1D&\\bord%f\\3c&H1D1D1D&\\move(%d,%d,%d,%d,%d,%d)\\fscx%d\\1a&H40&\\3a&H40&\\t(%d,%d,\\fscx1\\alphaFF)}m 0 0 l 100 0 100 1 0 1",
+				h, x2,y,960,y,t1,t2, w, t1,t2)
+			new_line.layer = 0
+			subtitle[li+10] = new_line
+
+			-- step 4: go down
+			subtitle.insert(li+11, line)
+			new_line.text = string.format("{\\alphaFF\\t(%d,%d,\\alpha00)\\an7\\p1\\fsc%d\\c&H0B6DA0&\\frz-540\\t(\\frz-1080)\\move(960,%d,960,%d,%d,%d)}m 0 -20 b 11 -20 20 -11 20 0 b 20 11 11 20 0 20 l 0 60 b 33 60 60 33 60 0 b 60 -33 33 -60 0 -60",
+				t2,t2, 32*hratio, y,y0,t2,ldur/2)
+			new_line.layer = 2
+			subtitle[li+11] = new_line
+
+			subtitle.insert(li+12, line)
+			new_line.text = string.format("{\\alphaFF\\t(%d,%d,\\alpha00)\\an7\\p1\\fsc%d\\c&H05A9B6&\\frz-360\\t(\\frz-900)\\move(960,%d,960,%d,%d,%d)}m 0 -20 b 11 -20 20 -11 20 0 b 20 11 11 20 0 20 l 0 60 b 33 60 60 33 60 0 b 60 -33 33 -60 0 -60",
+				t2,t2, 32*hratio, y,y0,t2,ldur/2)
+			new_line.layer = 2
+			subtitle[li+12] = new_line
+
+			subtitle.insert(li+13, line)
+			new_line.text = string.format("{\\alphaFF\\t(%d,%d,\\alpha00)\\an7\\p1\\fsc%d\\1vc(1d1d1d,090909,1d1d1d,1d1d1d)\\bord1\\blur5\\3c&H646464&\\move(960,%d,960,%d,%d,%d)}m 0 -20 b 11 -20 20 -11 20 0 b 20 11 11 20 0 20 b -11 20 -20 11 -20 0 b -20 -11 -11 -20 0 -20",
+				t2,t2, 200*hratio, y,y0,t2,ldur/2)
+			new_line.layer = 1
+			subtitle[li+13] = new_line
+			break
 		end
 	end
 	aegisub.set_undo_point(script_name)
@@ -858,7 +1046,19 @@ function daughter_dialog(effect)
 		}
 	elseif effect=="typewriter" then
 		dialog_conf = {
-			
+			{class="label",label="typewriter                                                                           ",x=0,y=0,width=4},
+			{class="label",label="Original Text",x=0,y=1},
+			{class="edit",name="chs",value="",x=1,y=1,width=3},--3
+			{class="label",label="Pinyin Text",x=0,y=2},
+			{class="edit",name="eng",value="",x=1,y=2,width=3},--5
+			{class="label",label="total time",x=0,y=3,width=2},
+			{class="intedit",name="t",value=2000,x=2,y=3},
+			{class="label",label="frame for a complete word",x=0,y=4,width=2},
+			{class="intedit",name="t2",value=4,x=2,y=4},
+			{class="label",label="frame for a punctuation",x=0,y=5,width=2},
+			{class="intedit",name="t3",value=4,x=2,y=5},
+			{class="label",label="cursor",x=0,y=6,width=2},
+			{class="edit",name="c",value="",x=2,y=6,hint="cursor style such as _,I, default: none"}
 		}
 	elseif effect=="spotlight" then
 		dialog_conf={
@@ -984,15 +1184,33 @@ function daughter_dialog(effect)
 			{class="floatedit",name="p",value=1,x=1,y=4},
 			{class="checkbox",name="fast",label="fast but wrong",value=false,x=0,y=5,width=2}
 		}
+	elseif effect=="template: CD" then
+		dialog_conf = {
+			{class="label",label="template: CD",x=0,y=0,width=2},
+			{class="label",label="entry posy",x=0,y=1},
+			{class="intedit",name="y0",value=1150,x=1,y=1},
+			{class="label",label="presentation posy",x=0,y=2},
+			{class="intedit",name="y",value=900,x=1,y=2},
+			{class="label",label="presentation width",x=0,y=3},
+			{class="intedit",name="w",value=1000,x=1,y=3},
+			{class="label",label="presentation height",x=0,y=4},
+			{class="intedit",name="h",value=100,x=1,y=4},
+			{class="label",label="vertical motion time",x=0,y=5},
+			{class="intedit",name="t1",value=300,x=1,y=5},
+			{class="label",label="horizontal motion time",x=0,y=6},
+			{class="intedit",name="t2",value=500,x=1,y=6}
+		}
 	end
 	return dialog_conf,button
 end
 
-function custom_config(conf, effect)
+function custom_config(conf, effect, line)
 	if effect=="clip_blur" then
 		conf[7].value = conf[7].value:gsub("#(%x%x)(%x%x)(%x%x)(%x%x)", function (r,g,b,a) return "&H"..a..b..g..r.."&" end)
 	elseif effect=="clip_gradient" then
 		conf[7].value = conf[7].value:gsub("#(%x%x)(%x%x)(%x%x)", function (r,g,b) return "&H"..b..g..r.."&" end)
+	elseif effect=="typewriter" then
+		conf[3].value = line.text:gsub("^{[^}]*}","")
 	end
 end
 
@@ -1240,6 +1458,13 @@ function fpsgen()
 	-- f = t/(1000/fps) = t/1000*fps
 	local fps = f/t*1000
 	return round(fps*1000)/1000
+end
+
+function stupid_punctuation_judge(p)
+	if p=="..." or p=="，" or p=="。" or p=="！" or p=="？" or p=="：" or p=="；" or p=="、"
+		or p=="《" or p=="》" or p=="“" or p=="”" or p=="【" or p=="】" 
+	then return true
+	else return false end
 end
 
 M={}
