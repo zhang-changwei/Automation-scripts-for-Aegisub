@@ -7,9 +7,9 @@ goto my repository https://github.com/zhang-changwei/Automation-scripts-for-Aegi
 
 --Script properties
 script_name="C Effect"
-script_description="Effect v1.5.1"
+script_description="Effect v1.6"
 script_author="chaaaaang"
-script_version="1.5.1"
+script_version="1.6"
 
 local Yutils = require('Yutils')
 include('karaskel.lua')
@@ -73,6 +73,10 @@ function main(subtitle, selected)
 		local tag_only_t = "{"
 		for t in tag:gmatch("\\t%([^%)]*%)") do	tag_only_t = tag_only_t..t	end
 		tag_only_t = tag_only_t.."}"
+		local tag_strip_basic = tag_strip_pos:gsub("\\bord[%d%.]+","")
+		tag_strip_basic = tag_strip_basic:gsub("\\[xy]?shad[%d%.%-]+","")
+		tag_strip_basic = tag_strip_basic:gsub("\\fsc[xy]?[%d%.]+","")
+		tag_strip_basic = tag_strip_basic:gsub("\\an%d","")
 		-- inline style
 		local font = tag_strip_t:match("\\fn") and tag_strip_t:match("\\fn([^\\}]+)") or line.styleref.fontname
 		local fontsize = tag_strip_t:match("\\fs%d") and tag_strip_t:match("\\fs([%d%.]+)") or line.styleref.fontsize
@@ -120,7 +124,7 @@ function main(subtitle, selected)
 
 		--  Yutils stuff, judge input shape|text
 		local shape, pixels, shape_bord, pixels_bord, shape_shad, pixels_shad
-		if result.effect:match("template")~=nil or result.effect=="typewriter" then 
+		if result.effect:match("template")~=nil or result.effect=="typewriter" or result.effect=="clip_blur" or result.effect=="clip_gradient" then 
 			goto yutilsJUMP
 		elseif result.effect=="bord_contour" or result.effect=="shape2bord" then 
 			shape = ltext:gsub("{[^}]*}","") -- shape
@@ -138,9 +142,11 @@ function main(subtitle, selected)
 		-- handle shadow
 		if xshad~=0 or yshad~=0 then 
 			if outline~=0 then
-				shape_shad = Yutils.shape.filter(shape_bord,function (x,y) return x+xshad,y+yshad end)
+				-- shape_shad = Yutils.shape.filter(shape_bord,function (x,y) return x+xshad,y+yshad end)
+				shape_shad = shape_bord:gsub("([%d%.%-]+) +([%d%.%-]+)",function (x,y) return x+xshad.." "..y+yshad end)
 			else
-				shape_shad = Yutils.shape.filter(shape,function (x,y) return x+xshad,y+yshad end)
+				-- shape_shad = Yutils.shape.filter(shape,function (x,y) return x+xshad,y+yshad end)
+				shape_shad = shape:gsub("([%d%.%-]+) +([%d%.%-]+)",function (x,y) return x+xshad.." "..y+yshad end)
 			end
 			pixels_shad = Yutils.shape.to_pixels(shape_shad)
 		end
@@ -148,77 +154,150 @@ function main(subtitle, selected)
 		pixels = Yutils.shape.to_pixels(shape)
 		::yutilsJUMP::
 
-		-- particle effect (using tag_strip_pos)
+		-- particle effect (using tag_strip_baisc)
 		if result.effect=="particle" then
 			if (d_res.fade_in==true and d_res.fade_out==true) or (d_res.fade_in==false and d_res.fade_out==false) then aegisub.cancel() end
+			if d_res.move_t<d_res.move_t_r then aegisub.log("move_t is shorter than move_t_r") aegisub.cancel() end
 
-			local disX,disY = d_res.move_x+d_res.rx, d_res.move_y+d_res.ry
-			if tag_strip_pos:match("\\an%d")~=nil then tag_strip_pos = tag_strip_pos:gsub("\\an%d","\\an7")
-			else tag_strip_pos = tag_strip_pos:gsub("^{","{\\an7") end
+			local textINpixel,bordINpixel,shadINpixel = "","",""
+			local cx, cy = math.floor(centerL), math.floor(middleL)
+			local new_line = line
 
 			-- content
-			if d_res.adv==false then 
-				if d_res.fade_in==true then
+			tag_strip_basic = tag_strip_basic:gsub("^{","{\\an7")
+			tag_strip_basic = tag_strip_basic:gsub("\\fn([^\\}]+)","")
+			tag_strip_basic = tag_strip_basic:gsub("\\fsp[%d%.%-]+","")
+			tag_strip_basic = tag_strip_basic:gsub("\\frz[%d%.%-]+","")
+			tag_strip_basic = tag_strip_basic:gsub("\\fs[%d%.]+","")
+			tag_strip_basic = tag_strip_basic:gsub("\\b%d","")
+			tag_strip_basic = tag_strip_basic:gsub("\\i%d","")
+			tag_strip_basic = tag_strip_basic:gsub("\\u%d","")
+			tag_strip_basic = tag_strip_basic:gsub("\\s%d","")
+
+			if d_res.fast==false then
+				if d_res.bsr==false then 
 					for j=1,#pixels do
 						subtitle.append(line)
-						local new_line = subtitle[#subtitle]
 						
 						local pos_r1,pos_r2 = math.random(-1*d_res.rx,d_res.rx),math.random(-1*d_res.ry,d_res.ry)
 						local move_t1,move_t2 = math.random(d_res.move_t_r), d_res.move_t+math.random(d_res.move_t_r)
 						local x0,y0 = left+pixels[j].x, top+pixels[j].y
 
-						if d_res.third==true then
-							new_line.text = string.format("{\\moves3(%d,%d,%d,%d,%d,%d,%d,%d)",
-								x0+d_res.move_x+pos_r1, y0+d_res.move_y+pos_r2,
-								x0+(d_res.move_x+pos_r1)/2+disX*d_res.curve*(math.random()-0.5), y0+(d_res.move_y+pos_r2)/2+disY*d_res.curve*(math.random()-0.5),
-								x0, y0,
-								move_t1, move_t2)
-						else
+						if d_res.fade_in==true then
+							new_line.start_time, new_line.end_time = lsta+move_t1, lsta+d_res.move_t+d_res.move_t_r
+							move_t1, move_t2 = 0, move_t2-move_t1
+
 							new_line.text = string.format("{\\move(%d,%d,%d,%d,%d,%d)",
 								x0+d_res.move_x+pos_r1, y0+d_res.move_y+pos_r2,
 								x0, y0,
 								move_t1, move_t2)
-						end
-
-						new_line.text = new_line.text..string.format("\\p1\\blur2\\alphaFF\\t(%d,%d,\\alpha00)\\t(%d,%d,\\blur0%s)", move_t1, move_t1, move_t1, move_t2, d_res.tags)
-						new_line.text = new_line.text..string.format("%s%s",tag_strip_pos:gsub("^{",""),"m 0 0 l 1 0 1 1 0 1")
-						subtitle[#subtitle] = new_line
-
-						aegisub.progress.set(j/#pixels*100)
-					end
-				else
-					for j=1,#pixels do
-						subtitle.append(line)
-						local new_line = subtitle[#subtitle]
-						
-						local pos_r1,pos_r2 = math.random(-1*d_res.rx,d_res.rx),math.random(-1*d_res.ry,d_res.ry)
-						local move_t1,move_t2 = ldur-math.random(d_res.move_t_r)-d_res.move_t,ldur-math.random(d_res.move_t_r)
-						local x0,y0 = left+pixels[j].x, top+pixels[j].y
-
-						new_line.text = tag_strip_pos:gsub("}$","")
-						if d_res.third==true then
-							new_line.text = string.format("{\\moves3(%d,%d,%d,%d,%d,%d,%d,%d)",
-								x0+d_res.move_x+pos_r1, y0+d_res.move_y+pos_r2,
-								x0+(d_res.move_x+pos_r1)/2+disX*d_res.curve*(math.random()-0.5), y0+(d_res.move_y+pos_r2)/2+disY*d_res.curve*(math.random()-0.5),
-								x0, y0,
-								move_t1, move_t2)
+							new_line.text = new_line.text..string.format("\\p1\\blur2\\bord0\\shad0\\fscx100\\fscy100%s\\t(%d,%d,\\blur0)", d_res.tags, move_t1, move_t2)
+							new_line.text = new_line.text..string.format("%s%s",tag_strip_basic:gsub("^{",""),"m 0 0 l 1 0 1 1 0 1")
 						else
+							new_line.start_time, new_line.end_time = lend-d_res.move_t-d_res.move_t_r, lend-d_res.move_t-d_res.move_t_r+move_t2
+
+							new_line.text = tag_strip_basic:gsub("}$","")
 							new_line.text = new_line.text..string.format("\\move(%d,%d,%d,%d,%d,%d)",
 								x0, y0,
 								x0+d_res.move_x+pos_r1, y0+d_res.move_y+pos_r2,
 								move_t1, move_t2)
+							new_line.text = new_line.text..string.format("\\p1\\bord0\\shad0\\fscx100\\fscy100\\t(%d,%d,\\blur2%s)}m 0 0 l 1 0 1 1 0 1", move_t1, move_t2, d_res.tags)
 						end
-						new_line.text = new_line.text..string.format("\\p1\\t(%d,%d,\\blur2%s)\\t(%d,%d,\\alphaFF)}m 0 0 l 1 0 1 1 0 1", move_t1, move_t2, d_res.tags, move_t2, move_t2)
 						subtitle[#subtitle] = new_line
+						textINpixel = textINpixel..string.format("m %d %d l %d %d %d %d %d %d ",x0-cx,y0-cy, x0-cx+1,y0-cy, x0-cx+1,y0-cy+1, x0-cx,y0-cy+1)
 
 						aegisub.progress.set(j/#pixels*100)
 					end
+					-- main part
+					subtitle.append(line)
+					if d_res.fade_in==true then
+						new_line.start_time, new_line.end_time = lsta+d_res.move_t+d_res.move_t_r, lend
+					else
+						new_line.start_time, new_line.end_time = lsta, lend-d_res.move_t-d_res.move_t_r
+					end
+					new_line.text = tag_strip_basic.."{\\pos("..cx..","..cy..")\\p1\\bord0\\shad0\\fscx100\\fscy100}"..textINpixel
+					new_line.text = new_line.text:gsub("}{","")
+					subtitle[#subtitle] = new_line
+				else
+					for i=math.floor(leftL), math.floor(rightL) do
+						for j=math.floor(topL), math.floor(bottomL) do
+							--judge: false-> no operation
+							local judge = 0
+							if true then
+								local ii,jj = posL2pos(angle,i+0.5,j+0.5,top,left,posx,posy)
+								if M.pt_in_shape2(ii,jj,pixels)==true then judge = 1 goto particle_judge end
+								-- outline
+								if outline~=0 then
+									ii,jj = posL2pos(angle,i+0.5,j+0.5,top,left,posx,posy)
+									if M.pt_in_shape2(ii,jj,pixels_bord)==true then judge = 3 goto particle_judge end
+								end
+								-- shad
+								if xshad~=0 or yshad~=0 then
+									ii,jj = posL2pos(angle,i+0.5,j+0.5,top,left,posx,posy)
+									if M.pt_in_shape2(ii,jj,pixels_shad)==true then judge = 4 goto particle_judge end
+								end
+							end
+							::particle_judge::
+
+							if judge~=0 then
+								subtitle.append(line)
+								
+								local pos_r1,pos_r2 = math.random(-1*d_res.rx,d_res.rx),math.random(-1*d_res.ry,d_res.ry)
+								local move_t1,move_t2 = math.random(d_res.move_t_r), d_res.move_t+math.random(d_res.move_t_r)
+								local x0,y0 = i,j
+								if judge==1 then cn,textINpixel = c1,textINpixel..string.format("m %d %d l %d %d %d %d %d %d ",x0-cx,y0-cy, x0-cx+1,y0-cy, x0-cx+1,y0-cy+1, x0-cx,y0-cy+1)
+								elseif judge==3 then cn,bordINpixel=c3,bordINpixel..string.format("m %d %d l %d %d %d %d %d %d ",x0-cx,y0-cy, x0-cx+1,y0-cy, x0-cx+1,y0-cy+1, x0-cx,y0-cy+1)
+								elseif judge==4 then cn,shadINpixel=c4,shadINpixel..string.format("m %d %d l %d %d %d %d %d %d ",x0-cx,y0-cy, x0-cx+1,y0-cy, x0-cx+1,y0-cy+1, x0-cx,y0-cy+1)
+								end
+
+								if d_res.fade_in==true then
+									new_line.start_time, new_line.end_time = lsta+move_t1, lsta+d_res.move_t+d_res.move_t_r
+									move_t1, move_t2 = 0, move_t2-move_t1
+
+									new_line.text = string.format("{\\move(%d,%d,%d,%d,%d,%d)",
+										x0+d_res.move_x+pos_r1, y0+d_res.move_y+pos_r2,
+										x0, y0,
+										move_t1, move_t2)
+									new_line.text = new_line.text..string.format("\\p1\\bord0\\shad0\\fscx100\\fscy100\\blur2%s\\t(%d,%d,\\blur0)", d_res.tags, move_t1, move_t2)
+									new_line.text = new_line.text..string.format("\\c%s%s%s", cn, tag_strip_basic:gsub("^{",""), "m 0 0 l 1 0 1 1 0 1")
+								else
+									new_line.start_time, new_line.end_time = lend-d_res.move_t-d_res.move_t_r, lend-d_res.move_t-d_res.move_t_r+move_t2
+
+									new_line.text = tag_strip_basic:gsub("}$","")
+									new_line.text = new_line.text..string.format("\\move(%d,%d,%d,%d,%d,%d)",
+										x0, y0,
+										x0+d_res.move_x+pos_r1, y0+d_res.move_y+pos_r2,
+										move_t1, move_t2)
+									new_line.text = new_line.text..string.format("\\c%s\\p1\\bord0\\shad0\\fscx100\\fscy100\\t(%d,%d,\\blur2%s)}m 0 0 l 1 0 1 1 0 1", cn, move_t1, move_t2, d_res.tags)
+								end
+								subtitle[#subtitle] = new_line
+							end
+							aegisub.progress.set((i-leftL+(j-topL)/(bottomL-topL))/(rightL-leftL)*100)
+						end
+					end
+					-- main part
+					subtitle.append(line)
+					if d_res.fade_in==true then	new_line.start_time, new_line.end_time = lsta+d_res.move_t+d_res.move_t_r, lend
+					else new_line.start_time, new_line.end_time = lsta, lend-d_res.move_t-d_res.move_t_r
+					end
+					new_line.text = tag_strip_basic.."{\\pos("..cx..","..cy..")\\p1\\bord0\\shad0\\fscx100\\fscy100\\c"..c1.."}"..textINpixel
+					new_line.text = new_line.text:gsub("}{","")
+					subtitle[#subtitle] = new_line
+					if outline~=0 then
+						subtitle.append(line)
+						new_line.text = tag_strip_basic.."{\\pos("..cx..","..cy..")\\p1\\bord0\\shad0\\fscx100\\fscy100\\c"..c3.."}"..bordINpixel
+						new_line.text = new_line.text:gsub("}{","")
+						subtitle[#subtitle] = new_line
+					end
+					if xshad~=0 or yshad~=0 then
+						subtitle.append(line)
+						new_line.text = tag_strip_basic.."{\\pos("..cx..","..cy..")\\p1\\bord0\\shad0\\fscx100\\fscy100\\c"..c4.."}"..shadINpixel
+						new_line.text = new_line.text:gsub("}{","")
+						subtitle[#subtitle] = new_line
+					end
 				end
 			else
-				-- kill bord/shad in linetext
-				tag_strip_pos = tag_strip_pos:gsub("\\bord[%d%.]+","")
-				tag_strip_pos = tag_strip_pos:gsub("\\[xy]?shad[%d%.%-]+","")
-				
+				local particleT = {}
 				for i=math.floor(leftL), math.floor(rightL) do
 					for j=math.floor(topL), math.floor(bottomL) do
 						--judge: false-> no operation
@@ -238,53 +317,100 @@ function main(subtitle, selected)
 							end
 						end
 						::particle_judge::
-						if judge~=0 then
-							subtitle.append(line)
-							local new_line = subtitle[#subtitle]
-							
+
+						if judge~=0 then	
+							table.insert(particleT, {i=0,o=0,c="",x1=0,y1=0,x2=0,y2=0})
+							local pN = #particleT
+
 							local pos_r1,pos_r2 = math.random(-1*d_res.rx,d_res.rx),math.random(-1*d_res.ry,d_res.ry)
 							local move_t1,move_t2 = math.random(d_res.move_t_r), d_res.move_t+math.random(d_res.move_t_r)
-							local x0,y0 = i,j
-							if judge==1 then cn=c1 elseif judge==3 then cn=c3 elseif judge==4 then cn=c4 end
+							if judge==1 then particleT[pN].c=c1	elseif judge==3 then particleT[pN].c=c3	elseif judge==4 then particleT[pN].c=c4	end
+							particleT[pN].i, particleT[pN].o=move_t1, move_t2
+							particleT[pN].x1,particleT[pN].x2,particleT[pN].y1,particleT[pN].y2 = i+d_res.move_x+pos_r1,i,j+d_res.move_y+pos_r2,j
+						end
+						aegisub.progress.set((i-leftL+(j-topL)/(bottomL-topL))/(rightL-leftL)*30)
+					end
+				end
 
-							if d_res.fade_in==true then
-								if d_res.third==true then
-									new_line.text = string.format("{\\moves3(%d,%d,%d,%d,%d,%d,%d,%d)",
-										x0+d_res.move_x+pos_r1, y0+d_res.move_y+pos_r2,
-										x0+(d_res.move_x+pos_r1)/2+disX*d_res.curve*(math.random()-0.5), y0+(d_res.move_y+pos_r2)/2+disY*d_res.curve*(math.random()-0.5),
-										x0, y0,
-										move_t1, move_t2)
-								else
-									new_line.text = string.format("{\\move(%d,%d,%d,%d,%d,%d)",
-										x0+d_res.move_x+pos_r1, y0+d_res.move_y+pos_r2,
-										x0, y0,
-										move_t1, move_t2)
-								end
+				local timeU = 1000/fps
+				local count = round((d_res.move_t+d_res.move_t_r)/timeU)
+				for j=1,count do
+					local time = round(timeU*(j-0.5))
 
-								new_line.text = new_line.text..string.format("\\p1\\blur2\\alphaFF\\t(%d,%d,\\alpha00)\\t(%d,%d,\\blur0%s)", move_t1, move_t1, move_t1, move_t2, d_res.tags)
-								new_line.text = new_line.text..string.format("\\c%s%s%s", cn, tag_strip_pos:gsub("^{",""), "m 0 0 l 1 0 1 1 0 1")
-								subtitle[#subtitle] = new_line
-							else
-								new_line.text = tag_strip_pos:gsub("}$","")
-								if d_res.third==true then
-									new_line.text = string.format("{\\moves3(%d,%d,%d,%d,%d,%d,%d,%d)",
-										x0+d_res.move_x+pos_r1, y0+d_res.move_y+pos_r2,
-										x0+(d_res.move_x+pos_r1)/2+disX*d_res.curve*(math.random()-0.5), y0+(d_res.move_y+pos_r2)/2+disY*d_res.curve*(math.random()-0.5),
-										x0, y0,
-										move_t1, move_t2)
-								else
-									new_line.text = new_line.text..string.format("\\move(%d,%d,%d,%d,%d,%d)",
-										x0, y0,
-										x0+d_res.move_x+pos_r1, y0+d_res.move_y+pos_r2,
-										move_t1, move_t2)
-								end
-								new_line.text = new_line.text..string.format("\\c%s\\p1\\t(%d,%d,\\blur2%s)\\t(%d,%d,\\alphaFF)}m 0 0 l 1 0 1 1 0 1", 
-									cn, move_t1, move_t2, d_res.tags, move_t2, move_t2)
-								subtitle[#subtitle] = new_line
+					local tagtail = "\\p1\\bord0\\shad0\\fscx100\\fscy100\\pos(0,0)}"
+					local blurN = M.interpolate(j/count, 2,0)
+					local c1text = tag_strip_basic:gsub("}$","").."\\c"..c1.."\\blur"..blurN..tagtail
+					local c3text = tag_strip_basic:gsub("}$","").."\\c"..c3.."\\blur"..blurN..tagtail
+					local c4text = tag_strip_basic:gsub("}$","").."\\c"..c4.."\\blur"..blurN..tagtail
+					local c1box,c3box,c4box = {c1text},{c3text},{c4text}
+
+					for sj,lj in ipairs(particleT) do
+						if time>=lj.i and time<=lj.o then
+							local bias = (time-lj.i)/(lj.o-lj.i)
+							local x,y = M.interpolate(bias, lj.x1, lj.x2),  M.interpolate(bias, lj.y1, lj.y2)
+							if lj.c==c1 then table.insert(c1box, string.format("m %d %d l %d %d %d %d %d %d ",x,y, x+1,y, x+1,y+1, x,y+1))
+							elseif lj.c==c3 then table.insert(c3box, string.format("m %d %d l %d %d %d %d %d %d ",x,y, x+1,y, x+1,y+1, x,y+1))
+							elseif lj.c==c4 then table.insert(c4box, string.format("m %d %d l %d %d %d %d %d %d ",x,y, x+1,y, x+1,y+1, x,y+1))
+							end
+						elseif time>lj.o then
+							local x,y = lj.x2,lj.y2
+							if lj.c==c1 then table.insert(c1box, string.format("m %d %d l %d %d %d %d %d %d ",x,y, x+1,y, x+1,y+1, x,y+1))
+							elseif lj.c==c3 then table.insert(c3box, string.format("m %d %d l %d %d %d %d %d %d ",x,y, x+1,y, x+1,y+1, x,y+1))
+							elseif lj.c==c4 then table.insert(c4box, string.format("m %d %d l %d %d %d %d %d %d ",x,y, x+1,y, x+1,y+1, x,y+1))
 							end
 						end
 					end
-					aegisub.progress.set((i-left)/(right-left)*100)
+
+					subtitle.append(line)
+					if d_res.fade_in==true then	new_line.start_time, new_line.end_time = lsta + timeU*(j-1), lsta + timeU*j
+					else new_line.start_time, new_line.end_time = lend - timeU*j, lend - timeU*(j-1)
+					end
+					new_line.text = table.concat(c1box)
+					subtitle[#subtitle] = new_line
+					if outline~=0 then
+						subtitle.append(line)
+						new_line.text = table.concat(c3box)
+						subtitle[#subtitle] = new_line
+					end
+					if xshad~=0 or yshad~=0 then
+						subtitle.append(line)
+						new_line.text = table.concat(c4box)
+						subtitle[#subtitle] = new_line
+					end
+					aegisub.progress.set(30+(j/count)*70)
+				end
+				-- main part
+				subtitle.append(line)
+				if d_res.fade_in==true then	new_line.start_time, new_line.end_time = lsta+timeU*count, lend
+				else new_line.start_time, new_line.end_time = lsta, lend-timeU*count
+				end
+
+				local c1text = tag_strip_basic:gsub("}$","").."\\c"..c1.."\\p1\\bord0\\shad0\\fscx100\\fscy100\\pos(0,0)}"
+				local c1box = {c1text}
+				for sj,lj in ipairs(particleT) do
+					if lj.c==c1 then table.insert(c1box, string.format("m %d %d l %d %d %d %d %d %d ",lj.x2,lj.y2, lj.x2+1,lj.y2, lj.x2+1,lj.y2+1, lj.x2,lj.y2+1)) end
+				end
+				new_line.text = table.concat(c1box)
+				subtitle[#subtitle] = new_line
+				if outline~=0 then
+					subtitle.append(line)
+					local c3text = tag_strip_basic:gsub("}$","").."\\c"..c3.."\\p1\\bord0\\shad0\\fscx100\\fscy100\\pos(0,0)}"
+					local c3box = {c3text}
+					for sj,lj in ipairs(particleT) do
+						if lj.c==c3 then table.insert(c3box, string.format("m %d %d l %d %d %d %d %d %d ",lj.x2,lj.y2, lj.x2+1,lj.y2, lj.x2+1,lj.y2+1, lj.x2,lj.y2+1)) end
+					end
+					new_line.text = table.concat(c3box)
+					subtitle[#subtitle] = new_line
+				end
+				if xshad~=0 or yshad~=0 then
+					subtitle.append(line)
+					local c4text = tag_strip_basic:gsub("}$","").."\\c"..c4.."\\p1\\bord0\\shad0\\fscx100\\fscy100\\pos(0,0)}"
+					local c4box = {c4text}
+					for sj,lj in ipairs(particleT) do
+						if lj.c==c4 then table.insert(c4box, string.format("m %d %d l %d %d %d %d %d %d ",lj.x2,lj.y2, lj.x2+1,lj.y2, lj.x2+1,lj.y2+1, lj.x2,lj.y2+1)) end
+					end
+					new_line.text = table.concat(c4box)
+					subtitle[#subtitle] = new_line
 				end
 			end
 		-- dissolve
@@ -301,6 +427,7 @@ function main(subtitle, selected)
 			-- kill fad in linetext
 			line.text = line.text:gsub("\\fade?%([^%)]+%)","")
 
+			if d_res.bundle==1 then
 			for i=math.floor(leftL), math.floor(rightL), d_res.step do
 				for j=math.floor(topL), math.floor(bottomL), d_res.step do
 					--judge: false-> no operation
@@ -371,91 +498,175 @@ function main(subtitle, selected)
 				end
 				aegisub.progress.set((i-left)/(right-left)*100)
 			end
-		-- spotlight effect
-		elseif result.effect=="spotlight" then
-			local spot = {}
-			spot.c1, spot.a1 = ca_html2ass(d_res.ca1)
-			-- stable
-			if d_res.move_on==false then
-				-- circle
-				if d_res.shape=="circle" then
-					subtitle.append(line)
-					local new_line = subtitle[#subtitle]
-					new_line.text = new_line.text:gsub("^({[^}]*)",function (a)
-						return string.format("%s\\iclip(%s)",a,M.draw.circle(d_res.cx1,d_res.cy1,d_res.r1+d_res.ew1)) end )
-					subtitle[#subtitle] = new_line
-
-					subtitle.append(line)
-					new_line = subtitle[#subtitle]
-					new_line.text = new_line.text:gsub("^({[^}]*)",function (a)
-						return string.format("%s\\clip(%s)\\c%s\\alpha%s",
-						a,M.draw.circle(d_res.cx1,d_res.cy1,d_res.r1),spot.c1,spot.a1) end )
-					subtitle[#subtitle] = new_line
-
-					for j=1, d_res.ew1 do
-						local space_bias = M.interpolate01(d_res.ew1+2,j+1,1)
-						subtitle.append(line)
-						new_line = subtitle[#subtitle]
-						new_line.text = new_line.text:gsub("^({[^}]*)",function (a)
-							return string.format("%s\\clip(%s)\\c%s\\alpha%s",
-							a,M.draw.ring(d_res.cx1,d_res.cy1,d_res.r1+j-1,d_res.r1+j),M.interpolate_c(space_bias,spot.c1,c1),M.interpolate_a(space_bias,spot.a1,alpha)) end )
-						subtitle[#subtitle] = new_line
-					end
-				end
-			-- move
-			elseif d_res.move_on==true then
-				spot.t = 1000/d_res.fps
-				spot.c2, spot.a2 = ca_html2ass(d_res.ca2)
-
-				if d_res.cx_ru==true then d_res.cx2 = d_res.cx1 end
-				if d_res.cy_ru==true then d_res.cy2 = d_res.cy1 end
-				if d_res.r_ru==true then d_res.r2 = d_res.r1 end
-				if d_res.ew_ru==true then d_res.ew2 = d_res.ew1 end
-				if d_res.ca_ru==true then d_res.ca2 = d_res.ca1 end
-				if d_res.ang_ru==true then d_res.ang2 = d_res.ang1 end
-
-				if (d_res.shape=="circle") then
-					for j=1,ldur/spot.t do
-						local time_bias = M.interpolate01(math.floor(ldur/spot.t),j,1)
-
-						spot.x = M.interpolate(time_bias,d_res.cx1,d_res.cx2)
-						spot.y = M.interpolate(time_bias,d_res.cy1,d_res.cy2)
-						spot.r = M.interpolate(time_bias,d_res.r1,d_res.r2)
-						spot.ew= math.floor(M.interpolate(time_bias,d_res.ew1,d_res.ew2)+0.5)
-						spot.c = M.interpolate_c(time_bias,spot.c1,spot.c2)
-						spot.a = M.interpolate_a(time_bias,spot.a1,spot.a2)
-
-						subtitle.append(line)
-						local new_line = subtitle[#subtitle]
-						new_line.start_time = lsta + (j-1)*spot.t
-						new_line.end_time   = lsta + (j)* spot.t
-						new_line.text = new_line.text:gsub("^({[^}]*)",function (a)
-							return string.format("%s\\iclip(%s)",a,M.draw.circle(spot.x,spot.y,spot.r+spot.ew)) end )
-						subtitle[#subtitle] = new_line
-
-						subtitle.append(line)
-						new_line = subtitle[#subtitle]
-						new_line.start_time = lsta + (j-1)*spot.t
-						new_line.end_time   = lsta + (j)* spot.t
-						new_line.text = new_line.text:gsub("^({[^}]*)",function (a)
-							return string.format("%s\\clip(%s)\\c%s\\alpha%s",
-							a,M.draw.circle(spot.x,spot.y,spot.r),spot.c,spot.a) end )
-						subtitle[#subtitle] = new_line
-
-						for k=1, spot.ew do
-							local space_bias = M.interpolate01(spot.ew+2,k+1,1)
-							subtitle.append(line)
-							new_line = subtitle[#subtitle]
-							new_line.start_time = lsta + (j-1)*spot.t
-							new_line.end_time   = lsta + (j)* spot.t
-							new_line.text = new_line.text:gsub("^({[^}]*)",function (a)
-								return string.format("%s\\clip(%s)\\c%s\\alpha%s",
-								a,M.draw.ring(spot.x,spot.y,spot.r+k-1,spot.r+k),M.interpolate_c(space_bias,spot.c,c1),M.interpolate_a(space_bias,spot.a,alpha)) end )
-							subtitle[#subtitle] = new_line
+			else
+				local dissolveT,dclipT = {},{}
+				for i=math.floor(leftL), math.floor(rightL), d_res.step do
+					for j=math.floor(topL), math.floor(bottomL), d_res.step do
+						--judge: false-> no operation
+						local judge = false
+						if d_res.yu==true then
+							local ii,jj = posL2pos(angle,i,j,top,left,posx,posy)
+							if M.pt_in_shape2(ii,jj,pixels)==true then judge = true goto dissolve_judge2 end
+							ii,jj = posL2pos(angle,i+d_res.step,j,top,left,posx,posy)
+							if M.pt_in_shape2(ii,jj,pixels)==true then judge = true goto dissolve_judge2 end
+							ii,jj = posL2pos(angle,i,j+d_res.step,top,left,posx,posy)
+							if M.pt_in_shape2(ii,jj,pixels)==true then judge = true goto dissolve_judge2 end
+							ii,jj = posL2pos(angle,i+d_res.step,j+d_res.step,top,left,posx,posy)
+							if M.pt_in_shape2(ii,jj,pixels)==true then judge = true goto dissolve_judge2 end
+							-- shad
+							if xshad~=0 or yshad~=0 then
+								ii,jj = posL2pos(angle,i,j,top,left,posx,posy)
+								if M.pt_in_shape2(ii,jj,pixels_shad)==true then judge = true goto dissolve_judge2 end
+								ii,jj = posL2pos(angle,i+d_res.step,j,top,left,posx,posy)
+								if M.pt_in_shape2(ii,jj,pixels_shad)==true then judge = true goto dissolve_judge2 end
+								ii,jj = posL2pos(angle,i,j+d_res.step,top,left,posx,posy)
+								if M.pt_in_shape2(ii,jj,pixels_shad)==true then judge = true goto dissolve_judge2 end
+								ii,jj = posL2pos(angle,i+d_res.step,j+d_res.step,top,left,posx,posy)
+								if M.pt_in_shape2(ii,jj,pixels_shad)==true then judge = true goto dissolve_judge2 end
+							end
+							-- outline
+							if outline~=0 then
+								ii,jj = posL2pos(angle,i,j,top,left,posx,posy)
+								if M.pt_in_shape2(ii,jj,pixels_bord)==true then judge = true goto dissolve_judge2 end
+								ii,jj = posL2pos(angle,i+d_res.step,j,top,left,posx,posy)
+								if M.pt_in_shape2(ii,jj,pixels_bord)==true then judge = true goto dissolve_judge2 end
+								ii,jj = posL2pos(angle,i,j+d_res.step,top,left,posx,posy)
+								if M.pt_in_shape2(ii,jj,pixels_bord)==true then judge = true goto dissolve_judge2 end
+								ii,jj = posL2pos(angle,i+d_res.step,j+d_res.step,top,left,posx,posy)
+								if M.pt_in_shape2(ii,jj,pixels_bord)==true then judge = true goto dissolve_judge2 end
+							end
+						else judge = true --disenable
+						end
+						::dissolve_judge2::
+						if judge==true then
+							local tmp = string.format("m %d %d l %d %d %d %d %d %d ",i,j, i+d_res.step,j, i+d_res.step,j+d_res.step, i,j+d_res.step)
+							table.insert(dissolveT, tmp)
 						end
 					end
+					aegisub.progress.set((i-left)/(right-left)*60)
+				end
+
+				while #dissolveT>d_res.bundle do
+					local tmpT = {}
+					for j=1,d_res.bundle do
+						local rand = math.random(#dissolveT)
+						table.insert(tmpT, dissolveT[rand])
+						table.remove(dissolveT, rand)
+					end
+					table.insert(dclipT, table.concat(tmpT))
+				end
+				table.insert(dclipT, table.concat(dissolveT))
+
+				for sj,lj in ipairs(dclipT) do
+					local rand1,rand2,rand3,rand4 = math.random(0,d_res.fin_t),math.random(0,d_res.fin_t),math.random(0,d_res.fout_t),math.random(0,d_res.fout_t)
+					rand1,rand2 = math.min(rand1,rand2),math.max(rand1,rand2)
+					rand3,rand4 = math.min(rand3,rand4),math.max(rand3,rand4)
+					-- head
+					if d_res.fin_t~=0 then
+						subtitle.append(line)
+						local new_line = subtitle[#subtitle]
+						new_line.text = new_line.text:gsub("^{([^}]*)}",
+							function (a) return string.format("{\\alpha&HFF&\\t(%d,%d,\\alpha&H00&)%s\\clip(%s)}",rand1,rand2,a,lj) end)
+						new_line.end_time = lsta + d_res.fin_t
+						subtitle[#subtitle] = new_line
+					end
+					-- tail
+					if d_res.fout_t~=0 then
+						subtitle.append(line)
+						local new_line = subtitle[#subtitle]
+						new_line.text = new_line.text:gsub("^{([^}]*)}",
+							function (a) return string.format("{%s\\t(%d,%d,\\alpha&HFF&)\\clip(%s)}",a,d_res.fout_t-rand4,d_res.fout_t-rand3,lj) end)
+						new_line.start_time = lend - d_res.fout_t
+						subtitle[#subtitle] = new_line
+					end	
+					aegisub.progress.set(sj/#dclipT*40+60)						
 				end
 			end
+		-- spotlight effect
+		elseif result.effect=="spotlight" then
+		-- 	local spot = {}
+		-- 	spot.c1, spot.a1 = ca_html2ass(d_res.ca1)
+		-- 	-- stable
+		-- 	if d_res.move_on==false then
+		-- 		-- circle
+		-- 		if d_res.shape=="circle" then
+		-- 			subtitle.append(line)
+		-- 			local new_line = subtitle[#subtitle]
+		-- 			new_line.text = new_line.text:gsub("^({[^}]*)",function (a)
+		-- 				return string.format("%s\\iclip(%s)",a,M.draw.circle(d_res.cx1,d_res.cy1,d_res.r1+d_res.ew1)) end )
+		-- 			subtitle[#subtitle] = new_line
+
+		-- 			subtitle.append(line)
+		-- 			new_line = subtitle[#subtitle]
+		-- 			new_line.text = new_line.text:gsub("^({[^}]*)",function (a)
+		-- 				return string.format("%s\\clip(%s)\\c%s\\alpha%s",
+		-- 				a,M.draw.circle(d_res.cx1,d_res.cy1,d_res.r1),spot.c1,spot.a1) end )
+		-- 			subtitle[#subtitle] = new_line
+
+		-- 			for j=1, d_res.ew1 do
+		-- 				local space_bias = M.interpolate01(d_res.ew1+2,j+1,1)
+		-- 				subtitle.append(line)
+		-- 				new_line = subtitle[#subtitle]
+		-- 				new_line.text = new_line.text:gsub("^({[^}]*)",function (a)
+		-- 					return string.format("%s\\clip(%s)\\c%s\\alpha%s",
+		-- 					a,M.draw.ring(d_res.cx1,d_res.cy1,d_res.r1+j-1,d_res.r1+j),M.interpolate_c(space_bias,spot.c1,c1),M.interpolate_a(space_bias,spot.a1,alpha)) end )
+		-- 				subtitle[#subtitle] = new_line
+		-- 			end
+		-- 		end
+		-- 	-- move
+		-- 	elseif d_res.move_on==true then
+		-- 		spot.t = 1000/d_res.fps
+		-- 		spot.c2, spot.a2 = ca_html2ass(d_res.ca2)
+
+		-- 		if d_res.cx_ru==true then d_res.cx2 = d_res.cx1 end
+		-- 		if d_res.cy_ru==true then d_res.cy2 = d_res.cy1 end
+		-- 		if d_res.r_ru==true then d_res.r2 = d_res.r1 end
+		-- 		if d_res.ew_ru==true then d_res.ew2 = d_res.ew1 end
+		-- 		if d_res.ca_ru==true then d_res.ca2 = d_res.ca1 end
+		-- 		if d_res.ang_ru==true then d_res.ang2 = d_res.ang1 end
+
+		-- 		if (d_res.shape=="circle") then
+		-- 			for j=1,ldur/spot.t do
+		-- 				local time_bias = M.interpolate01(math.floor(ldur/spot.t),j,1)
+
+		-- 				spot.x = M.interpolate(time_bias,d_res.cx1,d_res.cx2)
+		-- 				spot.y = M.interpolate(time_bias,d_res.cy1,d_res.cy2)
+		-- 				spot.r = M.interpolate(time_bias,d_res.r1,d_res.r2)
+		-- 				spot.ew= math.floor(M.interpolate(time_bias,d_res.ew1,d_res.ew2)+0.5)
+		-- 				spot.c = M.interpolate_c(time_bias,spot.c1,spot.c2)
+		-- 				spot.a = M.interpolate_a(time_bias,spot.a1,spot.a2)
+
+		-- 				subtitle.append(line)
+		-- 				local new_line = subtitle[#subtitle]
+		-- 				new_line.start_time = lsta + (j-1)*spot.t
+		-- 				new_line.end_time   = lsta + (j)* spot.t
+		-- 				new_line.text = new_line.text:gsub("^({[^}]*)",function (a)
+		-- 					return string.format("%s\\iclip(%s)",a,M.draw.circle(spot.x,spot.y,spot.r+spot.ew)) end )
+		-- 				subtitle[#subtitle] = new_line
+
+		-- 				subtitle.append(line)
+		-- 				new_line = subtitle[#subtitle]
+		-- 				new_line.start_time = lsta + (j-1)*spot.t
+		-- 				new_line.end_time   = lsta + (j)* spot.t
+		-- 				new_line.text = new_line.text:gsub("^({[^}]*)",function (a)
+		-- 					return string.format("%s\\clip(%s)\\c%s\\alpha%s",
+		-- 					a,M.draw.circle(spot.x,spot.y,spot.r),spot.c,spot.a) end )
+		-- 				subtitle[#subtitle] = new_line
+
+		-- 				for k=1, spot.ew do
+		-- 					local space_bias = M.interpolate01(spot.ew+2,k+1,1)
+		-- 					subtitle.append(line)
+		-- 					new_line = subtitle[#subtitle]
+		-- 					new_line.start_time = lsta + (j-1)*spot.t
+		-- 					new_line.end_time   = lsta + (j)* spot.t
+		-- 					new_line.text = new_line.text:gsub("^({[^}]*)",function (a)
+		-- 						return string.format("%s\\clip(%s)\\c%s\\alpha%s",
+		-- 						a,M.draw.ring(spot.x,spot.y,spot.r+k-1,spot.r+k),M.interpolate_c(space_bias,spot.c,c1),M.interpolate_a(space_bias,spot.a,alpha)) end )
+		-- 					subtitle[#subtitle] = new_line
+		-- 				end
+		-- 			end
+		-- 		end
+		-- 	end
 		-- other effect
 		elseif result.effect=="clip_blur" then
 			if ltext:match("\\i?clip")==nil then aegisub.cancel() end
@@ -1015,16 +1226,15 @@ function daughter_dialog(effect)
 			{class="floatedit",name="move_y",value=0,x=4,y=2},
 			-- shape
 			{class="label",label="diffusion radius x",x=1,y=3},
-			{class="intedit",name="rx",value=150,x=1,y=4},
+			{class="intedit",name="rx",value=300,x=1,y=4},
 			{class="label",label="diffusion radius y",x=2,y=3},
-			{class="intedit",name="ry",value=150,x=2,y=4},
+			{class="intedit",name="ry",value=300,x=2,y=4},
 			-- advanced
 			{class="label",label="advanced",x=1,y=5},
-			{class="checkbox",label="curve",name="third",value=false,x=1,y=6},
-			{class="floatedit",name="curve",value=0,x=1,y=7,hint="0 -> no curve, higher -> more curve"},
+			{class="checkbox",label="bord/shad/rotate",name="bsr",value=false,x=1,y=6},
+			{class="checkbox",label="faster render",name="fast",value=false,x=1,y=7},
 			{class="label",label="additional tags",x=2,y=6},
-			{class="edit",name="tags",value="",width=2,x=2,y=7},
-			{class="checkbox",label="bord/shad/rotate",name="adv",value=false,width=2,x=3,y=6}
+			{class="edit",name="tags",value="",width=2,x=2,y=7}
 		}
 	elseif effect=="dissolve" then
 		dialog_conf = {
@@ -1040,9 +1250,11 @@ function daughter_dialog(effect)
 			{class="label",label="particle size",x=3,y=1},
 			{class="intedit",name="step",value=4,x=3,y=2},
 			-- advanced
-			{class="label",label="advanced",x=4,y=0},
-			{class="label",label="get fewer lines with more power",x=4,y=1},
-			{class="checkbox",label="enable",name="yu",value=true,x=4,y=2}
+			{class="label",label="advanced",x=1,y=3},
+			{class="label",label="bundle size",x=1,y=4},
+			{class="intedit",name="bundle",value=1,x=1,y=5},
+			{class="label",label="get fewer lines with more power",width=2,x=2,y=4},
+			{class="checkbox",label="enable",name="yu",value=true,x=2,y=5}
 		}
 	elseif effect=="typewriter" then
 		dialog_conf = {
@@ -1571,10 +1783,11 @@ end
 function M.shape.normalize(shape)
 	local start_x,start_y = shape:match("([%d%.%-]+) +([%d%.%-]+)")
 	local end_x,end_y = shape:match("([%d%.%-]+) +([%d%.%-]+)[^%d%.%-]*$")
+	start_x,start_y,end_x,end_y = tonumber(start_x),tonumber(start_y),tonumber(end_x),tonumber(end_y)
 	if math.abs(start_x-end_x)<M.math.epsilon() and math.abs(start_y-end_y)<M.math.epsilon() then
-		shape = shape:gsub("[^%d%.%-]*$"," c")
+		shape = shape:gsub("([%d%.%-])[^%d%.%-]*$","%1 c")
 	else
-		shape = shape:gsub("[^%d%.%-]*$",string.format(" l %.2f %.2f c",start_x,start_y))
+		shape = shape:gsub("([%d%.%-])[^%d%.%-]*$",function(a) return a..string.format(" l %.2f %.2f c",start_x,start_y) end)
 	end
 	shape = shape:gsub(" +"," ")
 	return shape
@@ -1620,19 +1833,22 @@ end
 
 -- shape contain only one m, please normalize it first
 -- table .pre -> "b" or "l"   
---        .x1 .y1 .x2 .y2 [for "b" .xc1 .yc1 .xc2 .tc2]
+--        .x1 .y1 .x2 .y2 [for "b" .xc1 .yc1 .xc2 .yc2]
 function M.shape.read_line(shape)
 	local line_inf = {}
 	shape = shape:gsub("m", "")
 	local start_x,start_y = shape:match("([%d%.%-]+) +([%d%.%-]+)")
+	start_x,start_y = tonumber(start_x),tonumber(start_y)
 	for pre,i in shape:gmatch("(%a) ([^%a]+)") do
 		if pre=="l" then
 			for xj,yj in i:gmatch("([%d%.%-]+) ([%d%.%-]+)") do
+				xj,yj = tonumber(xj),tonumber(yj)
 				table.insert(line_inf,{pre="l",x1=start_x,y1=start_y,x2=xj,y2=yj})
 				start_x,start_y = xj,yj
 			end
 		elseif pre=="b" then
 			for xc1,yc1,xc2,yc2,x2,y2 in i:gmatch("([%d%.%-]+) ([%d%.%-]+) ([%d%.%-]+) ([%d%.%-]+) ([%d%.%-]+) ([%d%.%-]+)") do
+				xc1,yc1,xc2,yc2,x2,y2 = tonumber(xc1),tonumber(yc1),tonumber(xc2),tonumber(yc2),tonumber(x2),tonumber(y2)
 				table.insert(line_inf,{pre="b",x1=start_x,y1=start_y,xc1=xc1,xc2=xc2,yc1=yc1,yc2=yc2,x2=x2,y2=y2})
 				start_x,start_y = x2,y2
 			end
@@ -1661,9 +1877,8 @@ end
 
 -- shape contain only one m, please normalize it first 
 -- -> anticlockwise: 1, clockwise: -1, else: 0
-function M.shape.judge_rotation_direction(shape)
-	local flatten_shape = Yutils.shape.flatten(shape)
-	local line_inf = M.shape.read_line(flatten_shape)
+function M.shape.judge_rotation_direction_flatten(shape)
+	local line_inf = M.shape.read_line(shape)
 	local area = 0
 	for si,li in ipairs(line_inf) do
 		area = area + (li.y1+li.y2)*(li.x2-li.x1)/2
@@ -1677,9 +1892,31 @@ function M.shape.judge_rotation_direction(shape)
 	end
 end
 
+-- shape contain only one m, please normalize it first 
+-- -> anticlockwise: 1, clockwise: -1, else: 0
+function M.shape.judge_rotation_direction(shape)
+	local line_inf = M.shape.read_line(shape)
+	local area = 0
+	for si,li in ipairs(line_inf) do
+		if li.pre=="l" then
+			area = area + (li.y1+li.y2)*(li.x2-li.x1)/2
+		elseif li.pre=="b" then
+			area = area + M.math.area_under_bezier_curve(li.x1,li.y1,li.xc1,li.yc1,li.xc2,li.yc2,li.x2,li.y2)
+		end
+	end
+	if area>0 then
+		return 1 -- anticlockwise
+	elseif area<0 then
+		return -1 -- clockwise
+	else 
+		return 0
+	end
+end
+
 -- shape -> shapes  
 -- simple shape: simply connected
 function M.shape.slice_outline(shape,width,step)
+	local pixels = Yutils.shape.to_pixels(shape)
 	local half_width = width/2
 	-- local n = math.floor(half_width/step)
 	local rd1,rd2 = nil,nil
@@ -1696,7 +1933,7 @@ function M.shape.slice_outline(shape,width,step)
 		outlines[1].shape = M.shape.normalize(outlines[1].shape)
 		outlines[2].shape = M.shape.normalize(outlines[2].shape)
 		local x1,y1 = outlines[1].shape:match("([%d%.%-]+) ([%d%.%-]+)")
-		local judge = M.pt_in_shape(x1,y1,outlines[2].shape)
+		local judge = M.pt_in_shape2(x1,y1,pixels)
 
 		-- true -> [1] in, [2] out
 		if judge==true then
@@ -1729,16 +1966,16 @@ function M.shape.split_component(shape)
 
 	for ni,si in ipairs(shapes) do
 		si.shape = M.shape.normalize(si.shape)
-		si.other = {inside={},outside={},i=0,o=0,del=false,dn={},pn=nil} -- shape num inside & outside daughter & parent node
+		si.other = {pixels=Yutils.shape.to_pixels(si.shape),inside={},outside={},i=0,o=0,del=false,dn={},pn=nil} -- shape num inside & outside daughter & parent node
 	end
 
 	-- get inside & outside information
 	for ni,si in ipairs(shapes) do
-		local xi,yi = si.shape:match("([%d%.%-]+) ([%d%.%-]+)")
+		local xi,yi = si.other.pixels[1].x, si.other.pixels[1].y
 		
 		for nj,sj in ipairs(shapes) do
 			if nj~=ni then
-				local judge = M.pt_in_shape(xi,yi,sj.shape)
+				local judge = M.pt_in_shape2(xi,yi,sj.other.pixels)
 			
 				-- true -> si in sj
 				if judge==true then
@@ -1805,15 +2042,15 @@ function M.math.epsilon()
 	return 0.00001
 end
 
-function M.math.rotate(x,y,angle)
-	if math.abs(x)<M.math.epsilon() and math.abs(y)<M.math.epsilon() then return x,y end
-	local temp = math.atan(y,x)
-	local distance = math.sqrt(x^2+y^2)
-	return distance*math.cos(temp-angle),distance*math.sin(temp-angle)
-end
-
 function M.math.distance(x1,y1,x2,y2)
 	return math.sqrt((x2-x1)^2+(y2-y1)^2)
+end
+
+function M.math.area_under_bezier_curve(x0,y0,x1,y1,x2,y2,x3,y3)
+	return (10*(x3*y3-x0*y0)
+		   +6*(x1*y0-x0*y1+x3*y2-x2*y3)
+		   +3*(x2*y0+x2*y1+x3*y1-x0*y2-x1*y2-x1*y3)
+		   +  (x3*y0-x0*y3))/20
 end
 
 --Register macro (no validation function required)
