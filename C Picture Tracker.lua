@@ -29,27 +29,28 @@ clipboard = require 'aegisub.clipboard'
 local dialog_config = {
 	{class="label",label="",x=0,y=0,width=4},--1
 	{class="label",label="reference frame",x=1,y=1},--2
-	{class="intedit",name="f",value=1,x=2,y=1},--3
+	{class="intedit",name="f",value=1,x=2,y=1,width=2},--3
 	{class="label",label="vertial shrink",x=1,y=2},--4
-	{class="intedit",name="vs",value=0,x=2,y=2},--5
+	{class="intedit",name="vs",value=0,x=2,y=2,width=2},--5
 	{class="label",label="horizontal shrink",x=1,y=3},--6
-	{class="intedit",name="hs",value=0,x=2,y=3},--7
+	{class="intedit",name="hs",value=0,x=2,y=3,width=2},--7
 
 	{class="checkbox",name="x",label="pos",value=true,x=0,y=1},
 	{class="checkbox",name="s",label="scale",value=false,x=0,y=2},
 	{class="checkbox",name="r",label="rotate",value=false,x=0,y=3},
 	{class="checkbox",name="cl",label="clip",value=false,x=0,y=4},
 	{class="checkbox",name="r2v",label="rect2vec",value=false,x=1,y=4},
-	{class="checkbox",name="rem",label="remember",value=false,x=2,y=4,hint="xmlsimple required"},
+	{class="checkbox",name="text",label="text   ",value=false,x=2,y=4},
+	{class="checkbox",name="rem",label="rem",value=false,x=3,y=4},
 
 	{class="label",label="effect",x=0,y=5},
 	{class="dropdown",name="e",items={"none","paint, recommend: 5","spread, recommend: 5,5","swirl, recommend 360","custom command"},value="none",x=0,y=6,width=2},
-	{class="dropdown",name="m",items={"gradient","random"},value="gradient",x=2,y=6},
-	{class="edit",name="c",x=0,y=7,width=3,value="custom command:",hint="custom command: use input & output for file path, use \\d for argument"},
+	{class="dropdown",name="m",items={"gradient","random"},value="gradient",x=2,y=6,width=2},
+	{class="edit",name="c",x=0,y=7,width=4,value="custom command:",hint="custom command: use input & output for file path, use \\d for argument"},
 	{class="label",label="strength from/min",x=0,y=8,width=2},
-	{class="edit",name="argf",x=2,y=8,value="0",hint="strength for preview, separate by comma"},
+	{class="edit",name="argf",x=2,y=8,value="0",width=2,hint="strength for preview, separate by comma"},
 	{class="label",label="strength to/max",x=0,y=9,width=2},
-	{class="edit",name="argt",x=2,y=9,value="0",hint="separate by comma"}
+	{class="edit",name="argt",x=2,y=9,value="0",width=2,hint="separate by comma"}
 }
 local buttons = {"Track","Preview","Quit"}
 
@@ -62,8 +63,8 @@ function main(subtitle,selected,active)
 	local path_head = path:gsub("%.png","")
 
 	-- read width & height
-	local command1 = string.format('magick %s -format "%%wx%%h" info:',path)
-	local file = io.popen(command1)
+	local cmdinit = string.format('magick %s -format "%%wx%%h" info:',path)
+	local file = io.popen(cmdinit)
 	local info = file:read()
 	file:close()
 	local width,height = info:match("(%d+)x(%d+)")
@@ -107,12 +108,9 @@ function main(subtitle,selected,active)
 			if i:match("Scale")~=nil then trigger=2 end
 			if i:match("Position")~=nil then trigger=1 end
 		end
-	else
-		count_m = 0 
+	else count_m = 0 
 	end
-	if posdata=={} then 
-		count_m = 0
-	end
+	if posdata=={} then count_m = 0	end
 
 	-- get line info
 	local frame_S,frame_E = aegisub.frame_from_ms(subtitle[active].start_time),aegisub.frame_from_ms(subtitle[active].end_time)-1
@@ -126,12 +124,14 @@ function main(subtitle,selected,active)
 	if pressed=="Quit" then aegisub.cancel() end
 	if result.rem==true then config_write_xml(result) end
 
+	-- fps correction
 	if fps==23.976 then fps = 24000/1001 
 	elseif fps==29.97 then fps = 30000/1001 end
 
 	if pressed=="Track" then 
 		if count_f~=count_m then aegisub.cancel() end
 		-- ref frame
+		local frame_ref = result.f-frame_S+1
 		local line = subtitle[active]
 		karaskel.preproc_line(subtitle,meta,styles,line)
 		line.comment = true
@@ -139,18 +139,30 @@ function main(subtitle,selected,active)
 		line.comment = false
 		local tag = line.text:match("^{[^}]*}")
 		tag = tag:gsub("\\1img%([^%)]*%)","")
-		local align = (tag:match("\\an%d")~=nil) and tag:match("\\an(%d)") or line.styleref.align
+		tag = tag:gsub("\\fsc([%d%.]+)","\\fscx%1\\fscy%1")
+		local tag_strip_t = tag:gsub("\\t%([^%)]*%)","")
+		local align = tag:match("\\an%d") and tag:match("\\an(%d)") or line.styleref.align
+		local angle = tag_strip_t:match("\\frz") and tag_strip_t:match("\\frz([%d%.%-]+)") or line.styleref.angle
+		local scale_x = tag_strip_t:match("\\fscx") and tag_strip_t:match("\\fscx([%d%.]+)") or line.styleref.scale_x
+		local scale_y = tag_strip_t:match("\\fscy") and tag_strip_t:match("\\fscy([%d%.]+)") or line.styleref.scale_y
 		local posx,posy = tag:match("\\pos%(([%d%.%-]+),([%d%.%-]+)")
 		local orgx,orgy = tag:match("\\org%(([%d%.%-]+),([%d%.%-]+)")
 		local fin,fout  = tag:match("\\fad%(([%d%.%-]+),([%d%.%-]+)")
-		local clip_head,clip_shape = tag:match("(\\i?clip)%(([^%)]*)%)")
-		if posx==nil then posx = line.x end
-		if posy==nil then posy = line.y end
-		align,posx,posy = tonumber(align),tonumber(posx),tonumber(posy)
+		local clip_head,clip_shape = tag_strip_t:match("(\\i?clip)%(([^%)]*)%)")
+		local alpha = tag_strip_t:match("\\1?al?p?h?a?&?H?%x") and "&H"..tag_strip_t:match("\\1?al?p?h?a?&?H?([%x]+)&?").."&" or "&H"..line.styleref.color1:match("(%x%x)%x%x%x%x%x%x").."&"
+		if posx==nil then posx,posy = line.x,line.y end
+		align,posx,posy,angle,scale_x,scale_y = tonumber(align),tonumber(posx),tonumber(posy),tonumber(angle),tonumber(scale_x),tonumber(scale_y)
 		if orgx~=nil then orgx,orgy = tonumber(orgx),tonumber(orgy) end
 		if fin~=nil then fin,fout = tonumber(fin),tonumber(fout) end
-		tag = "{\\an"..align.."\\bord0\\shad0"
-		local frame_ref = result.f-frame_S+1
+		-- for shape
+		local tagforshape = "{\\an"..align.."\\bord0\\shad0\\fscx100\\fscy100\\frz0\\p1"
+		-- for text
+		local linetext = line.text:match("^{")~=nil and line.text or "{}"..line.text
+		linetext = linetext:gsub("\\t%(([^,%)]+)%)",function (a) return string.format("\\t(0,%d,%s)",line.duration,a) end)
+		linetext = linetext:gsub("\\fad%([^%)]+%)","")
+		linetext = linetext:gsub("\\fsc([%d%.]+)","\\fscx%1\\fscy%1")
+		if fin~=nil and fin~=0 then linetext = linetext:gsub("^{",string.format("{\\alpha&HFF&\\t(0,%d,\\alpha%s)",fin,alpha)) end
+		if fout~=nil and fout~=0 then linetext = linetext:gsub("^({[^}]*)}",function(a) return string.format("%s\\t(%d,%d,\\alpha&HFF&)",a,line.duration-fout,line.duration) end) end
 
 		-- clip rect2vec
 		if result.cl==true and result.r2v==true and clip_shape:match(",")~=nil then
@@ -197,24 +209,23 @@ function main(subtitle,selected,active)
 			l.end_time = endtime(i,fps)
 
 			-- do the picture stuff
-			local draw = ""
+			local draw,drawpos,draworg,drawclip = "","","",""
 			local path_o = path_head.."_"..i..".png"
 			local w,h = width,height
-			local xdev, ydev = posx-posdata[frame_ref].x, posy-posdata[frame_ref].y
+			local xdev, ydev, rotdev, scadev, timedev = posx-posdata[frame_ref].x, posy-posdata[frame_ref].y, 0, 1, l.start_time-line.start_time
+			local posxN, posyN, orgxN, orgyN = posx, posy, orgx, orgy
 
 			-- scale & rotation
 			if result.s==true or result.r==true then
-				if result.s==true and result.r==true then
-					command1 = string.format('magick %s -resize %f%% -fill rgba(255,255,255,255) -background rgba(0,0,0,0) -rotate "%f%s" +repage ',
-						path, scaledata[index]/scaledata[frame_ref]*100, rotationdata[index]-rotationdata[frame_ref], wlh)
-					xdev,ydev = xdev*scaledata[index]/scaledata[frame_ref],ydev*scaledata[index]/scaledata[frame_ref]
-				elseif result.s==true then
-					command1 = string.format('magick %s -resize %f%% ',
-						path, scaledata[index]/scaledata[frame_ref]*100)
-					xdev,ydev = xdev*scaledata[index]/scaledata[frame_ref],ydev*scaledata[index]/scaledata[frame_ref]
-				else -- result.r==true
-					command1 = string.format('magick %s -fill rgba(255,255,255,255) -background rgba(0,0,0,0) -rotate "%f%s" +repage ',
-						path, rotationdata[index]-rotationdata[frame_ref], wlh)
+				local command1 = string.format('magick %s ',path)
+				if result.s==true then
+					scadev = scaledata[index]/scaledata[frame_ref]
+					command1 = command1..string.format('-resize %f%% ',	scadev*100)
+					xdev,ydev = xdev*scadev,ydev*scadev
+				end
+				if result.r==true then
+					rotdev = rotationdata[index]-rotationdata[frame_ref]
+					command1 = command1..string.format('-fill rgba(255,255,255,255) -background rgba(0,0,0,0) -rotate "%f%s" +repage ',rotdev, wlh)
 				end
 
 				-- effect
@@ -232,13 +243,15 @@ function main(subtitle,selected,active)
 				end
 
 				command1 =command1..path_o
-				local command2 = string.format('magick %s -format "%%wx%%h" info:',path_o)
 				os.execute(command1)
-				file = io.popen(command2)
-				info = file:read()
-				file:close()
-				w,h = info:match("(%d+)x(%d+)")
-				w,h = tonumber(w),tonumber(h)
+				if result.text==false then
+					local command2 = string.format('magick %s -format "%%wx%%h" info:',path_o)
+					file = io.popen(command2)
+					info = file:read()
+					file:close()
+					w,h = info:match("(%d+)x(%d+)")
+					w,h = tonumber(w),tonumber(h)
+				end
 			else
 				path_o = path
 
@@ -254,64 +267,52 @@ function main(subtitle,selected,active)
 						end
 					end
 					command1 = 'magick '..path.." "..command0copy..path_o
-					local command2 = string.format('magick %s -format "%%wx%%h" info:',path_o)
 					os.execute(command1)
-					file = io.popen(command2)
-					info = file:read()
-					file:close()
-					w,h = info:match("(%d+)x(%d+)")
-					w,h = tonumber(w),tonumber(h)
 				end
 			end
 
 			-- position
 			if result.x==true then 
-				draw = draw..string.format("\\pos(%.3f,%.3f)",posdata[index].x+xdev,posdata[index].y+ydev)
+				posN, posyN = posdata[index].x+xdev, posdata[index].y+ydev
+				drawpos = string.format("\\pos(%.3f,%.3f)",posxN, posyN)
 			else
-				draw = draw.."\\pos("..posx..","..posy..")"
+				drawpos = "\\pos("..posx..","..posy..")"
 			end
 			
 			-- org
 			if orgx~=nil then
 				if result.x==true then
 					local orgxdev, orgydev = orgx-posdata[frame_ref].x, orgy-posdata[frame_ref].y
-					if result.r==true then orgxdev,orgydev = orgxdev*scaledata[index]/scaledata[frame_ref],orgydev*scaledata[index]/scaledata[frame_ref] end
-					draw = draw..string.format("\\org(%.3f,%.3f)",posdata[index].x+orgxdev,posdata[index].y+orgydev)
+					if result.r==true then orgxdev,orgydev = orgxdev*scadev,orgydev*scadev end
+					orgxN, orgyN = posdata[index].x+orgxdev, posdata[index].y+orgydev
+					draworg = string.format("\\org(%.3f,%.3f)",orgxN, orgyN)
 				else
-					draw = draw.."\\org("..orgx..","..orgy..")"
+					draworg = "\\org("..orgx..","..orgy..")"
 				end
 			end
 
 			-- clip
 			if result.cl==true then
-				local scale = 1
 				local clip_shape_copy = clip_shape
-				if result.s==true then scale = scaledata[index]/scaledata[frame_ref] end
 				-- clip position
 				if result.x==true then
-					clip_shape_copy = filter(clip_shape_copy, posdata[index].x, posdata[index].y, posdata[frame_ref].x, posdata[frame_ref].y, scale)
+					clip_shape_copy = filter(clip_shape_copy, posdata[index].x, posdata[index].y, posdata[frame_ref].x, posdata[frame_ref].y, scadev)
 				end
 				-- clip scale
 				if result.s==true and orgx~=nil then 
-					local temp1,temp2 = draw:match("\\org%(([%d%.%-]+),([%d%.%-]+)")
-					temp1,temp2 = tonumber(temp1),tonumber(temp2)
-					clip_shape_copy =filter_s(clip_shape_copy, temp1, temp2, scale)
+					clip_shape_copy =filter_s(clip_shape_copy, orgxN, orgyN, scadev)
 				elseif result.s==true then  
-					local temp1,temp2 = draw:match("\\pos%(([%d%.%-]+),([%d%.%-]+)")
-					temp1,temp2 = tonumber(temp1),tonumber(temp2)
-					clip_shape_copy =filter_s(clip_shape_copy, temp1, temp2, scale) 
+					clip_shape_copy =filter_s(clip_shape_copy, posxN, posyN, scadev) 
 				end
 				-- clip rotation
 				if result.r==true and orgx~=nil then 
-					local temp1,temp2 = draw:match("\\org%(([%d%.%-]+),([%d%.%-]+)")
-					temp1,temp2 = tonumber(temp1),tonumber(temp2)
-					clip_shape_copy =filter_r(clip_shape_copy, temp1, temp2, rotationdata[index]-rotationdata[frame_ref])
+					clip_shape_copy =filter_r(clip_shape_copy, orgxN, orgyN, rotdev)
 				elseif result.r==true then  
-					local temp1,temp2 = draw:match("\\pos%(([%d%.%-]+),([%d%.%-]+)")
-					temp1,temp2 = tonumber(temp1),tonumber(temp2)
-					clip_shape_copy =filter_r(clip_shape_copy, temp1, temp2, rotationdata[index]-rotationdata[frame_ref]) 
+					clip_shape_copy =filter_r(clip_shape_copy, posxN, posyN, rotdev) 
 				end
-				draw = draw..clip_head.."("..clip_shape_copy..")"
+				drawclip = clip_head.."("..clip_shape_copy..")"
+			elseif clip_shape~=nil then
+				drawclip = clip_head.."("..clip_shape..")"
 			end
 
 			-- handle picture out of boundry
@@ -330,40 +331,47 @@ function main(subtitle,selected,active)
 			end
 
 			-- output
-			draw = draw..string.format("\\fscx100\\fscy100\\frz0\\p1\\1img(%s)}m 0 0 l %d 0 l %d %d l 0 %d", path_o, w-result.hs, w-result.hs, h-result.vs, h-result.vs)
-			l.text = tag..draw
+			if result.text==false then
+				draw = string.format("%s%s%s%s\\1img(%s)}m 0 0 l %d 0 l %d %d l 0 %d", 
+					tagforshape, drawpos, draworg, drawclip, path_o, w-result.hs, w-result.hs, h-result.vs, h-result.vs)
+				l.text = draw
+			else
+				local ltcopy = linetext
+				if result.x==true then
+					ltcopy = ltcopy:gsub("\\pos%([^%)]+%)","")
+					ltcopy = ltcopy:gsub("^{", "{"..drawpos)
+				end
+				if orgx~=nil then
+					ltcopy = ltcopy:gsub("\\org%([^%)]+%)","")
+					ltcopy = ltcopy:gsub("^{", "{"..draworg)
+				end
+				if result.r==true then
+					if ltcopy:match("\\frz")==nil then ltcopy = ltcopy:gsub("^{","{\\frz"..angle) end
+					ltcopy = ltcopy:gsub("\\frz([%d%.%-]+)", string.format("\\frz%.3f", angle-rotdev))
+				end
+				if result.s==true then
+					if ltcopy:match("\\fscy")==nil then ltcopy = ltcopy:gsub("^{","{\\fscy"..scale_y) end
+					if ltcopy:match("\\fscx")==nil then ltcopy = ltcopy:gsub("^{","{\\fscx"..scale_x) end
+					ltcopy = ltcopy:gsub("\\fscx([%d%.]+)", string.format("\\fscx%.2f", scale_x*scadev))
+					ltcopy = ltcopy:gsub("\\fscy([%d%.]+)", string.format("\\fscy%.2f", scale_y*scadev))
+				end
+				if result.cl==true then
+					ltcopy = ltcopy:gsub("^({[^}]*)}",function (a) return a..drawclip.."}" end)
+				end
+				ltcopy = ltcopy:gsub("\\t%(([^,]+),([^,]+),([^%)]*)%)", function (t1,t2,a)
+					t1,t2 = tonumber(t1)-timedev,tonumber(t2)-timedev
+					if t2<=0 then return a
+					else return string.format("\\t(%d,%d,%s)",t1,t2,a)
+					end
+				end)
+				l.text = ltcopy
+			end
 			subtitle[j] = l
 			aegisub.progress.set(index/count_f*100)
 			j = j + 1
 			index = index + 1
 		end
 
-		-- handle fad
-		if fin~=nil then
-			local time_U = 1000/fps
-			if fin~=0 then
-				local fs,fj = active,frame_S
-				for fi=time_U/2,fin,time_U do
-					local l = subtitle[fs]
-					local fad = fbffad1(fi,fin,fj,fps)
-					l.text = l.text:gsub("^{","{\\fad("..fad..",0)")
-					subtitle[fs] = l
-					fs = fs + 1
-					fj = fj + 1
-				end
-			end
-			if fout~=0 then
-				local fs,fj = active+count_f-1,frame_E
-				for fi=time_U/2,fout,time_U do
-					local l = subtitle[fs]
-					local fad = fbffad2(fi,fout,fj,fps)
-					l.text = l.text:gsub("^{","{\\fad(0,"..fad..")")
-					subtitle[fs] = l
-					fs = fs - 1
-					fj = fj - 1
-				end
-			end
-		end
 	elseif pressed=="Preview" then
 		local command0
 		if result.e=="none" then aegisub.cancel() 
@@ -407,7 +415,6 @@ function main(subtitle,selected,active)
 		subtitle[active] = line
 	end
 
-	::bottom::
 	aegisub.set_undo_point(script_name)
 	return selected
 end
@@ -432,16 +439,6 @@ end
 
 function round(x)
 	return math.floor(x+0.5)
-end
-
-function fbffad1(i,all,frame,fps)
-	local t = round(frame*1000/fps-starttime(frame,fps))
-	return round(t/(i/all)) -- t/x = i/all
-end
-
-function fbffad2(i,all,frame,fps)
-	local t = round(endtime(frame,fps)-frame*1000/fps)
-	return round(t/(i/all)) -- t/x = i/all
 end
 
 function interpolate(head,tail,N,i,accel)
