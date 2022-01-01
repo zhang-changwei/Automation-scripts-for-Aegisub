@@ -10,48 +10,51 @@ Updated on Fre.8th, 2021
 
 --Script properties
 script_name="C Gradient"
-script_description="Gradient v2.1"
+script_description="Gradient v2.2"
 script_author="chaaaaang"
-script_version="2.1"
+script_version="2.2"
 
 include("karaskel.lua")
 util = require 'aegisub.util'
 
 --GUI
-dialog_config={
+local dialog_config={
     --true: time mode, false: line mode
     {class="checkbox",name="set",label="setting",value=false,x=0,y=0,hint="true: time mode, false: line mode"},
-    {class="dropdown",name="mode",items={"exact match","custom"},value="exact match",width=4,x=1,y=0},
+    {class="dropdown",name="mode",items={"replace","append"},value="replace",width=3,x=1,y=0},
 
     {class="label",label="rule",x=0,y=1},
-    {class="edit",name="rule",value="11",width=4,x=1,y=1,hint="%d%d[ht]?,%d%d[ht]?... e.g. 12h,21t"},
+    {class="edit",name="rule",value="11",width=3,x=1,y=1,hint="%d%d[ht]?,%d%d[ht]?... e.g. 12h,21t"},
     {class="label",label="accel",x=0,y=2},
-    {class="floatedit",name="accel",value=1,width=2,x=1,y=2},
+    {class="floatedit",name="accel",value=1,width=3,x=1,y=2},
 
     {class="checkbox",name="color_cb",label="color",value=false,x=1,y=3},
-    {class="dropdown",name="color",items={"c","1c","2c","3c","4c","1vc"},value="c",x=1,y=4},
+    {class="dropdown",name="color",items={"c","1c","2c","3c","4c","1vc","2vc","3vc","4vc"},value="c",x=1,y=4},
     {class="checkbox",name="alpha_cb",label="alpha",value=false,x=2,y=3},
-    {class="dropdown",name="alpha",items={"alpha","1a","2a","3a","4a"},value="alpha",x=2,y=4},
+    {class="dropdown",name="alpha",items={"alpha","1a","2a","3a","4a","1va","2va","3va","4va"},value="alpha",x=2,y=4},
     {class="checkbox",name="other_cb",label="others",value=false,x=3,y=3},
-    {class="dropdown",name="other",items={"pos","fscx","fscy","fsc","fsvp","frz","frx","fry","fax","fay","bord","shad","xshad","yshad","t1","t2","clip"},value="pos",x=3,y=4,hint="only vector clip supported"},
-    {class="checkbox",name="t_cb",label="\\t",value=false,x=0,y=3,hint="not available"},
+    {class="dropdown",name="other",items={"pos","fscx","fscy","fsc","fsp","fsvp","frz","frx","fry","fax","fay","bord","shad","xshad","yshad","blur","t1","t2","clip"},value="pos",x=3,y=4,hint="only vector clip supported"},
     --note
-    {class="label",width=6,height=8,x=0,y=5,
-        label="mode=\"exact match\": the tag should be included in every selected line\n"..
-        "mode=\"custom\": keep original tags and add new tags at the head/tail\n"..
-        "rule: %d%d[ht]?,%d%d[ht]?...  seperated with \",\"\n"..
-        "    first # : number of tag block, start from 1\n"..
-        "    second # : the position of tag you want to gradient in all this tag\n"..
-        "        in the tag block, start from 1, tags in \\t() should be counted\n"..
-        "    third [ht] : add the tag to the head/tail of the tag block, only work\n"..
-        "        in \"custom\" mode, default = \"h\""}
+    {class="label",x=0,y=5,label="mode:"},
+    {class="label",x=1,y=5,width=4,height=2, 
+        label="replace:  the tag should be included in every selected line\n"..
+            "append:  keep original tags and add new tags at the head/tail"},
+    {class="label",x=0,y=7,label="rule:"},
+    {class="label",x=1,y=7,width=4,label="\\d\\d[ht]?,\\d\\d[ht]?...  seperated with ','"},
+    {class="label",x=0,y=8, width=2,label="      first number:"},
+    {class="label",x=0,y=9, width=2,label="      second number:"},
+    {class="label",x=0,y=11,width=2,label="      third [ht]?:"},
+    {class="label",x=2,y=8,width=3,label="number of tag block, start from 1"},
+    {class="label",x=2,y=9,width=3,height=2,label="the position of tag you want to gradient in all this tag\nin the tag block, start from 1, tags in \\t() should be counted"},
+    {class="label",x=2,y=11,width=3,height=2,label="add the tag to the head/tail of the tag block, only work\nin 'append' mode, default = 'h'"},
+    {class="label",x=4,y=0, label="      --Gradient v2.2--"}
 }
-buttons={"Run","Quit"}
+local buttons={"Run","Quit"}
 
 function main(subtitle, selected)
     local meta,styles=karaskel.collect_head(subtitle,false)
 
-    pressed, result = aegisub.dialog.display(dialog_config,buttons)
+    local pressed, result = aegisub.dialog.display(dialog_config,buttons)
     if (pressed=="Quit") then aegisub.cancel() end
     --all false
     if (result["color_cb"]==false and result["alpha_cb"]==false and result["other_cb"]==false) then 
@@ -59,27 +62,17 @@ function main(subtitle, selected)
     else
         --first get l1 & ln
         --line count = N, time count = T
-        local i,start_f,end_f,l1,ln = 0,0,0,0,0
+        local l1,ln = selected[1], selected[#selected]
+        local start_f,end_f = aegisub.frame_from_ms(subtitle[l1].start_time), aegisub.frame_from_ms(subtitle[ln].start_time)+1
+        local T,N = end_f-start_f, #selected
 
         for sa,la in ipairs(selected) do
             local line = subtitle[la]
-                                    
-            if (i == 0) then 
-                start_f = aegisub.frame_from_ms(line.start_time) 
-                l1 = la
-            end
-
             local ltext = (line.text:match("^{")==nil) and "{}"..line.text or line.text
             ltext = ltext:gsub("}{","")
             line.text = ltext
             subtitle[la] = line
-
-            ln = la
-            end_f = aegisub.frame_from_ms(line.start_time)
-            i = i + 1
         end
-        local T = end_f - start_f + 1
-        local N = i
 
         --second read the rule
         rule_table = read_rule(result["rule"])
@@ -90,140 +83,56 @@ function main(subtitle, selected)
         local linen = subtitle[ln]
         local textn = linen.text
 
-        if not(result["t_cb"]==true and result["mode"]=="custom") then
             -- color group
             if (result["color_cb"]==true) then
-                -- \c
-                if (result["color"]=="c") then
-                    text1,textn = get_information_ca(text1,textn,rule_table,"\\c&?H?([0-9a-fA-F]+)&?","\\c&H","\\c(&H[0-9a-fA-F]+&)")
+                local c1234 = "\\"..result.color
+                -- \c - \4c
+                if result.color=="c" or result.color=="1c" or result.color=="2c" or result.color=="3c" or result.color=="4c"then
+                    text1,textn = get_information_ca(text1,textn,rule_table, c1234.."&?H?(%x+)&?", c1234.."&H", c1234.."(&H%x+&)")
                     line1.text = text1
                     linen.text = textn
                     subtitle[l1] = line1
                     subtitle[ln] = linen
-                -- \1c
-                elseif (result["color"]=="1c") then
-                    text1,textn = get_information_ca(text1,textn,rule_table,"\\1c&?H?([0-9a-fA-F]+)&?","\\1c&H","\\1c(&H[0-9a-fA-F]+&)")
+                -- \1vc - \4vc
+                elseif result.color=="1vc" or result.color=="2vc" or result.color=="3vc" or result.color=="4vc" then
+                    text1 = text1:gsub(c1234.."%(&?H?(%x+)&?,&?H?(%x+)&?,&?H?(%x+)&?,&?H?(%x+)&?%)",
+                        function(a,b,c,d) return c1234.."(&H"..a.."&,&H"..b.."&,&H"..c.."&,&H"..d.."&)" end)
+                    textn = textn:gsub(c1234.."%(&?H?(%x+)&?,&?H?(%x+)&?,&?H?(%x+)&?,&?H?(%x+)&?%)",
+                        function(a,b,c,d) return c1234.."(&H"..a.."&,&H"..b.."&,&H"..c.."&,&H"..d.."&)" end)
                     line1.text = text1
                     linen.text = textn
                     subtitle[l1] = line1
                     subtitle[ln] = linen
-                -- \2c
-                elseif (result["color"]=="2c") then
-                    text1,textn = get_information_ca(text1,textn,rule_table,"\\2c&?H?([0-9a-fA-F]+)&?","\\2c&H","\\2c(&H[0-9a-fA-F]+&)")
-                    line1.text = text1
-                    linen.text = textn
-                    subtitle[l1] = line1
-                    subtitle[ln] = linen
-                -- \3c
-                elseif (result["color"]=="3c") then
-                    text1,textn = get_information_ca(text1,textn,rule_table,"\\3c&?H?([0-9a-fA-F]+)&?","\\3c&H","\\3c(&H[0-9a-fA-F]+&)")
-                    line1.text = text1
-                    linen.text = textn
-                    subtitle[l1] = line1
-                    subtitle[ln] = linen
-                -- \4c
-                elseif (result["color"]=="4c") then
-                    text1,textn = get_information_ca(text1,textn,rule_table,"\\4c&?H?([0-9a-fA-F]+)&?","\\4c&H","\\4c(&H[0-9a-fA-F]+&)")
-                    line1.text = text1
-                    linen.text = textn
-                    subtitle[l1] = line1
-                    subtitle[ln] = linen
-                -- \1vc
-                elseif (result["color"]=="1vc") then
-                    text1 = text1:gsub("\\1vc%(&?H?([0-9a-fA-F]+)&?,&?H?([0-9a-fA-F]+)&?,&?H?([0-9a-fA-F]+)&?,&?H?([0-9a-fA-F]+)&?%)",
-                        function(a,b,c,d) return "\\1vc(&H"..a.."&,&H"..b.."&,&H"..c.."&,&H"..d.."&)" end)
-                    textn = textn:gsub("\\1vc%(&?H?([0-9a-fA-F]+)&?,&?H?([0-9a-fA-F]+)&?,&?H?([0-9a-fA-F]+)&?,&?H?([0-9a-fA-F]+)&?%)",
-                        function(a,b,c,d) return "\\1vc(&H"..a.."&,&H"..b.."&,&H"..c.."&,&H"..d.."&)" end)
-                    line1.text = text1
-                    linen.text = textn
-                    subtitle[l1] = line1
-                    subtitle[ln] = linen
-                    write4_head(text1, rule_table,"\\1vc%((&H[0-9a-fA-F]+&),(&H[0-9a-fA-F]+&),(&H[0-9a-fA-F]+&),(&H[0-9a-fA-F]+&)%)")
-                    write4_tail(textn, rule_table,"\\1vc%((&H[0-9a-fA-F]+&),(&H[0-9a-fA-F]+&),(&H[0-9a-fA-F]+&),(&H[0-9a-fA-F]+&)%)")
-                else
+                    write4_head(text1, rule_table,c1234.."%((&H%x+&),(&H%x+&),(&H%x+&),(&H%x+&)%)")
+                    write4_tail(textn, rule_table,c1234.."%((&H%x+&),(&H%x+&),(&H%x+&),(&H%x+&)%)")
                 end
             -- alpha group
             elseif (result["alpha_cb"]==true) then
-                -- \alpha
-                if (result["alpha"]=="alpha") then
-                    text1,textn = get_information_ca(text1,textn,rule_table,"\\alpha&?H?([0-9a-fA-F]+)&?","\\alpha&H","\\alpha(&H[0-9a-fA-F]+&)")
+                local a1234 = "\\"..result.alpha
+                -- \1a - \4a
+                if result.alpha=="alpha" or result.alpha=="1a" or result.alpha=="2a" or result.alpha=="3a" or result.alpha=="4a" then
+                    text1,textn = get_information_ca(text1,textn,rule_table, a1234.."&?H?(%x+)&?", a1234.."&H", a1234.."(&H%x+&)")
                     line1.text = text1
                     linen.text = textn
                     subtitle[l1] = line1
                     subtitle[ln] = linen
-                -- \1a
-                elseif (result["alpha"]=="1a") then
-                    text1,textn = get_information_ca(text1,textn,rule_table,"\\1a&?H?([0-9a-fA-F]+)&?","\\1a&H","\\1a(&H[0-9a-fA-F]+&)")
+                -- \1va - \4va
+                elseif result.alpha=="1va" or result.alpha=="2va" or result.alpha=="3va" or result.alpha=="4va" then
+                    text1 = text1:gsub(a1234.."%(&?H?(%x+)&?,&?H?(%x+)&?,&?H?(%x+)&?,&?H?(%x+)&?%)",
+                        function(a,b,c,d) return a1234.."(&H"..a.."&,&H"..b.."&,&H"..c.."&,&H"..d.."&)" end)
+                    textn = textn:gsub(a1234.."%(&?H?(%x+)&?,&?H?(%x+)&?,&?H?(%x+)&?,&?H?(%x+)&?%)",
+                        function(a,b,c,d) return a1234.."(&H"..a.."&,&H"..b.."&,&H"..c.."&,&H"..d.."&)" end)
                     line1.text = text1
                     linen.text = textn
                     subtitle[l1] = line1
                     subtitle[ln] = linen
-                -- \2a
-                elseif (result["alpha"]=="2a") then
-                    text1,textn = get_information_ca(text1,textn,rule_table,"\\2a&?H?([0-9a-fA-F]+)&?","\\2a&H","\\2a(&H[0-9a-fA-F]+&)")
-                    line1.text = text1
-                    linen.text = textn
-                    subtitle[l1] = line1
-                    subtitle[ln] = linen
-                -- \3a
-                elseif (result["alpha"]=="3a") then
-                    text1,textn = get_information_ca(text1,textn,rule_table,"\\3a&?H?([0-9a-fA-F]+)&?","\\3a&H","\\3a(&H[0-9a-fA-F]+&)")
-                    line1.text = text1
-                    linen.text = textn
-                    subtitle[l1] = line1
-                    subtitle[ln] = linen
-                -- \4a
-                elseif (result["alpha"]=="4a") then
-                    text1,textn = get_information_ca(text1,textn,rule_table,"\\4a&?H?([0-9a-fA-F]+)&?","\\4a&H","\\4a(&H[0-9a-fA-F]+&)")
-                    line1.text = text1
-                    linen.text = textn
-                    subtitle[l1] = line1
-                    subtitle[ln] = linen
-                else
+                    write4_head(text1, rule_table,a1234.."%((&H%x+&),(&H%x+&),(&H%x+&),(&H%x+&)%)")
+                    write4_tail(textn, rule_table,a1234.."%((&H%x+&),(&H%x+&),(&H%x+&),(&H%x+&)%)")
                 end
             elseif (result["other_cb"]==true) then
                 -- \pos
                 if (result["other"]=="pos") then
                     get_information_pos(text1,textn,rule_table,"\\pos%(([%-%d%.]+),([%-%d%.]+)%)")
-                -- \fscx
-                elseif (result["other"]=="fscx") then
-                    get_information_other(text1,textn,rule_table,"\\fscx([%-%d%.]+)")
-                -- \fscy
-                elseif (result["other"]=="fscy") then
-                    get_information_other(text1,textn,rule_table,"\\fscy([%-%d%.]+)")
-                -- \fsc
-                elseif (result["other"]=="fsc") then
-                    get_information_other(text1,textn,rule_table,"\\fsc([%-%d%.]+)")
-                -- \fsvp
-                elseif (result["other"]=="fsvp") then
-                    get_information_other(text1,textn,rule_table,"\\fsvp([%-%d%.]+)")
-                -- \frz
-                elseif (result["other"]=="frz") then
-                    get_information_other(text1,textn,rule_table,"\\frz([%-%d%.]+)")
-                -- \frx
-                elseif (result["other"]=="frx") then
-                    get_information_other(text1,textn,rule_table,"\\frx([%-%d%.]+)")
-                -- \fry
-                elseif (result["other"]=="fry") then
-                    get_information_other(text1,textn,rule_table,"\\fry([%-%d%.]+)")
-                -- \fax
-                elseif (result["other"]=="fax") then
-                    get_information_other(text1,textn,rule_table,"\\fax([%-%d%.]+)")
-                -- \fay
-                elseif (result["other"]=="fay") then
-                    get_information_other(text1,textn,rule_table,"\\fay([%-%d%.]+)")
-                -- \bord
-                elseif (result["other"]=="bord") then
-                    get_information_other(text1,textn,rule_table,"\\bord([%-%d%.]+)")
-                -- \shad
-                elseif (result["other"]=="shad") then
-                    get_information_other(text1,textn,rule_table,"\\shad([%-%d%.]+)")
-                -- \xshad
-                elseif (result["other"]=="xshad") then
-                    get_information_other(text1,textn,rule_table,"\\xshad([%-%d%.]+)")
-                -- \yshad
-                elseif (result["other"]=="yshad") then
-                    get_information_other(text1,textn,rule_table,"\\yshad([%-%d%.]+)")
                 -- t1
                 elseif (result["other"]=="t1") then
                     get_information_other(text1,textn,rule_table,"\\t%(([%-%d%.]+)")
@@ -234,14 +143,14 @@ function main(subtitle, selected)
                 elseif (result["other"]=="clip") then
                     get_information_clip(text1,textn,rule_table)
                 else
+                -- universaltag \fscx \fscy \fsc \fsp \fsvp \frz \frx \fry \fax \fay \bord \shad \xshad \yshad
+                    local univeraltag = "\\"..result.other
+                    get_information_other(text1,textn,rule_table, univeraltag.."([%-%d%.]+)")
                 end
             end
-        end
 
         --fourth rewrite///////////////////////////////////////////////////////////////////////////////////////////////////////
-        local i = 0
         for si,li in ipairs(selected) do
-            i = i + 1
             if (li==l1 or li==ln) then goto loop_end end
 
             local line=subtitle[li]
@@ -249,182 +158,39 @@ function main(subtitle, selected)
             local t = aegisub.frame_from_ms(line.start_time) - start_f + 1
 
             --interpolate01
-            local bias = interpolate01(N,T,i,t,result["set"],result["accel"])
+            local bias = interpolate01(N,T,si,t,result["set"],result["accel"])
             
             local tt_table = {}
             for tg,tx in ltext:gmatch("({[^}]*})([^{]*)") do
                 table.insert(tt_table,{tag=tg,text=tx})
             end
 
-            -- \t false
-            if not(result["t_cb"]==true and result["mode"]=="custom") then
                 -- color group
                 if (result["color_cb"]==true) then
-                    -- \c
-                    if (result["color"]=="c") then
-                        ltext = rewrite_c(tt_table,rule_table,result["mode"],bias,
-                            "\\c&?H?([0-9a-fA-F]+)&?","\\c","\\c&HFFFFFF&","([^}]*)}\\c(&H[0-9a-fA-F]+&)","\\c&HFFFFFF&$")
-                    -- \1c    tt_table|rule_table|result["mode"]
-                    elseif (result["color"]=="1c") then
-                        ltext = rewrite_c(tt_table,rule_table,result["mode"],bias,
-                            "\\1c&?H?([0-9a-fA-F]+)&?","\\1c","\\1c&HFFFFFF&","([^}]*)}\\1c(&H[0-9a-fA-F]+&)","\\1c&HFFFFFF&$")
-                    -- \2c
-                    elseif (result["color"]=="2c") then
-                        ltext = rewrite_c(tt_table,rule_table,result["mode"],bias,
-                            "\\2c&?H?([0-9a-fA-F]+)&?","\\2c","\\2c&HFFFFFF&","([^}]*)}\\2c(&H[0-9a-fA-F]+&)","\\2c&HFFFFFF&$")
-                    -- \3c
-                    elseif (result["color"]=="3c") then
-                        ltext = rewrite_c(tt_table,rule_table,result["mode"],bias,
-                            "\\3c&?H?([0-9a-fA-F]+)&?","\\3c","\\3c&HFFFFFF&","([^}]*)}\\3c(&H[0-9a-fA-F]+&)","\\3c&HFFFFFF&$")
-                    -- \4c
-                    elseif (result["color"]=="4c") then
-                        ltext = rewrite_c(tt_table,rule_table,result["mode"],bias,
-                            "\\4c&?H?([0-9a-fA-F]+)&?","\\4c","\\4c&HFFFFFF&","([^}]*)}\\4c(&H[0-9a-fA-F]+&)","\\4c&HFFFFFF&$")
-                    -- \1vc
-                    elseif (result["color"]=="1vc") then
-                        local rebuild = ""
-                        local ib = 0
-                        for _,tt in ipairs(tt_table) do
-                            ib = ib + 1
-                            local apply_true = false
-                            for _1,rule in ipairs(rule_table) do
-                                if (rule.block==ib) then
-                                    apply_true = true
-                                    local ip = 0
-                                    local rebuild_tag = ""
-                                    local rule_head = rule.head
-                                    local rule_tail = rule.tail
-
-                                    if (result["mode"]=="exact match") then
-                                        tt.tag = tt.tag:gsub("\\1vc%(&?H?([0-9a-fA-F]+)&?,&?H?([0-9a-fA-F]+)&?,&?H?([0-9a-fA-F]+)&?,&?H?([0-9a-fA-F]+)&?%)",
-                                            function(a,b,c,d) return "}".."\\1vc(&H"..a.."&,&H"..b.."&,&H"..c.."&,&H"..d.."&)" end)
-                                        tt.tag = tt.tag.."\\1vc(&HFFFFFF&,&HFFFFFF&,&HFFFFFF&,&HFFFFFF&)"
-
-                                        for p,q1,q2,q3,q4 in tt.tag:gmatch("([^}]*)}\\1vc%((&H[0-9a-fA-F]+&),(&H[0-9a-fA-F]+&),(&H[0-9a-fA-F]+&),(&H[0-9a-fA-F]+&)%)") do
-                                            ip = ip + 1
-                                            if (rule.position==ip) then
-                                                local q1n = interpolate_c(bias,rule_head.h1,rule_tail.t1)
-                                                local q2n = interpolate_c(bias,rule_head.h2,rule_tail.t2)
-                                                local q3n = interpolate_c(bias,rule_head.h3,rule_tail.t3)
-                                                local q4n = interpolate_c(bias,rule_head.h4,rule_tail.t4) 
-                                                rebuild_tag = rebuild_tag..p.."\\1vc("..q1n..","..q2n..","..q3n..","..q4n..")"
-                                            else
-                                                rebuild_tag = rebuild_tag..p.."\\1vc("..q1..","..q2..","..q3..","..q4..")"
-                                            end
-                                        end
-                                        rebuild_tag = rebuild_tag:gsub("\\1vc%(&HFFFFFF&,&HFFFFFF&,&HFFFFFF&,&HFFFFFF&%)$","}")
-                                    else
-                                        if (rule.ht=="h") then 
-                                            rebuild_tag=tt.tag:gsub("^{",function() 
-                                                local ht1=interpolate_c(bias,rule_head.h1,rule_tail.t1)
-                                                local ht2=interpolate_c(bias,rule_head.h2,rule_tail.t2)
-                                                local ht3=interpolate_c(bias,rule_head.h3,rule_tail.t3)
-                                                local ht4=interpolate_c(bias,rule_head.h4,rule_tail.t4)
-                                                return "{\\1vc("..ht1..","..ht2..","..ht3..","..ht4..")" end)
-                                        else 
-                                            rebuild_tag=tt.tag:gsub("}$",function() 
-                                                local ht1=interpolate_c(bias,rule_head.h1,rule_tail.t1)
-                                                local ht2=interpolate_c(bias,rule_head.h2,rule_tail.t2)
-                                                local ht3=interpolate_c(bias,rule_head.h3,rule_tail.t3)
-                                                local ht4=interpolate_c(bias,rule_head.h4,rule_tail.t4)
-                                                return "\\1vc("..ht1..","..ht2..","..ht3..","..ht4..")}" end)
-                                        end
-                                    end
-                                    rebuild = rebuild..rebuild_tag..tt.text
-                                end
-                            end
-                            if (apply_true==false) then rebuild = rebuild..tt.tag..tt.text end
-                        end
-                        ltext = rebuild
-                    -- \2vc
-                    elseif (result["color"]=="2vc") then
-                    else
+                    -- \c - \4c
+                    if result.color=="c" or result.color=="1c" or result.color=="2c" or result.color=="3c" or result.color=="4c" then
+                        ltext = rewrite_c(tt_table,rule_table,result["mode"],bias, "\\"..result.color)
+                    -- \1vc - \4vc
+                    elseif result.color=="1vc" or result.color=="2vc" or result.color=="3vc" or result.color=="4vc" then
+                        ltext = rewrite_vc(tt_table,rule_table,result["mode"],bias, "\\"..result.color)
                     end
                 -- alpha group
                 elseif (result["alpha_cb"]==true) then
-                    -- \alpha
-                    if (result["alpha"]=="alpha") then
-                        ltext = rewrite_a(tt_table,rule_table,result["mode"],bias,
-                            "\\alpha&?H?([0-9a-fA-F]+)&?","\\alpha","\\alpha&HFF&","([^}]*)}\\alpha(&H[0-9a-fA-F]+&)","\\alpha&HFF&$")
-                    -- \1a
-                    elseif (result["alpha"]=="1a") then
-                        ltext = rewrite_a(tt_table,rule_table,result["mode"],bias,
-                            "\\1a&?H?([0-9a-fA-F]+)&?","\\1a","\\1a&HFF&","([^}]*)}\\1a(&H[0-9a-fA-F]+&)","\\1a&HFF&$")
-                    -- \2a
-                    elseif (result["alpha"]=="2a") then
-                        ltext = rewrite_a(tt_table,rule_table,result["mode"],bias,
-                            "\\2a&?H?([0-9a-fA-F]+)&?","\\2a","\\2a&HFF&","([^}]*)}\\2a(&H[0-9a-fA-F]+&)","\\2a&HFF&$")
-                    -- \3a
-                    elseif (result["alpha"]=="3a") then
-                        ltext = rewrite_a(tt_table,rule_table,result["mode"],bias,
-                            "\\3a&?H?([0-9a-fA-F]+)&?","\\3a","\\3a&HFF&","([^}]*)}\\3a(&H[0-9a-fA-F]+&)","\\3a&HFF&$")
-                    -- \4a
-                    elseif (result["alpha"]=="4a") then
-                        ltext = rewrite_a(tt_table,rule_table,result["mode"],bias,
-                            "\\4a&?H?([0-9a-fA-F]+)&?","\\4a","\\4a&HFF&","([^}]*)}\\4a(&H[0-9a-fA-F]+&)","\\4a&HFF&$")
-                    else
+                    -- \1a - \4a
+                    if result.alpha=="alpha" or result.alpha=="1a" or result.alpha=="2a" or result.alpha=="3a" or result.alpha=="4a" then
+                        ltext = rewrite_a(tt_table,rule_table,result["mode"],bias, "\\"..result.alpha)
+                    -- \1va - \4va
+                    elseif result.alpha=="1va" or result.alpha=="2va" or result.alpha=="3va" or result.alpha=="4va" then
+                        ltext = rewrite_va(tt_table,rule_table,result["mode"],bias, "\\"..result.alpha)
                     end
                 elseif (result["other_cb"]==true) then
                     -- \pos
                     if (result["other"]=="pos") then
                         ltext = rewrite_pos(tt_table,rule_table,result["mode"],bias,
                             "\\pos%(([%-%d%.]+),([%-%d%.]+)%)","([^}]*)}\\pos%(([%-%d%.]+),([%-%d%.]+)%)")
-                    -- \fscx
-                    elseif (result["other"]=="fscx") then
-                        ltext = rewrite_other(tt_table,rule_table,result["mode"],bias,
-                            "\\fscx([%-%d%.]+)","\\fscx","\\fscx0","([^}]*)}\\fscx([%-%d%.]+)","\\fscx0$")
-                    -- \fscy
-                    elseif (result["other"]=="fscy") then
-                        ltext = rewrite_other(tt_table,rule_table,result["mode"],bias,
-                            "\\fscy([%-%d%.]+)","\\fscy","\\fscy0","([^}]*)}\\fscy([%-%d%.]+)","\\fscy0$")
-                    -- \fsc
-                    elseif (result["other"]=="fsc") then
-                        ltext = rewrite_other(tt_table,rule_table,result["mode"],bias,
-                            "\\fsc([%-%d%.]+)","\\fsc","\\fsc0","([^}]*)}\\fsc([%-%d%.]+)","\\fsc0$")
-                    -- \fsvp
-                    elseif (result["other"]=="fsvp") then
-                        ltext = rewrite_other(tt_table,rule_table,result["mode"],bias,
-                            "\\fsvp([%-%d%.]+)","\\fsvp","\\fsvp0","([^}]*)}\\fsvp([%-%d%.]+)","\\fsvp0$")
-                    -- \frz
-                    elseif (result["other"]=="frz") then
-                        ltext = rewrite_other(tt_table,rule_table,result["mode"],bias,
-                            "\\frz([%-%d%.]+)","\\frz","\\frz0","([^}]*)}\\frz([%-%d%.]+)","\\frz0$")
-                    -- \frx
-                    elseif (result["other"]=="frx") then
-                        ltext = rewrite_other(tt_table,rule_table,result["mode"],bias,
-                            "\\frx([%-%d%.]+)","\\frx","\\frx0","([^}]*)}\\frx([%-%d%.]+)","\\frx0$")
-                    -- \fry
-                    elseif (result["other"]=="fry") then
-                        ltext = rewrite_other(tt_table,rule_table,result["mode"],bias,
-                            "\\fry([%-%d%.]+)","\\fry","\\fry0","([^}]*)}\\fry([%-%d%.]+)","\\fry0$")
-                    -- \fax
-                    elseif (result["other"]=="fax") then
-                        ltext = rewrite_other(tt_table,rule_table,result["mode"],bias,
-                            "\\fax([%-%d%.]+)","\\fax","\\fax0","([^}]*)}\\fax([%-%d%.]+)","\\fax0$")
-                    -- \fay
-                    elseif (result["other"]=="fay") then
-                        ltext = rewrite_other(tt_table,rule_table,result["mode"],bias,
-                            "\\fay([%-%d%.]+)","\\fay","\\fay0","([^}]*)}\\fay([%-%d%.]+)","\\fay0$")
-                    -- \bord
-                    elseif (result["other"]=="bord") then
-                        ltext = rewrite_other(tt_table,rule_table,result["mode"],bias,
-                            "\\bord([%-%d%.]+)","\\bord","\\bord0","([^}]*)}\\bord([%-%d%.]+)","\\bord0$")
-                    -- \shad
-                    elseif (result["other"]=="shad") then
-                        ltext = rewrite_other(tt_table,rule_table,result["mode"],bias,
-                            "\\shad([%-%d%.]+)","\\shad","\\shad0","([^}]*)}\\shad([%-%d%.]+)","\\shad0$")
-                    -- \xshad
-                    elseif (result["other"]=="xshad") then
-                        ltext = rewrite_other(tt_table,rule_table,result["mode"],bias,
-                            "\\xshad([%-%d%.]+)","\\xshad","\\xshad0","([^}]*)}\\xshad([%-%d%.]+)","\\xshad0$")
-                    -- \yshad
-                    elseif (result["other"]=="yshad") then
-                        ltext = rewrite_other(tt_table,rule_table,result["mode"],bias,
-                            "\\yshad([%-%d%.]+)","\\yshad","\\yshad0","([^}]*)}\\yshad([%-%d%.]+)","\\yshad0$")
                     -- t1
                     elseif (result["other"]=="t1") then
-                        ltext = rewrite_other(tt_table,rule_table,result["mode"],bias,
-                            "\\t%(([%-%d%.]+)","\\t(","\\t(0","([^}]*)}\\t%(([%-%d%.]+)","\\t%(0$")
+                        ltext = rewrite_other(tt_table,rule_table,result["mode"],bias, "\\t%(", "\\t(")
                     -- t2
                     elseif (result["other"]=="t2") then
                         ltext = rewrite_t2(tt_table,rule_table,result["mode"],bias)
@@ -432,12 +198,11 @@ function main(subtitle, selected)
                     elseif (result["other"]=="clip") then
                         ltext = rewrite_clip(tt_table,rule_table,result["mode"],bias)
                     else
+                    -- \fscx \fscy \fsc \fsp \fsvp \frz \frx \fry \fax \fay \bord \shad \xshad \yshad
+                        ltext = rewrite_other(tt_table,rule_table,result["mode"],bias, "\\"..result.other, "\\"..result.other)
                     end
                 else
                 end
-            -- \t true and custom mode
-            else
-            end
 
             line.text = ltext
             subtitle[li]=line
@@ -779,12 +544,8 @@ function get_information_clip(text1,textn,rule_table)
     writeclip_tail(textn, rule_table)
 end
 
--- subfrom="\\1c&?H?([0-9a-fA-F]+)&?",
--- tagtype="\\1c",
--- subtail="\\1c&HFFFFFF&",
--- match"([^}]*)}\\1c(&H[0-9a-fA-F]+&)",
--- matchtail="\\1c&HFFFFFF&$")
-function rewrite_c(tt_table,rule_table,mode,bias,subfrom,tagtype,subtail,match,matchtail)
+function rewrite_c(tt_table,rule_table,mode,bias, color)
+    local matchfrom,tagtype,subtail,match,matchtail = color.."&?H?(%x+)&?", color, color.."&HFFFFFF&", "([^}]*)}"..color.."(&H%x+&)", color.."&HFFFFFF&$"
     local rebuild = ""
     local ib = 0
     for _,tt in ipairs(tt_table) do
@@ -796,8 +557,8 @@ function rewrite_c(tt_table,rule_table,mode,bias,subfrom,tagtype,subtail,match,m
                 local ip = 0
                 local rebuild_tag = ""
 
-                if (mode=="exact match") then
-                    tt.tag = tt.tag:gsub(subfrom,function(a) return "}"..tagtype.."&H"..a.."&" end)
+                if (mode=="replace") then
+                    tt.tag = tt.tag:gsub(matchfrom,function(a) return "}"..tagtype.."&H"..a.."&" end)
                     tt.tag = tt.tag..subtail
 
                     for p,q in tt.tag:gmatch(match) do
@@ -826,7 +587,70 @@ function rewrite_c(tt_table,rule_table,mode,bias,subfrom,tagtype,subtail,match,m
     return ltext
 end
 
-function rewrite_a(tt_table,rule_table,mode,bias,subfrom,tagtype,subtail,match,matchtail)
+function rewrite_vc(tt_table,rule_table,mode,bias, vc)
+    local tagtype,subtail = vc.."(", vc.."(&HFFFFFF&,&HFFFFFF&,&HFFFFFF&,&HFFFFFF&)" -- \\1vc(
+    local matchfrom,match,matchtail = vc.."%(&?H?(%x+)&?,&?H?(%x+)&?,&?H?(%x+)&?,&?H?(%x+)&?%)",
+        "([^}]*)}"..vc.."%((&H%x+&),(&H%x+&),(&H%x+&),(&H%x+&)%)",
+        vc.."%(&HFFFFFF&,&HFFFFFF&,&HFFFFFF&,&HFFFFFF&%)$"
+    local rebuild = ""
+    local ib = 0
+    for _,tt in ipairs(tt_table) do
+        ib = ib + 1
+        local apply_true = false
+        for _1,rule in ipairs(rule_table) do
+            if (rule.block==ib) then
+                apply_true = true
+                local ip = 0
+                local rebuild_tag = ""
+                local rule_head = rule.head
+                local rule_tail = rule.tail
+
+                if (mode=="replace") then
+                    tt.tag = tt.tag:gsub(matchfrom,
+                        function(a,b,c,d) return "}"..tagtype.."&H"..a.."&,&H"..b.."&,&H"..c.."&,&H"..d.."&)" end)
+                    tt.tag = tt.tag..subtail
+
+                    for p,q1,q2,q3,q4 in tt.tag:gmatch(match) do
+                        ip = ip + 1
+                        if (rule.position==ip) then
+                            local q1n = interpolate_c(bias,rule_head.h1,rule_tail.t1)
+                            local q2n = interpolate_c(bias,rule_head.h2,rule_tail.t2)
+                            local q3n = interpolate_c(bias,rule_head.h3,rule_tail.t3)
+                            local q4n = interpolate_c(bias,rule_head.h4,rule_tail.t4) 
+                            rebuild_tag = rebuild_tag..p..tagtype..q1n..","..q2n..","..q3n..","..q4n..")"
+                        else
+                            rebuild_tag = rebuild_tag..p..tagtype..q1..","..q2..","..q3..","..q4..")"
+                        end
+                    end
+                    rebuild_tag = rebuild_tag:gsub(matchtail,"}")
+                else
+                    if (rule.ht=="h") then 
+                        rebuild_tag=tt.tag:gsub("^{",function() 
+                            local ht1=interpolate_c(bias,rule_head.h1,rule_tail.t1)
+                            local ht2=interpolate_c(bias,rule_head.h2,rule_tail.t2)
+                            local ht3=interpolate_c(bias,rule_head.h3,rule_tail.t3)
+                            local ht4=interpolate_c(bias,rule_head.h4,rule_tail.t4)
+                            return "{"..tagtype..ht1..","..ht2..","..ht3..","..ht4..")" end)
+                    else 
+                        rebuild_tag=tt.tag:gsub("}$",function() 
+                            local ht1=interpolate_c(bias,rule_head.h1,rule_tail.t1)
+                            local ht2=interpolate_c(bias,rule_head.h2,rule_tail.t2)
+                            local ht3=interpolate_c(bias,rule_head.h3,rule_tail.t3)
+                            local ht4=interpolate_c(bias,rule_head.h4,rule_tail.t4)
+                            return tagtype..ht1..","..ht2..","..ht3..","..ht4..")}" end)
+                    end
+                end
+                rebuild = rebuild..rebuild_tag..tt.text
+            end
+        end
+        if (apply_true==false) then rebuild = rebuild..tt.tag..tt.text end
+    end
+    ltext = rebuild
+    return ltext
+end
+
+function rewrite_a(tt_table,rule_table,mode,bias, alpha)
+    local matchfrom,tagtype,subtail,match,matchtail = alpha.."&?H?(%x+)&?", alpha, alpha.."&HFF&", "([^}]*)}"..alpha.."(&H%x+&)", alpha.."&HFF&$"
     local rebuild = ""
     local ib = 0
     for _,tt in ipairs(tt_table) do
@@ -838,8 +662,8 @@ function rewrite_a(tt_table,rule_table,mode,bias,subfrom,tagtype,subtail,match,m
                 local ip = 0
                 local rebuild_tag = ""
 
-                if (mode=="exact match") then
-                    tt.tag = tt.tag:gsub(subfrom,function(a) return "}"..tagtype.."&H"..a.."&" end)
+                if (mode=="replace") then
+                    tt.tag = tt.tag:gsub(matchfrom,function(a) return "}"..tagtype.."&H"..a.."&" end)
                     tt.tag = tt.tag..subtail
 
                     for p,q in tt.tag:gmatch(match) do
@@ -868,8 +692,70 @@ function rewrite_a(tt_table,rule_table,mode,bias,subfrom,tagtype,subtail,match,m
     return ltext
 end
 
--- subfrom "\\pos%(([%-%d%.]+),([%-%d%.]+)%)"    --match "([^W]*)WWW\\pos%(([%-%d%.]+),([%-%d%.]+)%)"
-function rewrite_pos(tt_table,rule_table,mode,bias,subfrom,match)
+function rewrite_va(tt_table,rule_table,mode,bias, va)
+    local tagtype,subtail = va.."(", va.."(&HFF&,&HFF&,&HFF&,&HFF&)" -- \\1vc(
+    local matchfrom,match,matchtail = va.."%(&?H?(%x+)&?,&?H?(%x+)&?,&?H?(%x+)&?,&?H?(%x+)&?%)",
+        "([^}]*)}"..va.."%((&H%x+&),(&H%x+&),(&H%x+&),(&H%x+&)%)",
+        va.."%(&HFF&,&HFF&,&HFF&,&HFF&%)$"
+    local rebuild = ""
+    local ib = 0
+    for _,tt in ipairs(tt_table) do
+        ib = ib + 1
+        local apply_true = false
+        for _1,rule in ipairs(rule_table) do
+            if (rule.block==ib) then
+                apply_true = true
+                local ip = 0
+                local rebuild_tag = ""
+                local rule_head = rule.head
+                local rule_tail = rule.tail
+
+                if (mode=="replace") then
+                    tt.tag = tt.tag:gsub(matchfrom,
+                        function(a,b,c,d) return "}"..tagtype.."&H"..a.."&,&H"..b.."&,&H"..c.."&,&H"..d.."&)" end)
+                    tt.tag = tt.tag..subtail
+
+                    for p,q1,q2,q3,q4 in tt.tag:gmatch(match) do
+                        ip = ip + 1
+                        if (rule.position==ip) then
+                            local q1n = interpolate_a(bias,rule_head.h1,rule_tail.t1)
+                            local q2n = interpolate_a(bias,rule_head.h2,rule_tail.t2)
+                            local q3n = interpolate_a(bias,rule_head.h3,rule_tail.t3)
+                            local q4n = interpolate_a(bias,rule_head.h4,rule_tail.t4) 
+                            rebuild_tag = rebuild_tag..p..tagtype..q1n..","..q2n..","..q3n..","..q4n..")"
+                        else
+                            rebuild_tag = rebuild_tag..p..tagtype..q1..","..q2..","..q3..","..q4..")"
+                        end
+                    end
+                    rebuild_tag = rebuild_tag:gsub(matchtail,"}")
+                else
+                    if (rule.ht=="h") then 
+                        rebuild_tag=tt.tag:gsub("^{",function() 
+                            local ht1=interpolate_a(bias,rule_head.h1,rule_tail.t1)
+                            local ht2=interpolate_a(bias,rule_head.h2,rule_tail.t2)
+                            local ht3=interpolate_a(bias,rule_head.h3,rule_tail.t3)
+                            local ht4=interpolate_a(bias,rule_head.h4,rule_tail.t4)
+                            return "{"..tagtype..ht1..","..ht2..","..ht3..","..ht4..")" end)
+                    else 
+                        rebuild_tag=tt.tag:gsub("}$",function() 
+                            local ht1=interpolate_a(bias,rule_head.h1,rule_tail.t1)
+                            local ht2=interpolate_a(bias,rule_head.h2,rule_tail.t2)
+                            local ht3=interpolate_a(bias,rule_head.h3,rule_tail.t3)
+                            local ht4=interpolate_a(bias,rule_head.h4,rule_tail.t4)
+                            return tagtype..ht1..","..ht2..","..ht3..","..ht4..")}" end)
+                    end
+                end
+                rebuild = rebuild..rebuild_tag..tt.text
+            end
+        end
+        if (apply_true==false) then rebuild = rebuild..tt.tag..tt.text end
+    end
+    ltext = rebuild
+    return ltext
+end
+
+-- matchfrom "\\pos%(([%-%d%.]+),([%-%d%.]+)%)"    --match "([^W]*)WWW\\pos%(([%-%d%.]+),([%-%d%.]+)%)"
+function rewrite_pos(tt_table,rule_table,mode,bias,matchfrom,match)
     local rebuild = ""
     local ib = 0
     for _,tt in ipairs(tt_table) do
@@ -881,8 +767,8 @@ function rewrite_pos(tt_table,rule_table,mode,bias,subfrom,match)
                 local ip = 0
                 local rebuild_tag = ""
 
-                if (mode=="exact match") then
-                    tt.tag = tt.tag:gsub(subfrom,function(a,b) return "}\\pos("..a..","..b..")" end)
+                if (mode=="replace") then
+                    tt.tag = tt.tag:gsub(matchfrom,function(a,b) return "}\\pos("..a..","..b..")" end)
                     tt.tag = tt.tag.."\\pos(0,0)"
 
                     for p,q1,q2 in tt.tag:gmatch(match) do
@@ -918,7 +804,8 @@ function rewrite_pos(tt_table,rule_table,mode,bias,subfrom,match)
     return ltext
 end
 
-function rewrite_other(tt_table,rule_table,mode,bias,subfrom,tagtype,subtail,match,matchtail)
+function rewrite_other(tt_table,rule_table,mode,bias, matchtxt, plaintxt)
+    local matchfrom,tagtype,subtail,match,matchtail = matchtxt.."([%-%d%.]+)", plaintxt, plaintxt.."0", "([^}]*)}"..matchtxt.."([%-%d%.]+)", matchtxt.."0$"
     local rebuild = ""
     local ib = 0
     for _,tt in ipairs(tt_table) do
@@ -930,8 +817,8 @@ function rewrite_other(tt_table,rule_table,mode,bias,subfrom,tagtype,subtail,mat
                 local ip = 0
                 local rebuild_tag = ""
 
-                if (mode=="exact match") then
-                    tt.tag = tt.tag:gsub(subfrom,function(a) return "}"..tagtype..a end)
+                if (mode=="replace") then
+                    tt.tag = tt.tag:gsub(matchfrom,function(a) return "}"..tagtype..a end)
                     tt.tag = tt.tag..subtail
 
                     for p,q in tt.tag:gmatch(match) do
@@ -972,7 +859,7 @@ function rewrite_t2(tt_table,rule_table,mode,bias)
                 local ip = 0
                 local rebuild_tag = ""
 
-                if (mode=="exact match") then
+                if (mode=="replace") then
                     tt.tag = tt.tag:gsub("\\t%(([%-%d%.]+),([%-%d%.]+)",function(a,b) return "}".."\\t("..a..","..b end)
                     tt.tag = tt.tag.."\\t(0,0"
 
@@ -1010,7 +897,7 @@ function rewrite_clip(tt_table,rule_table,mode,bias)
                 local ip = 0
                 local rebuild_tag = ""
 
-                if (mode=="exact match") then
+                if (mode=="replace") then
                     tt.tag = tt.tag:gsub("(\\i?clip%([^%)]*%))","}%1")
                     tt.tag = tt.tag.."\\clip()"
 

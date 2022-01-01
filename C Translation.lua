@@ -37,14 +37,14 @@ Updated on 7 Dec 2020
 ]]
 
 script_name="C Translation"
-script_description="Trasnlation v3.2"
+script_description="Trasnlation v3.2.1"
 script_author="chaaaaang"
-script_version="3.2"
+script_version="3.2.1"
 
 include("karaskel.lua")
 
 --GUI
-dialog_config={
+local dialog_config={
     {class="checkbox",name="set",label="setting",value=true,x=0,y=0,hint="true: time mode, false: line mode"},
     {class="label",label="Translation",x=2,y=0},--start
     {class="label",label="Translation",x=4,y=0},--end
@@ -158,9 +158,10 @@ dialog_config={
     {class="label",label="index",x=11,y=9},
     {class="intedit",name="other_index",value=1,x=12,y=9},
     --multiply
-    {class="checkbox",name="multiply",label="multiply",value=false,x=4,y=10},
+    {class="checkbox",name="XeqY",label="fscy<-fscx",value=false,x=2,y=10},
+    {class="checkbox",name="multiply",label="multiply",width=2,value=false,x=3,y=10},
     --note
-    {class="label",x=0,y=10,width=2,label="Translation v3.0"},
+    {class="label",x=0,y=10,width=2,label="Translation v3.2.1"},
     {class="label",x=0,y=11,width=13,label="better to be used in FRAME BY FRAME lines, may use the linetofbf in Relocator first, index argument Z+"},
     {class="label",x=0,y=12,width=13,label="index: index of the tag you would like to translate in ALL this tag"},
     {class="label",x=0,y=13,width=13,label="ATTENTION: positive posy means moving downwards"},
@@ -168,30 +169,34 @@ dialog_config={
     {class="label",x=0,y=15,width=13,label="accel: arg (0,inf) SMOOTH the peak get sharper as the argument increases"},
     {class="label",x=0,y=16,width=13,label="transverse: arg (0,inf) transverse deviation from center, the peak move from left to right as the argument increases"}
 }
-buttons={"Translation","Smooth","Quit"}
+local buttons={"Translation","Smooth","Quit"}
 
 function main(subtitle, selected, active)
     local meta,styles=karaskel.collect_head(subtitle,false)
-    xres, yres, ar, artype = aegisub.video_size()
+    local xres, yres, ar, artype = aegisub.video_size()
 
     --count the size N,T
-    local i,start_f,end_f = 0,0,0
+    local start_f,end_f = 0,0
 
     for sa,la in ipairs(selected) do
         local line = subtitle[la]
-        if (i == 0) then start_f = aegisub.frame_from_ms(line.start_time) end
+        if (sa == 1) then start_f = aegisub.frame_from_ms(line.start_time) end
         end_f = aegisub.frame_from_ms(line.start_time)
-        i = i + 1
     end
     local T = end_f - start_f + 1
-    local N = i
+    local N = #selected
 
-    pressed, result = aegisub.dialog.display(dialog_config,buttons)
+    local pressed, result = aegisub.dialog.display(dialog_config,buttons)
     if (pressed=="Quit") then aegisub.cancel() end
     --all false
     if (result["posx"]==false and result["posy"]==false and result["fscx"]==false and result["fscy"]==false and result["clip_x"]==false and result["clip_y"]==false and result["frz"]==false and result["other_button"]==false) then
         aegisub.cancel()
     else
+        if result.XeqY==true then
+            result.fscy = true
+            result.fscy_start, result.fscy_end, result.fscy_accel, result.fscy_deviation, result.fscy_transverse, result.fscy_index
+            = result.fscx_start, result.fscx_end, result.fscx_accel, result.fscx_deviation, result.fscx_transverse, result.fscx_index
+        end
         --loop begins
         local i = 0
         for si,li in ipairs(selected) do
@@ -201,11 +206,7 @@ function main(subtitle, selected, active)
             local t = now_f - start_f + 1
             karaskel.preproc_line(subtitle,meta,styles,line)
             --preprocession
-            if (line.text:match("^{")==nil) then
-                linetext = "{}"..line.text
-            else
-                linetext = line.text
-            end
+            local linetext = (line.text:match("^{")==nil) and "{}"..line.text or line.text
             linetext = linetext:gsub("}{","")
 
             --posx posy
@@ -252,7 +253,7 @@ function main(subtitle, selected, active)
                 if (linetext:match("\\fscx")==nil) then
                     linetext=linetext:gsub("^{",string.format("{\\fscx%.2f",line.styleref.scale_x))
                 end
-                deviation = interpolate(result["fscx_start"],result["fscx_end"],result["fscx_accel"],N,T,i,t,result["set"],result["fscx_deviation"],result["fscx_transverse"],pressed)
+                local deviation = interpolate(result["fscx_start"],result["fscx_end"],result["fscx_accel"],N,T,i,t,result["set"],result["fscx_deviation"],result["fscx_transverse"],pressed)
                 linetext = translation(linetext,"\\fscx",deviation,result["fscx_index"],"([^}]*)}\\fscx([%d%.%-]+)","\\fscx[%d%.%-]+$",result["multiply"])
             end
             --fscy
@@ -260,7 +261,7 @@ function main(subtitle, selected, active)
                 if (linetext:match("\\fscy")==nil) then
                     linetext=linetext:gsub("^{",string.format("{\\fscy%.2f",line.styleref.scale_y))
                 end
-                deviation = interpolate(result["fscy_start"],result["fscy_end"],result["fscy_accel"],N,T,i,t,result["set"],result["fscy_deviation"],result["fscy_transverse"],pressed)
+                local deviation = interpolate(result["fscy_start"],result["fscy_end"],result["fscy_accel"],N,T,i,t,result["set"],result["fscy_deviation"],result["fscy_transverse"],pressed)
                 linetext = translation(linetext,"\\fscy",deviation,result["fscy_index"],"([^}]*)}\\fscy([%d%.%-]+)","\\fscy[%d%.%-]+$",result["multiply"])
             end
             --frz
@@ -268,7 +269,7 @@ function main(subtitle, selected, active)
                 if (linetext:match("\\frz")==nil) then
                     linetext=linetext:gsub("^({[^}]*)}",function (a) return string.format("%s\\frz%.2f}",a,line.styleref.angle) end)
                 end
-                deviation = interpolate(result["frz_start"],result["frz_end"],result["frz_accel"],N,T,i,t,result["set"],result["frz_deviation"],result["frz_transverse"],pressed)
+                local deviation = interpolate(result["frz_start"],result["frz_end"],result["frz_accel"],N,T,i,t,result["set"],result["frz_deviation"],result["frz_transverse"],pressed)
                 linetext = translation(linetext,"\\frz",deviation,result["frz_index"],"([^}]*)}\\frz([%d%.%-]+)","\\frz[%d%.%-]+$")
             end
             --clip
@@ -298,42 +299,42 @@ function main(subtitle, selected, active)
                     if (linetext:match("\\fsp")==nil) then
                         linetext=linetext:gsub("^({[^}]*)}",function (a) return string.format("%s\\fsp%.2f}",a,line.styleref.spacing) end)
                     end
-                    deviation = interpolate(result["other_start"],result["other_end"],result["other_accel"],N,T,i,t,result["set"],result["other_deviation"],result["other_transverse"],pressed)
+                    local deviation = interpolate(result["other_start"],result["other_end"],result["other_accel"],N,T,i,t,result["set"],result["other_deviation"],result["other_transverse"],pressed)
                     linetext = translation(linetext,"\\fsp",deviation,result["other_index"],"([^}]*)}\\fsp([%d%.%-]+)","\\fsp[%d%.%-]+$")
                 --fsvp
                 elseif (result["other"]=="fsvp") then
                     if (linetext:match("\\fsvp")==nil) then
                         linetext=linetext:gsub("^({[^}]*)}",function (a) return a.."\\fsvp0}" end)
                     end
-                    deviation = interpolate(result["other_start"],result["other_end"],result["other_accel"],N,T,i,t,result["set"],result["other_deviation"],result["other_transverse"],pressed)
+                    local deviation = interpolate(result["other_start"],result["other_end"],result["other_accel"],N,T,i,t,result["set"],result["other_deviation"],result["other_transverse"],pressed)
                     linetext = translation(linetext,"\\fsvp",deviation,result["other_index"],"([^}]*)}\\fsvp([%d%.%-]+)","\\fsvp[%d%.%-]+$")
                 --fax
                 elseif (result["other"]=="fax") then
                     if (linetext:match("\\fax")==nil) then
                         linetext=linetext:gsub("^({[^}]*)}",function (a) return a.."\\fax0}" end)
                     end
-                    deviation = interpolate(result["other_start"],result["other_end"],result["other_accel"],N,T,i,t,result["set"],result["other_deviation"],result["other_transverse"],pressed)
+                    local deviation = interpolate(result["other_start"],result["other_end"],result["other_accel"],N,T,i,t,result["set"],result["other_deviation"],result["other_transverse"],pressed)
                     linetext = translation(linetext,"\\fax",deviation,result["other_index"],"([^}]*)}\\fax([%d%.%-]+)","\\fax[%d%.%-]+$")
                 --fay
                 elseif (result["other"]=="fay") then
                     if (linetext:match("\\fay")==nil) then
                         linetext=linetext:gsub("^({[^}]*)}",function (a) return a.."\\fay0}" end)
                     end
-                    deviation = interpolate(result["other_start"],result["other_end"],result["other_accel"],N,T,i,t,result["set"],result["other_deviation"],result["other_transverse"],pressed)
+                    local deviation = interpolate(result["other_start"],result["other_end"],result["other_accel"],N,T,i,t,result["set"],result["other_deviation"],result["other_transverse"],pressed)
                     linetext = translation(linetext,"\\fay",deviation,result["other_index"],"([^}]*)}\\fay([%d%.%-]+)","\\fay[%d%.%-]+$")
                 --frx
                 elseif (result["other"]=="frx") then
                     if (linetext:match("\\frx")==nil) then
                         linetext=linetext:gsub("^({[^}]*)}",function (a) return a.."\\frx0}" end)
                     end
-                    deviation = interpolate(result["other_start"],result["other_end"],result["other_accel"],N,T,i,t,result["set"],result["other_deviation"],result["other_transverse"],pressed)
+                    local deviation = interpolate(result["other_start"],result["other_end"],result["other_accel"],N,T,i,t,result["set"],result["other_deviation"],result["other_transverse"],pressed)
                     linetext = translation(linetext,"\\frx",deviation,result["other_index"],"([^}]*)}\\frx([%d%.%-]+)","\\frx[%d%.%-]+$")
                 --fry
                 elseif (result["other"]=="fry") then
                     if (linetext:match("\\fry")==nil) then
                         linetext=linetext:gsub("^({[^}]*)}",function (a) return a.."\\fry0}" end)
                     end
-                    deviation = interpolate(result["other_start"],result["other_end"],result["other_accel"],N,T,i,t,result["set"],result["other_deviation"],result["other_transverse"],pressed)
+                    local deviation = interpolate(result["other_start"],result["other_end"],result["other_accel"],N,T,i,t,result["set"],result["other_deviation"],result["other_transverse"],pressed)
                     linetext = translation(linetext,"\\fry",deviation,result["other_index"],"([^}]*)}\\fry([%d%.%-]+)","\\fry[%d%.%-]+$")
                 end
             end
@@ -350,6 +351,7 @@ end
 
 function interpolate(head,tail,accel,N,T,i,t,judge,deviation,transverse,button)
     -- i 1-N
+    local bias, x
     if (button=="Translation") then
         if (judge==false) then
             bias = (1/(N-1)*(i-1))^accel
@@ -373,7 +375,7 @@ function interpolate(head,tail,accel,N,T,i,t,judge,deviation,transverse,button)
 end
 
 function translation(linetext,tagtype,deviation,index,match,matchtail,multiply)
-    tt_table={}
+    local tt_table={}
     for tg,tx in linetext:gmatch("({[^}]*})([^{]*)") do
         table.insert(tt_table,{tag=tg,text=tx})
     end

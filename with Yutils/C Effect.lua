@@ -244,7 +244,7 @@ function main(subtitle, selected)
 								
 								local pos_r1,pos_r2 = math.random(-1*d_res.rx,d_res.rx),math.random(-1*d_res.ry,d_res.ry)
 								local move_t1,move_t2 = math.random(d_res.move_t_r), d_res.move_t+math.random(d_res.move_t_r)
-								local x0,y0 = i,j
+								local x0,y0,cn = i,j,nil
 								if judge==1 then cn,textINpixel = c1,textINpixel..string.format("m %d %d l %d %d %d %d %d %d ",x0-cx,y0-cy, x0-cx+1,y0-cy, x0-cx+1,y0-cy+1, x0-cx,y0-cy+1)
 								elseif judge==3 then cn,bordINpixel=c3,bordINpixel..string.format("m %d %d l %d %d %d %d %d %d ",x0-cx,y0-cy, x0-cx+1,y0-cy, x0-cx+1,y0-cy+1, x0-cx,y0-cy+1)
 								elseif judge==4 then cn,shadINpixel=c4,shadINpixel..string.format("m %d %d l %d %d %d %d %d %d ",x0-cx,y0-cy, x0-cx+1,y0-cy, x0-cx+1,y0-cy+1, x0-cx,y0-cy+1)
@@ -1442,7 +1442,7 @@ function color_html2ass(c)
 end
 
 function alpha_html2ass(c)
-	a = c:match("%x%x%x%x%x%x(%x%x)")
+	local a = c:match("%x%x%x%x%x%x(%x%x)")
 	return "&H"..a.."&"
 end
 
