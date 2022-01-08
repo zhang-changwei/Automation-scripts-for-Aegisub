@@ -6,9 +6,9 @@ goto my repository https://github.com/zhang-changwei/Automation-scripts-for-Aegi
 ]]
 
 script_name="C Utilities"
-script_description="Utilities v1.7.4"
+script_description="Utilities v1.7.5"
 script_author="chaaaaang"
-script_version="1.7.4" 
+script_version="1.7.5" 
 
 include('karaskel.lua')
 re = nil
@@ -58,7 +58,7 @@ local dialog_config = {
 	{class="label",label="■ Dialog Checker",x=3,y=6,width=2},--25
 	{class="checkbox",label="overlap checker",name="dialog_olp",value=false,x=3,y=7,width=2},--26
 	{class="checkbox",label="bilang checker",name="dialog_bl",value=false,x=3,y=8,width=2},--27
-	{class="dropdown",name="dialog_blstyle",items={"zho\\Neng","zho\\Nany","any\\Neng","any\\Nany"},value="zho\\Neng",x=3,y=9,width=3},--28
+	{class="dropdown",name="dialog_blstyle",items={"zho\\Neng","zho\\Nany","any\\Neng","any\\Nany"},value="any\\Neng",x=3,y=9,width=3},--28
 	{class="checkbox",label="overlength checker",name="dialog_ol",value=false,x=3,y=10,width=3},--29
 	{class="label",label="buffer 1",x=3,y=11},--30
 	{class="floatedit",name="dialog_bf1",value=0.6,x=4,y=11,width=2,hint="Buffer for CHS SUBS, Arg:0-1. ACT ON overlength checker, smaller buffer means narrower space for SUBS."},
@@ -100,7 +100,7 @@ local dialog_config = {
 	{class="label",label="         ",x=2,y=1},
 	{class="label",label="         ",x=6,y=1},
 	
-	{class="label",label="--Utilities v1.7.4--",x=8,y=0,width=2},
+	{class="label",label="--Utilities v1.7.5--",x=8,y=0,width=2},
 	{class="label",label="AE Sequential Picture Importer: ",x=0,y=14,width=3},
 	{class="label",label="Press the AE button to Grab AE Sequential Picture Path and Run.",x=3,y=14,width=7},
 	{class="label",label="Please choose the file with the smallest INDEX in the file picker.",x=3,y=15,width=7},
@@ -397,6 +397,8 @@ function main(subtitle, selected, active)
 			end
 		elseif result.option=="Dialog Checker" then
 			linetext = linetext:gsub("^{}","")
+			if line.comment==true then goto DCEnd end
+
 			if result.dialog_ol==true then
 				local _,count = linetext:gsub("\\N","")
 				if count==0 then
@@ -460,12 +462,16 @@ function main(subtitle, selected, active)
 				end
 			end
 			
-			if result.dialog_olp==true and si~=N and line.end_time>subtitle[li+1].start_time then
-				line.actor = line.actor.."overlap "
-				local nextline = subtitle[li+1]
-				nextline.actor = nextline.actor.."overlap "
-				subtitle[li+1] = nextline
-				log.overlap = log.overlap + 1
+			if result.dialog_olp==true then
+				for sj=1, si-1 do
+					local linej = subtitle[selected[sj]]
+					if math.max(line.end_time,linej.end_time)-math.min(line.start_time,linej.start_time)<line.duration+linej.end_time-linej.start_time then
+						line.actor = string.format("%solp%d ", line.actor, log.overlap+1)
+						linej.actor = string.format("%solp%d ", linej.actor, log.overlap+1)
+						subtitle[selected[sj]] = linej
+						log.overlap = log.overlap + 1
+					end
+				end
 			end
 			if result.dialog_bl==true then
 				local _,count = linetext:gsub("\\N","")
@@ -503,6 +509,8 @@ function main(subtitle, selected, active)
 					log.bilang = log.bilang + 1
 				end
 			end
+
+			::DCEnd::
 		elseif result.option=="Mocha Data Visualization" then
 			linetext = linetext:gsub("^{}","")
 			if (N>visualization_max_height and result.data_mode=="x-t") or (N>visualization_max_width and result.data_mode=="t-x") then 

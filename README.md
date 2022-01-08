@@ -17,7 +17,7 @@
     | C Jump                          | v1.0    |
     | C Picture Tracker               | v1.4.1  |
     | C Translation                   | v3.2.1  |
-    | C Utilities                     | v1.7.4  |
+    | C Utilities                     | v1.7.5  |
     | C XML Analyzer                  | v1.4.3  |
     > 在Automation Manager > Description栏中查看脚本版本信息  
     > 第二位数字表示较为重要的更新，如重要功能增加、重大bug修复等  
@@ -31,7 +31,6 @@
     + `C Effect & C Utilities`脚本部分功能依赖`Yutils`库，请先安装相关组件，传送门[https://github.com/Youka/Yutils](https://github.com/Youka/Yutils)，感谢原作者。
     + `C XML Analyzer & C Picture Tracker & C Effect`脚本依赖`xmlSimple`库，原作者[https://github.com/Cluain/Lua-Simple-XML-Parser](https://github.com/Cluain/Lua-Simple-XML-Parser)，本人作了一点修改，存放在`lib`文件夹下，将该文件放置在`C:\Program Files (x86)\Aegisub\automation\include\`目录下即可正常使用。
 * __该仓库本人长期维护，欢迎star与fork。__  
-* __本仓库的cheatsheet正在施工中__
 
 -------------------------------------------
 ## __使用方法__  
@@ -42,6 +41,7 @@
 ## __更新日志__
 | Date | Script | Version | Detail |
 |------|--------|---------|--------|
+|2022.1.8|C Utilities|1.7.5|Dialog Checker 时间轴重叠功能改进|
 |2022.1.1|C Translation|3.2.1|美化界面，完善功能|
 |2022.1.1|C Gradient|2.2|美化界面，完善功能|
 |2021.11.9|C Effect|1.6|bug fix, 优化速度|
