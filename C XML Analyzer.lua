@@ -2,13 +2,15 @@
 README:
 
 goto my repository https://github.com/zhang-changwei/Automation-scripts-for-Aegisub for the latest version
-
+magick 0.png -crop 500x50+0+0  +repage -type PaletteMatte -colorspace sRGB -colors 256 -define colorspace:auto-grayscale=false 1.png
+-define png:color-type=3 -set colorspace:auto-grayscale=false
+ magick identify -verbose 1.png
 ]]
 
 script_name="C XML Analyzer"
-script_description="XML Analyzer v1.4.3"
+script_description="XML Analyzer v1.5.1"
 script_author="chaaaaang"
-script_version="1.4.3"
+script_version="1.5.1"
 
 local xmlsimple = require("xmlSimple").newParser()
 local lfs = require "lfs"
@@ -170,24 +172,16 @@ function borderadder(subtitle, selected, active)
         {class="checkbox",name="m",label="merge",value=false,x=0,y=1},--2
         {class="label",label="proportion threshold",x=1,y=1},--3
         {class="floatedit",name="mp",value=0.9,x=2,y=1},--4
-        {class="checkbox",name="fbf",label="fbfbord",value=false,x=0,y=2},--5
-        {class="checkbox",name="man",label="manual",value=false,x=0,y=3},--6
-        {class="checkbox",name="r",label="remember",value=false,x=1,y=0}--7
+        {class="checkbox",name="man",label="manual",value=false,x=0,y=2},--5
+        {class="checkbox",name="r",label="remember",value=false,x=1,y=0}--6
     }
     local buttons = {"Run","Quit"}
     -- read config
-    dialog_config[1].value, dialog_config[2].value, dialog_config[4].value, dialog_config[5].value, dialog_config[6].value, dialog_config[7].value = config_read("?user")
+    config_read_xml(dialog_config)
     -- show UI
     local pressed,result = aegisub.dialog.display(dialog_config,buttons)
     if (pressed=="Quit") then aegisub.cancel() end
-    local UI_selected = 0
-    if result.b==true then UI_selected = UI_selected + 1 end
-    if result.m==true then UI_selected = UI_selected + 1 end
-    if result.fbf==true then UI_selected = UI_selected + 1 end
-    if result.man==true then UI_selected = UI_selected + 1 end
-    if UI_selected~=1 then aegisub.cancel() end
-    -- write config
-    if result.r == true then config_write("?user",result) end
+    if result.r==true then config_write_xml(result) end
     -- manual
     local man_starttime,man_endtime = subtitle[selected[1]].start_time,subtitle[selected[1]].end_time
     for si,li in ipairs(selected) do
@@ -300,36 +294,6 @@ function borderadder(subtitle, selected, active)
                         local r,b = j.l+j.w, j.t+j.h
                         line.text = string.format("{\\an7\\pos(0,0)\\fscx100\\fscy100\\bord1\\shad0\\1aFF\\3aFD\\p1}m %d %d l %d %d %d %d %d %d",j.l,j.t,r,j.t,r,b,j.l,b)
                         subtitle.append(line)
-                    end
-                end
-            elseif result.fbf==true then
-                for _,j in ipairs(items) do
-                    if #j>1 then
-                        local trigger = 0
-                        local l,t,r,b = 1921,1081,-1,-1
-                        local w,h = 0,0
-                        for __,k in ipairs(j) do
-                            if l~=k.x or t~=k.y or r~=k.w+k.x or b~=k.h+k.y then trigger=trigger+1 end
-                            l,t,r,b = math.min(l,k.x),math.min(t,k.y),math.max(r,k.w+k.x),math.max(b,k.h+k.y)
-                            w,h = math.max(w,k.w),math.max(h,k.h)
-                        end
-                        if trigger>=3 then
-                            for nk,k in ipairs(j) do
-                                local judge = ptINsquare(k.x+k.w, k.h+k.y, l,t,w,h)
-                                if judge==true then
-                                    line.text = string.format("{\\an7\\pos(0,0)\\fscx100\\fscy100\\bord1\\shad0\\1aFF\\3aFD\\p1}m %d %d l %d %d %d %d %d %d",l,t,l+w,t,l+w,t+h,l,t+h)
-                                else
-                                    local lt,tt,rt,bt = k.x+k.w-w,k.y+k.h-h,k.x+k.w,k.y+k.h
-                                    if lt<l then lt,rt = l,l+w end
-                                    if tt<t then tt,bt = t,t+h end
-                                    line.text = string.format("{\\an7\\pos(0,0)\\fscx100\\fscy100\\bord1\\shad0\\1aFF\\3aFD\\p1}m %d %d l %d %d %d %d %d %d",lt,tt,rt,tt,rt,bt,lt,bt)
-                                end
-                                line.start_time = NDF2starttime(j[nk].i,fps)
-                                line.end_time   = NDF2endtime(j[nk].o,fps)
-                                line.actor      = "G"..epoch_count
-                                subtitle.append(line)
-                            end
-                        end
                     end
                 end
             elseif result.man==true then
@@ -510,7 +474,8 @@ function slicecutter(subtitle, selected, active)
     local dialog_config = {
         {class="label",label="slice count: "..#slices,x=0,y=0,width=2},
         {class="checkbox",name="realtime",label="use real time format\nX:XX:XX.XXX",value=true,x=0,y=1,height=2},
-        {class="checkbox",name="NDFtime",label="use NDF time format\nXX:XX:XX:XX",value=false,x=1,y=1,height=2}
+        {class="checkbox",name="NDFtime",label="use NDF time format\nXX:XX:XX:XX",value=false,x=1,y=1,height=2},
+        {class="checkbox",name="ffbs",label="add first frame black screen",value=false,x=0,y=3,width=2}
     }
     local buttons = {"Run","Quit"}
 
@@ -554,6 +519,7 @@ function slicecutter(subtitle, selected, active)
     end
     local eventINslice_count = 0
     local trigger = false
+    local path_table = {} -- store generated xml path
 
     -- loop begin
     if events.Event[event_count]["@InTC"]=="00:00:00:00" then event_count = event_count - 1 end -- delete first black frame
@@ -575,6 +541,7 @@ function slicecutter(subtitle, selected, active)
 
             xml_head = xml_head:gsub('Title="[^"]+"',string.format('Title="%s_slice%s_clip%s"',title,slice_count,slices[slice_count].text))
             local path_new = path:gsub("%.xml$",string.format("_slice%s_clip%s.xml",slice_count,slices[slice_count].text))
+            table.insert(path_table, path_new)
             local file = io.open(path_new,"w")
             file:write(xml_head,xml_mid,xml_tail)
             file:close()
@@ -637,6 +604,7 @@ function slicecutter(subtitle, selected, active)
 
             xml_head = xml_head:gsub('Title="[^"]+"',string.format('Title="%s_slice%s_clip%s"',title,slice_count,slices[slice_count].text))
             local path_new = path:gsub("%.xml$",string.format("_slice%s_clip%s.xml",slice_count,slices[slice_count].text))
+            table.insert(path_table, path_new)
             local file = io.open(path_new,"w")
             file:write(xml_head,xml_mid,xml_tail)
             file:close()
@@ -646,6 +614,30 @@ function slicecutter(subtitle, selected, active)
         if trigger==false then i = i + 1 end
     end
     -- loop end
+
+    -- add first frame black screen
+    if result.ffbs==true then
+        local pngpath = aegisub.decode_path("?user").."\\00000000.png"
+        local path_head = path:gsub("[^\\]*%.xml$","")
+
+        for si,li in ipairs(path_table) do
+            local xmlfile = io.open(li,"r")
+            xml = xmlfile:read("*all")
+            if xml:match("Event Forced=\"False\" InTC=\"00:00:00:00\"")==nil then
+                if xml:match("Event Forced=\"False\" InTC=\"00:00:00:01\"")==nil then
+                    xml = xml:gsub("</Events>\n</BDN>", '<Event Forced="False" InTC="00:00:00:00" OutTC="00:00:00:02"><Graphic Width="10" Height="10" X="0" Y="0">00000000.png</Graphic></Event>\n</Events>\n</BDN>')
+                else
+                    xml = xml:gsub("</Events>\n</BDN>", '<Event Forced="False" InTC="00:00:00:00" OutTC="00:00:00:01"><Graphic Width="10" Height="10" X="0" Y="0">00000000.png</Graphic></Event>\n</Events>\n</BDN>')
+                end
+                xmlfile:close()
+                xmlfile = io.open(li, "w")
+                xmlfile:write(xml)
+            end
+            xmlfile:close()
+        end
+        copyfile(pngpath, path_head.."\\00000000.png", true)
+    end
+    
     aegisub.log("succeeded")
     aegisub.set_undo_point(script_name) 
     return selected 
@@ -721,6 +713,172 @@ function dialogpuller(subtitle, selected, active)
             subtitle[ni],subtitle[nj] = li,lj
         end
     end
+end
+
+function forcetwowindow(subtitle, selected, active)
+    local path = aegisub.dialog.open('XML Analyzer', '', '', 'XML files (.xml)|*.xml|All Files (.)|.', false, true)
+    local path_head = path:gsub("[^\\]*%.xml$","") -- E:\\XXX\\
+    local path_new = path:gsub("%.xml$","_FTW.xml")
+    local BDNHandler = xmlsimple:loadFile(path)
+
+    local events = BDNHandler.BDN.Events
+    local event_count = #events.Event
+    local fps = BDNHandler.BDN.Description.Format["@FrameRate"]
+    event_count,fps = tonumber(event_count),tonumber(fps)
+    if fps==23.976 then fps=24000/1001 
+    elseif fps==29.97 then fps=30000/1001 end
+
+    -- bat & python
+    local batpath = path_head.."forcetwowindow.bat"
+    local bat = io.open(batpath, "w")
+    bat:write("@echo off\n")
+    local pypath = path_head.."ForceTwoWindow.py"
+    copyfile(aegisub.decode_path("?user").."\\ForceTwoWindow.py", pypath, false)
+
+    -- open the new xml to write
+    local xmlfile = io.open(path, "r")
+    local xmlFTWfile = io.open(path_new, "w")
+    local xmlFTW = xmlfile:read("*all")
+
+    -- ass part
+    local rule_table = {}
+    for si, li in ipairs(selected) do
+        if subtitle[li].comment==false and subtitle[li].actor=="FTW" then
+            local line = subtitle[li]
+            local x1,y1,x2,y2,x3,y3 = line.text:match("m +([%d%.]+) +([%d%.]+) +l +([%d%.]+) +([%d%.]+)[l ]+([%d%.]+) +([%d%.]+)")
+            x1,x2,y1,y2 = math.min(x1,x2,x3),math.max(x1,x2,x3),math.min(y1,y2,y3),math.max(y1,y2,y3)
+            x1,x2,y1,y2 = math.floor(x1),math.floor(x2),math.floor(y1),math.floor(y2)
+            local f1, f2 = math.ceil(line.start_time/(1000/fps)), math.ceil(line.end_time/(1000/fps))
+            table.insert(rule_table, {i=f1, o=f2, l=x1, t=y1, r=x2, b=y2})
+        end
+    end
+
+    for i=1, event_count do
+        local t_intc = events.Event[i]["@InTC"]
+        local t_outtc = events.Event[i]["@OutTC"]
+        local graphics = events.Event[i].Graphic
+        if #graphics<2 then
+            local newgraphics = {} -- for xml
+            local pngi = 1
+            local png
+            local pngnew = {} -- for python
+            local cropinfo = {}
+            for si,ri in ipairs(rule_table) do
+                if NDF2frame(t_intc, fps)<ri.o and NDF2frame(t_outtc, fps)>ri.i then
+                    local tx,ty,tw,th = graphics["@X"], graphics["@Y"], graphics["@Width"], graphics["@Height"]
+                    tx,ty,tw,th = tonumber(tx),tonumber(ty),tonumber(tw),tonumber(th)
+        
+                    png = graphics:value()
+                    local png1 = png:gsub("%.png$","_"..pngi..".png")
+                    if pngi==3 then aegisub.log("3 windows in one frame") aegisub.cancel() end
+                    pngi = pngi + 1
+        
+                    local l,t,r,b = math.max(ri.l,tx), math.max(ri.t,ty), math.min(ri.r,tx+tw), math.min(ri.b,ty+th) -- box
+                    -- local cmd = string.format("magick %s -crop %dx%d+%d+%d +repage -type PaletteMatte -colorspace sRGB -colors 256 -depth 8 %s", png_path, r-l, b-t, l-tx, t-ty, png1_path)
+                    table.insert(pngnew, png1)
+                    table.insert(cropinfo, l-tx)
+                    table.insert(cropinfo, t-ty)
+                    table.insert(cropinfo, r-tx)
+                    table.insert(cropinfo, b-ty)
+                    table.insert(newgraphics, {_attr={Width=r-l,Height=b-t,X=l,Y=t}, png1})
+                end
+            end           
+            if #newgraphics~=0 then
+                xmlFTW = xmlFTW:gsub('<Graphic[^\n]+'..png..'</Graphic>\n', function() 
+                    local graphicsstr = ""
+                    for sj,gj in ipairs(newgraphics) do
+                        graphicsstr = graphicsstr..string.format('<Graphic Width="%d" Height="%d" X="%d" Y="%d">%s</Graphic>\n',
+                            gj._attr.Width, gj._attr.Height, gj._attr.X, gj._attr.Y, gj[1])
+                    end
+                    return graphicsstr
+                end)
+                local cmd = string.format("python ForceTwoWindow.py -i %s -o %s -c %s", png, table.concat(pngnew," "), table.concat(cropinfo," "))
+                bat:write(string.format("start cmd /c \"%s\"\n", cmd))
+            end
+        else
+            local newgraphics = {}
+            local pngi = 1
+            local png, pnga, pngb
+            local tx,ty,tw,th,Tx,Ty,Tw,Th
+            local pngnew = {}
+            local cropinfo = {}
+            local png_frame, L,T,R,B
+            for si,ri in ipairs(rule_table) do
+                if NDF2frame(t_intc, fps)<ri.o and NDF2frame(t_outtc, fps)>ri.i then
+                    if pngi==1 then
+                        tx,ty,tw,th = graphics[1]["@X"], graphics[1]["@Y"], graphics[1]["@Width"], graphics[1]["@Height"]
+                        tx,ty,tw,th = tonumber(tx),tonumber(ty),tonumber(tw),tonumber(th)
+                        L,T,R,B = tx,ty,tx+tw,ty+th
+                        Tx,Ty,Tw,Th = graphics[2]["@X"], graphics[2]["@Y"], graphics[2]["@Width"], graphics[2]["@Height"]
+                        Tx,Ty,Tw,Th = tonumber(Tx),tonumber(Ty),tonumber(Tw),tonumber(Th)
+                        L,T,R,B = math.min(L,Tx), math.min(T,Ty), math.max(R,Tx+Tw), math.max(B,Ty+Th)
+
+                        pnga, pngb = graphics[1]:value(), graphics[2]:value()
+                        png = pnga:gsub("_%d%.png$", "_0_0.png")
+                        png_frame = pnga:gsub("_%d%.png$", "")
+                        -- local cmd = string.format("magick convert -size %dx%d -strip xc:none %s -geometry +%d+%d -composite %s -geometry +%d+%d -composite %s",
+                        --     R-L, B-T, pnga_path, tx-L, ty-T, pngb_path, Tx-L,Ty-T, png_path)
+                    end
+
+                    local png1 = png:gsub("%d%.png$", pngi..".png")
+
+                    local l,t,r,b = math.max(ri.l,L), math.max(ri.t,T), math.min(ri.r,R), math.min(ri.b,B) -- box
+                    -- local cmd = string.format("magick %s -crop %dx%d+%d+%d +repage -type PaletteMatte -colorspace sRGB -colors 256 -depth 8 %s", png_path, r-l, b-t, l-L, t-T, png1_path)
+                    table.insert(pngnew, png1)
+                    table.insert(cropinfo, l-L)
+                    table.insert(cropinfo, t-T)
+                    table.insert(cropinfo, r-R)
+                    table.insert(cropinfo, b-B)
+                    table.insert(newgraphics, {_attr={Width=r-l,Height=b-t,X=l,Y=t}, png_frame.."_0_"..pngi..".png"})
+
+                    if pngi==3 then aegisub.log("3 windows in one frame") aegisub.cancel() end
+                    pngi = pngi + 1
+                end
+            end
+            if #newgraphics~=0 then
+                xmlFTW = xmlFTW:gsub('<Graphic[^\n]+'..png_frame..'_0%.png</Graphic>\n[^\n]*<Graphic[^\n]+'..png_frame..'_1%.png</Graphic>\n', function() 
+                    local graphicsstr = ""
+                    for sj,gj in ipairs(newgraphics) do
+                        graphicsstr = graphicsstr..string.format('<Graphic Width="%d" Height="%d" X="%d" Y="%d">%s</Graphic>\n',
+                            gj._attr.Width, gj._attr.Height, gj._attr.X, gj._attr.Y, gj[1])
+                    end
+                    return graphicsstr
+                end)
+                local cmd = string.format("python ForceTwoWindow.py -i %s -o %s -c %s -m 1 -u %d %d %d %d %d %d", 
+                    pnga.." "..pngb, table.concat(pngnew," "), table.concat(cropinfo," "), R-L, B-T, tx-L, ty-T, Tx-L, Ty-T)
+                bat:write(string.format("start cmd /c \"%s\"\n", cmd))
+            end
+        end
+        aegisub.progress.set(i/event_count*100)
+    end
+
+    -- run bat
+    bat:close()
+    -- os.execute(batpath)
+    -- os.remove(batpath)
+    -- os.remove(pypath)
+
+    xmlFTWfile:write(xmlFTW)
+    xmlFTWfile:close()
+    aegisub.log("Succeed!\nIf you get nothing, check whether your actor is FTW.")
+    return selected
+end
+
+function firstframeblackscreen(subtitle, selected, active)
+    local pngpath = aegisub.decode_path("?user").."\\0.png"
+    local path = aegisub.dialog.open('XML Analyzer', '', '', 'XML files (.xml)|*.xml|All Files (.)|.', false, true)
+    local path_head = path:gsub("[^\\]*%.xml$","")
+
+    local xmlfile = io.open(path,"r")
+    local xml = xmlfile:read("*all")
+    xml = xml:gsub("</Events>\n</BDN>", '<Event Forced="False" InTC="00:00:00:00" OutTC="00:00:00:08"><Graphic Width="1920" Height="1080" X="0" Y="0">0.png</Graphic></Event>\n</Events>\n</BDN>')
+    xmlfile:close()
+    xmlfile = io.open(path, "w")
+    xmlfile:write(xml)
+    xmlfile:close()
+
+    copyfile(pngpath, path_head.."\\0.png", true)
+    return selected
 end
 
 --********************************************************************************************--
@@ -933,38 +1091,63 @@ function Realminus(t1,t2)
     return string.format("%d:%02d:%02d.%03d",h1,m1,s1,ms1)
 end
 
+function copyfile(source, destination, byte)
+    local sourcefile, destinationfile
+    if byte==true then
+        sourcefile = io.open(source, "rb")
+        destinationfile = io.open(destination, "wb")
+    else
+        sourcefile = io.open(source, "r")
+        destinationfile = io.open(destination, "w")
+    end
+    destinationfile:write(sourcefile:read("*all"))
+    sourcefile:close()
+    destinationfile:close()
+end
+
 function round(x)
     return math.floor(x+0.5)
 end
 
--- basic,merge,proportion,fbfbord,manual,remember
-function config_read(path)
-    path = aegisub.decode_path(path).."\\xml_analyzer_bordadder.txt"
+function config_read_xml(dialog)
+    local path = aegisub.decode_path("?user").."\\xmlanalyzer_config.xml"
     local file = io.open(path, "r")
-    local basic,merge,proportion,fbfbord,manual,remember = true,false,0.9,false,false,false
     if file~=nil then
-        for i in file:lines() do
-            if i:match("basic") then basic = str2bool(i:match("[a-z]+$"))
-            elseif i:match("merge") then merge = str2bool(i:match("[a-z]+$"))
-            elseif i:match("manual") then manual = str2bool(i:match("[a-z]+$"))
-            elseif i:match("fbfbord") then fbfbord = str2bool(i:match("[a-z]+$"))
-            elseif i:match("remember") then remember = str2bool(i:match("[a-z]+$"))
-            elseif i:match("proportion") then proportion = tonumber(i:match("[%d%.]+$")) end
-        end
         file:close()
+        local config = require("xmlSimple").newParser():loadFile(path)
+        for si,li in ipairs(dialog) do
+            for sj,lj in pairs(li) do
+                if sj=="class" and lj~="label" then
+                    local name = li.name
+                    local item = config.Config[name]
+                    if item["@Type"]=="boolean" then 
+                        dialog[si].value = str2bool(item["@Value"])
+                    elseif item["@Type"]=="number" then 
+                        dialog[si].value = tonumber(item["@Value"])
+                    elseif item["@Type"]=="string" then 
+                        dialog[si].value = item["@Value"]
+                    end
+                    break
+                end
+            end
+        end
+    else
+        return nil
     end
-    return basic,merge,proportion,fbfbord,manual,remember
 end
 
-function config_write(path,result)
-    path = aegisub.decode_path(path).."\\xml_analyzer_bordadder.txt"
+function config_write_xml(result)
+    local path = aegisub.decode_path("?user").."\\xmlanalyzer_config.xml"
     local file = io.open(path, "w")
-    file:write("basic: "..bool2str(result.b).."\n")
-    file:write("merge: "..bool2str(result.m).."\n")
-    file:write("fbfbord: "..bool2str(result.fbf).."\n")
-    file:write("manual: "..bool2str(result.man).."\n")
-    file:write("remember: "..bool2str(result.r).."\n")
-    file:write("proportion: "..result.mp)
+    file:write('<?xml version="1.0" encoding="UTF-8"?>\n<Config>\n')
+    for key,value in pairs(result) do
+        if type(value)=="boolean" then 
+            file:write(string.format('<%s Type="%s" Value="%s"/>\n', key, type(value), bool2str(value)))
+        else
+            file:write(string.format('<%s Type="%s" Value="%s"/>\n', key, type(value), value))
+        end
+    end
+    file:write('</Config>')
     file:close()
 end
 
@@ -978,14 +1161,12 @@ function bool2str(bool)
     else return "false" end
 end
 
-function macro_validation(subtitle, selected, active)
-    return true
-end
-
 --This is what puts your automation in Aegisub's automation list
-aegisub.register_macro(script_name.."/simulator",script_description,simulator,macro_validation)
-aegisub.register_macro(script_name.."/borderadder",script_description,borderadder,macro_validation)
---aegisub.register_macro(script_name.."/patch_overlapjoiner",script_description,patch_overlapjoiner,macro_validation)
-aegisub.register_macro(script_name.."/slicecutter",script_description,slicecutter,macro_validation)
-aegisub.register_macro(script_name.."/timecalculator",script_description,timecalculator,macro_validation)
---aegisub.register_macro(script_name.."/dialogpuller",script_description,dialogpuller,macro_validation)
+aegisub.register_macro(script_name.."/Simulator",script_description,simulator)
+aegisub.register_macro(script_name.."/BorderAdder",script_description,borderadder)
+aegisub.register_macro(script_name.."/ForceTwoWindow",script_description,forcetwowindow)
+aegisub.register_macro(script_name.."/FirstFrameBlackScreen",script_description,firstframeblackscreen)
+aegisub.register_macro(script_name.."/SliceCutter",script_description,slicecutter)
+aegisub.register_macro(script_name.."/TimeCalculator",script_description,timecalculator)
+--aegisub.register_macro(script_name.."/Patch_OverlapJoiner",script_description,patch_overlapjoiner)
+--aegisub.register_macro(script_name.."/DialogPuller",script_description,dialogpuller)

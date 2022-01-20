@@ -18,7 +18,7 @@
     | C Picture Tracker               | v1.4.1  |
     | C Translation                   | v3.2.1  |
     | C Utilities                     | v1.7.5  |
-    | C XML Analyzer                  | v1.4.3  |
+    | C XML Analyzer                  | v1.5.1  |
     > 在Automation Manager > Description栏中查看脚本版本信息  
     > 第二位数字表示较为重要的更新，如重要功能增加、重大bug修复等  
     > 第三位数字表示小更新
@@ -30,7 +30,9 @@
     + `C Picture Tracker & C Utilities > AE Importer > crop`依赖`imagemagick`，需自行下载，地址[https://legacy.imagemagick.org/](https://legacy.imagemagick.org/)
     + `C Effect & C Utilities`脚本部分功能依赖`Yutils`库，请先安装相关组件，传送门[https://github.com/Youka/Yutils](https://github.com/Youka/Yutils)，感谢原作者。
     + `C XML Analyzer & C Picture Tracker & C Effect`脚本依赖`xmlSimple`库，原作者[https://github.com/Cluain/Lua-Simple-XML-Parser](https://github.com/Cluain/Lua-Simple-XML-Parser)，本人作了一点修改，存放在`lib`文件夹下，将该文件放置在`C:\Program Files (x86)\Aegisub\automation\include\`目录下即可正常使用。
+    + `lib`目录下`0.png`，`00000000.png`，`ForceTwoWindow.py`为`C XML Analyzer`配套工具，请放置在`C:\Users\?\AppData\Roaming\Aegisub\`目录下。
 * __该仓库本人长期维护，欢迎star与fork。__  
+* __cheatsheet每次发布release时更新__
 
 -------------------------------------------
 ## __使用方法__  
@@ -41,6 +43,7 @@
 ## __更新日志__
 | Date | Script | Version | Detail |
 |------|--------|---------|--------|
+|2022.1.20|C XML Analyzer|1.5.1|增加了强制将一张大图切分成两张小图的功能，与首帧黑屏|
 |2022.1.8|C Utilities|1.7.5|Dialog Checker 时间轴重叠功能改进|
 |2022.1.1|C Translation|3.2.1|美化界面，完善功能|
 |2022.1.1|C Gradient|2.2|美化界面，完善功能|
