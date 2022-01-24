@@ -27,7 +27,7 @@
     + 在 Aegisub Automation 项中可以发现添加的脚本  
     + 可以在`option`中将脚本与热键绑定，建议以脚本首字母绑定热键，方便记忆
 * __脚本依赖关系__
-    + `C Picture Tracker & C Utilities > AE Importer > crop`依赖`imagemagick`，需自行下载，地址[https://legacy.imagemagick.org/](https://legacy.imagemagick.org/)
+    + `C Picture Tracker & C Utilities > AE Importer > crop`依赖`imagemagick`，需自行下载，地址[https://imagemagick.org/](https://imagemagick.org/)
     + `C Effect & C Utilities`脚本部分功能依赖`Yutils`库，请先安装相关组件，传送门[https://github.com/Youka/Yutils](https://github.com/Youka/Yutils)，感谢原作者。
     + `C XML Analyzer & C Picture Tracker & C Effect`脚本依赖`xmlSimple`库，原作者[https://github.com/Cluain/Lua-Simple-XML-Parser](https://github.com/Cluain/Lua-Simple-XML-Parser)，本人作了一点修改，存放在`lib`文件夹下，将该文件放置在`C:\Program Files (x86)\Aegisub\automation\include\`目录下即可正常使用。
     + `lib`目录下`0.png`，`00000000.png`，`ForceTwoWindow.py`为`C XML Analyzer`配套工具，请放置在`C:\Users\?\AppData\Roaming\Aegisub\`目录下。
