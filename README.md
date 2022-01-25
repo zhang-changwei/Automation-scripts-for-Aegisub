@@ -18,7 +18,7 @@
     | C Picture Tracker               | v1.4.1  |
     | C Translation                   | v3.2.1  |
     | C Utilities                     | v1.7.5  |
-    | C XML Analyzer                  | v1.5.1  |
+    | C XML Analyzer                  | v1.5.2  |
     > 在Automation Manager > Description栏中查看脚本版本信息  
     > 第二位数字表示较为重要的更新，如重要功能增加、重大bug修复等  
     > 第三位数字表示小更新
@@ -43,6 +43,7 @@
 ## __更新日志__
 | Date | Script | Version | Detail |
 |------|--------|---------|--------|
+|2022.1.25|C XML Analyzer|1.5.2|封装py为exe程序，可直接运行|
 |2022.1.20|C XML Analyzer|1.5.1|增加了强制将一张大图切分成两张小图的功能，与首帧黑屏|
 |2022.1.8|C Utilities|1.7.5|Dialog Checker 时间轴重叠功能改进|
 |2022.1.1|C Translation|3.2.1|美化界面，完善功能|

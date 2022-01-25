@@ -8,9 +8,9 @@ magick 0.png -crop 500x50+0+0  +repage -type PaletteMatte -colorspace sRGB -colo
 ]]
 
 script_name="C XML Analyzer"
-script_description="XML Analyzer v1.5.1"
+script_description="XML Analyzer v1.5.2"
 script_author="chaaaaang"
-script_version="1.5.1"
+script_version="1.5.2"
 
 local xmlsimple = require("xmlSimple").newParser()
 local lfs = require "lfs"
@@ -732,8 +732,19 @@ function forcetwowindow(subtitle, selected, active)
     local batpath = path_head.."forcetwowindow.bat"
     local bat = io.open(batpath, "w")
     bat:write("@echo off\n")
-    local pypath = path_head.."ForceTwoWindow.py"
-    copyfile(aegisub.decode_path("?user").."\\ForceTwoWindow.py", pypath, false)
+    local pypath = ""
+    local tmpfile = io.open(aegisub.decode_path("?user").."\\ForceTwoWindow.py")
+    if tmpfile~=nil then
+        tmpfile:close()
+        pypath = path_head.."ForceTwoWindow.py"
+        copyfile(aegisub.decode_path("?user").."\\ForceTwoWindow.py", pypath, false)
+    end
+    tmpfile = io.open(aegisub.decode_path("?user").."\\ForceTwoWindow2.exe")
+    if tmpfile~=nil then
+        tmpfile:close()
+        pypath = path_head.."ForceTwoWindow2.exe"
+        copylargefile(aegisub.decode_path("?user").."\\ForceTwoWindow2.exe", pypath)
+    end
 
     -- open the new xml to write
     local xmlfile = io.open(path, "r")
@@ -1101,6 +1112,23 @@ function copyfile(source, destination, byte)
         destinationfile = io.open(destination, "w")
     end
     destinationfile:write(sourcefile:read("*all"))
+    sourcefile:close()
+    destinationfile:close()
+end
+
+-- byte = true
+function copylargefile(source, destination)
+    local buffer = 8192
+    local sourcefile, destinationfile
+    sourcefile = io.open(source, "rb")
+    destinationfile = io.open(destination, "wb")
+
+    local filelen = sourcefile:seek("end")
+    for i=0, filelen, buffer do
+        sourcefile:seek("set", i)
+        local data = sourcefile:read(math.min(filelen, i+buffer)-i)
+        destinationfile:write(data)
+    end
     sourcefile:close()
     destinationfile:close()
 end
