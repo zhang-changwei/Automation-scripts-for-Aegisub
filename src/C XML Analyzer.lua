@@ -5,12 +5,15 @@ goto my repository https://github.com/zhang-changwei/Automation-scripts-for-Aegi
 magick 0.png -crop 500x50+0+0  +repage -type PaletteMatte -colorspace sRGB -colors 256 -define colorspace:auto-grayscale=false 1.png
 -define png:color-type=3 -set colorspace:auto-grayscale=false
  magick identify -verbose 1.png
+
+TO DO: check correctness of window out picture
+TO DO: borderadder last epoch
 ]]
 
 script_name="C XML Analyzer"
-script_description="XML Analyzer v1.5.2"
+script_description="XML Analyzer v1.5.3"
 script_author="chaaaaang"
-script_version="1.5.2"
+script_version="1.5.3"
 
 local xmlsimple = require("xmlSimple").newParser()
 local lfs = require "lfs"
@@ -728,6 +731,48 @@ function forcetwowindow(subtitle, selected, active)
     if fps==23.976 then fps=24000/1001 
     elseif fps==29.97 then fps=30000/1001 end
 
+    -- -- bat & python
+    -- local batpath = path_head.."forcetwowindow.bat"
+    -- local pysrcpath = aegisub.decode_path("?user").."\\ForceTwoWindow2.py"
+    -- local pydespath = path_head.."ForceTwoWindow2.py"
+    -- local tmpfile = io.open(pysrcpath)
+    -- -- first: py2 + conf + bat2
+    -- if tmpfile~=nil then
+    --     tmpfile:close()
+    --     copyfile(pysrcpath, pydespath, false)
+    --     batpath = path_head.."forcetwowindow.bat"
+    --     local bat2path = path_head.."forcetwowindow2.bat"
+    --     bat2 = io.open(bat2path, "w")
+    --     bat2:write("@echo off\n")
+    --     bat2:write('start cmd /c "python ForceTwoWindow2.py"')
+    --     bat2:close()
+    -- else
+    --     pysrcpath = aegisub.decode_path("?user").."\\ForceTwoWindow.py"
+    --     pydespath = path_head.."ForceTwoWindow.py"
+    --     tmpfile = io.open(pysrcpath)
+    --     -- second: py + bat
+    --     if tmpfile~=nil then
+    --         tmpfile:close()
+    --         copyfile(pysrcpath, pydespath, false)
+    --     else
+    --         -- third: exe + conf
+    --         batpath = path_head.."forcetwowindow.bat"
+    --         pysrcpath = aegisub.decode_path("?user").."\\ForceTwoWindow2.exe"
+    --         pydespath = path_head.."ForceTwoWindow2.exe"
+    --         tmpfile = io.open(pysrcpath)
+    --         local tmpfile2 = io.open(pydespath, "rb")
+    --         if tmpfile~=nil and tmpfile2==nil then
+    --             tmpfile:close()
+    --             os.execute(string.format('copy "%s" "%s"', pysrcpath, pydespath))
+    --         else
+    --             if tmpfile~=nil then tmpfile:close()
+    --             elseif tmpfile2~=nil then tmpfile2:close() end
+    --         end
+    --     end
+    -- end
+    -- local bat = io.open(batpath, "w")
+    -- bat:write("@echo off\n")
+
     -- bat & python
     local batpath = path_head.."forcetwowindow.bat"
     local bat = io.open(batpath, "w")
@@ -743,7 +788,8 @@ function forcetwowindow(subtitle, selected, active)
     if tmpfile~=nil then
         tmpfile:close()
         pypath = path_head.."ForceTwoWindow2.exe"
-        copylargefile(aegisub.decode_path("?user").."\\ForceTwoWindow2.exe", pypath)
+        pypathdata = aegisub.decode_path("?user").."\\ForceTwoWindow2.exe"
+        os.execute(string.format('copy "%s" "%s"', pypathdata, pypath))
     end
 
     -- open the new xml to write
@@ -779,19 +825,21 @@ function forcetwowindow(subtitle, selected, active)
                     local tx,ty,tw,th = graphics["@X"], graphics["@Y"], graphics["@Width"], graphics["@Height"]
                     tx,ty,tw,th = tonumber(tx),tonumber(ty),tonumber(tw),tonumber(th)
         
-                    png = graphics:value()
-                    local png1 = png:gsub("%.png$","_"..pngi..".png")
-                    if pngi==3 then aegisub.log("3 windows in one frame") aegisub.cancel() end
-                    pngi = pngi + 1
-        
                     local l,t,r,b = math.max(ri.l,tx), math.max(ri.t,ty), math.min(ri.r,tx+tw), math.min(ri.b,ty+th) -- box
-                    -- local cmd = string.format("magick %s -crop %dx%d+%d+%d +repage -type PaletteMatte -colorspace sRGB -colors 256 -depth 8 %s", png_path, r-l, b-t, l-tx, t-ty, png1_path)
-                    table.insert(pngnew, png1)
-                    table.insert(cropinfo, l-tx)
-                    table.insert(cropinfo, t-ty)
-                    table.insert(cropinfo, r-tx)
-                    table.insert(cropinfo, b-ty)
-                    table.insert(newgraphics, {_attr={Width=r-l,Height=b-t,X=l,Y=t}, png1})
+                    if r>l and b>t then
+                        png = graphics:value()
+                        local png1 = png:gsub("%.png$","_"..pngi..".png")
+                        if pngi==3 then aegisub.log("3 windows in one frame") aegisub.cancel() end
+                        pngi = pngi + 1
+            
+                        -- local cmd = string.format("magick %s -crop %dx%d+%d+%d +repage -type PaletteMatte -colorspace sRGB -colors 256 -depth 8 %s", png_path, r-l, b-t, l-tx, t-ty, png1_path)
+                        table.insert(pngnew, png1)
+                        table.insert(cropinfo, l-tx)
+                        table.insert(cropinfo, t-ty)
+                        table.insert(cropinfo, r-tx)
+                        table.insert(cropinfo, b-ty)
+                        table.insert(newgraphics, {_attr={Width=r-l,Height=b-t,X=l,Y=t}, png1})
+                    end
                 end
             end           
             if #newgraphics~=0 then
@@ -834,16 +882,18 @@ function forcetwowindow(subtitle, selected, active)
                     local png1 = png:gsub("%d%.png$", pngi..".png")
 
                     local l,t,r,b = math.max(ri.l,L), math.max(ri.t,T), math.min(ri.r,R), math.min(ri.b,B) -- box
-                    -- local cmd = string.format("magick %s -crop %dx%d+%d+%d +repage -type PaletteMatte -colorspace sRGB -colors 256 -depth 8 %s", png_path, r-l, b-t, l-L, t-T, png1_path)
-                    table.insert(pngnew, png1)
-                    table.insert(cropinfo, l-L)
-                    table.insert(cropinfo, t-T)
-                    table.insert(cropinfo, r-R)
-                    table.insert(cropinfo, b-B)
-                    table.insert(newgraphics, {_attr={Width=r-l,Height=b-t,X=l,Y=t}, png_frame.."_0_"..pngi..".png"})
+                    if r>l and b>t then
+                        -- local cmd = string.format("magick %s -crop %dx%d+%d+%d +repage -type PaletteMatte -colorspace sRGB -colors 256 -depth 8 %s", png_path, r-l, b-t, l-L, t-T, png1_path)
+                        table.insert(pngnew, png1)
+                        table.insert(cropinfo, l-L)
+                        table.insert(cropinfo, t-T)
+                        table.insert(cropinfo, r-L)
+                        table.insert(cropinfo, b-T)
+                        table.insert(newgraphics, {_attr={Width=r-l,Height=b-t,X=l,Y=t}, png_frame.."_0_"..pngi..".png"})
 
-                    if pngi==3 then aegisub.log("3 windows in one frame") aegisub.cancel() end
-                    pngi = pngi + 1
+                        if pngi==3 then aegisub.log("3 windows in one frame") aegisub.cancel() end
+                        pngi = pngi + 1
+                    end
                 end
             end
             if #newgraphics~=0 then

@@ -20,6 +20,199 @@ script_author="chaaaaang"
 script_version="1.2"
 
 include('karaskel.lua')
+local re = require('aegisub.re')
+
+function better_bilang_combiner(subtitle, selected)
+    local dialog_config = {
+        {class='label', label='Better Bilang Combiner v1.3', x=0, y=0, width=4},
+        {class='label', label='Selected: ', x=0, y=1, width=2},
+        {class='dropdown',name='sel', items={'Chinese Lines','English Lines'}, value='Chinese Lines', x=2, y=1,width=2},
+        {class='label', label='Timeline based on:', x=0, y=2, width=3},
+        {class='dropdown', name='time', items={'Chinese', 'English'}, value='Chinese', x=3, y=2},
+
+        {class='label', label='delete', x=0, y=3},
+        {class='checkbox', label='...', name='deldots', value=true, x=1, y=3},
+        {class='checkbox', label='--',  name='delbars', value=true, x=2, y=3},
+        {class='checkbox', label='{}',  name='delkets', value=true, x=3, y=3},
+
+        {class='label', label='ignore', x=0, y=4},
+        {class='checkbox', label='*', name='ignstar', value=true, x=1, y=4},
+        {class='checkbox', label='♪', name='ignsong', value=true, x=2, y=4},
+        {class='checkbox', label='#', name='ignwell', value=true, x=3, y=4}
+    }
+    local buttons = {'Run', 'Quit'}
+
+    local meta,styles=karaskel.collect_head(subtitle,false)
+    local pressed, result = aegisub.dialog.display(dialog_config,buttons)
+    if pressed~="Run" then aegisub.cancel() end    
+
+    local zhoList, engList = {},{}
+    local ii = 1 
+    while ii<=#subtitle do
+        if ii==selected[1] then ii = selected[#selected]
+        elseif subtitle[ii].class~='dialogue' then
+        else
+            local line = subtitle[ii]
+            local linetext = line.text:gsub('^ *',''):gsub(' *$','')
+            local linetextstriptag = linetext:gsub('{[^}]*}','')
+            if line.comment==true then
+            elseif (result.ignstar==true and linetextstriptag:match('^.')=='*') 
+                or (result.ignsong==true and linetextstriptag:match('^...')=='♪')
+                or (result.ignwell==true and linetextstriptag:match('^.')=='#') then
+                    line.text = '{\\an8}'..linetext
+                    subtitle[ii] = line
+            else
+                line.text = linetext
+                subtitle[ii] = line
+                if result.sel=='Chinese Lines' then table.insert(engList, ii)
+                else table.insert(zhoList, ii) end
+            end
+        end
+        ii = ii + 1
+    end
+    for _,i in ipairs(selected) do
+        if subtitle[i].class~='dialogue' then
+        else
+            local line = subtitle[i]
+            local linetext = line.text:gsub('^ *',''):gsub(' *$','')
+            local linetextstriptag = linetext:gsub('{[^}]*}','')
+            if line.comment==true then
+            elseif (result.ignstar==true and linetextstriptag:match('^.')=='*') 
+                or (result.ignsong==true and linetextstriptag:match('^...')=='♪')
+                or (result.ignwell==true and linetextstriptag:match('^.')=='#') then
+                    line.text = '{\\an8}'..linetext
+                    subtitle[i] = line
+            else
+                line.text = linetext
+                subtitle[i] = line
+                if result.sel=='Chinese Lines' then table.insert(zhoList, i)
+                else table.insert(engList, i) end
+            end
+        end
+    end
+
+    local zhoH, zhoT, engH, engT = 1,1,1,1
+    while zhoH<=#zhoList and engH<=#engList do
+        local zhoI ,engI = zhoList[zhoT], engList[engT]
+        local zhoLine, engLine = subtitle[zhoI], subtitle[engI]
+        local score = getscore(zhoLine, engLine)
+        if score<=0 then
+            if engLine.end_time<zhoLine.end_time then -- eng behind
+                local linetext = ''
+                for li in re.gsplit(engLine.text, '\\\\N') do
+                    if result.deldots==true then li = li:gsub('^%.%.%.',''):gsub('%.%.%.$','') end
+                    if result.delbars==true then li = li:gsub('^%-%-',''):gsub('%-%-$','') end
+                    if result.delkets==true then li = li:gsub('{[^}]*}','') end
+                    linetext = linetext..li..' '
+                end
+                engLine.text = linetext:gsub(' $','')
+                subtitle[engI] = engLine
+                engT = engT + 1
+                engH = engT
+            else
+                local linetext = ''
+                for li in re.gsplit(zhoLine.text, '\\\\N') do
+                    if result.deldots==true then li = li:gsub('^%.%.%.',''):gsub('%.%.%.$','') end
+                    if result.delbars==true then li = li:gsub('^%-%-',''):gsub('%-%-$','') end
+                    if result.delkets==true then li = li:gsub('{[^}]*}','') end
+                    linetext = linetext..li..' '
+                end
+                zhoLine.text = linetext:gsub(' $','')
+                subtitle[zhoI] = zhoLine
+                zhoT = zhoT + 1
+                zhoH = zhoT
+            end
+        else
+            local zhoMerge, engMerge = true, true
+            -- merge zho
+            ::zhoengSTART::
+            if zhoMerge==true and zhoT+1<=#zhoList then
+                local scoreplus = getscore(subtitle[zhoList[zhoT+1]], engLine)
+                if scoreplus>0 then
+                    if engT+1<=#engList and getscore(subtitle[zhoList[zhoT+1]], subtitle[engList[engT+1]])<scoreplus or engT==#engList then
+                        zhoT, engMerge = zhoT+1, false
+                        goto zhoengSTART
+                    end
+                end
+            end
+            -- merge english
+            if engMerge==true and engT+1<=#engList then
+                local scoreplus = getscore(subtitle[engList[engT+1]], zhoLine)
+                if scoreplus>0 then
+                    if zhoT+1<=#zhoList and getscore(subtitle[zhoList[zhoT+1]], subtitle[engList[engT+1]])<scoreplus or zhoT==#zhoList then
+                        engT, zhoMerge = engT+1, false
+                        goto zhoengSTART
+                    end
+                end
+            end
+            -- merge subtitle
+            local linetext = ''
+            for i=zhoH,zhoT do
+                local zhoLi = subtitle[zhoList[i]]
+                for li in re.gsplit(zhoLi.text, '\\\\N') do
+                    if result.deldots==true then li = li:gsub('^%.%.%.',''):gsub('%.%.%.$','') end
+                    if result.delbars==true then li = li:gsub('^%-%-',''):gsub('%-%-$','') end
+                    if result.delkets==true then li = li:gsub('{[^}]*}','') end
+                    linetext = linetext..li..' '
+                end
+                zhoLi.text = ''
+                subtitle[zhoList[i]] = zhoLi
+            end
+            linetext = linetext:gsub(' $','\\N')
+            for i=engH,engT do
+                local engLi = subtitle[engList[i]]
+                for li in re.gsplit(engLi.text, '\\\\N') do
+                    if result.deldots==true then li = li:gsub('^%.%.%.',''):gsub('%.%.%.$','') end
+                    if result.delbars==true then li = li:gsub('^%-%-',''):gsub('%-%-$','') end
+                    if result.delkets==true then li = li:gsub('{[^}]*}','') end
+                    linetext = linetext..li..' '
+                end
+                engLi.text = ''
+                subtitle[engList[i]] = engLi
+            end
+            -- rewrite
+            if result.time=='Chinese' then
+                zhoLine.text = linetext:gsub(' $','')
+                zhoLine.end_time = subtitle[zhoList[zhoT]].end_time
+                subtitle[zhoI] = zhoLine
+            else
+                engLine.text = linetext:gsub(' $','')
+                engLine.end_time = subtitle[engList[engT]].end_time
+                subtitle[engI] = engLine
+            end
+            -- update
+            zhoT, engT = zhoT + 1, engT + 1
+            zhoH, engH = zhoT, engT
+        end
+        aegisub.progress.set(zhoH/#zhoList*100)
+    end
+    -- delete blank lines
+    local i = 1
+    local total = #subtitle
+    local data = {}
+    while(i<=total) do
+        local li = subtitle[i]
+        if li.class=="dialogue" and li.comment==false then
+            li.text = li.text:gsub("{}","")
+            li.text = li.text:gsub(" *","")
+            if li.text=="" then
+                subtitle.delete(i)
+                total = total - 1
+            else
+                table.insert(data,i)
+                i = i + 1
+            end
+        else
+            i = i + 1
+        end
+    end
+    aegisub.set_undo_point(script_name) 
+    return data
+end
+
+function getscore(line1, line2)
+    return math.min(line1.end_time, line2.end_time) - math.max(line1.start_time, line2.start_time)
+end
 
 function pre1_eng(subtitle, selected)
     local meta, styles = karaskel.collect_head(subtitle, false)
@@ -369,6 +562,7 @@ function slide_forward_chs(subtitle, selected)
 end
 
 --Register macro (no validation function required)
+aegisub.register_macro(script_name.."/better_bilang_combiner",script_description,better_bilang_combiner)
 aegisub.register_macro(script_name.."/pre2_eng",script_description,pre2_eng)
 aegisub.register_macro(script_name.."/pre1_eng",script_description,pre1_eng)
 aegisub.register_macro(script_name.."/next1_eng",script_description,next1_eng)
