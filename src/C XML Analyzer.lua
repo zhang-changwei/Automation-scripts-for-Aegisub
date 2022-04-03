@@ -6,14 +6,12 @@ magick 0.png -crop 500x50+0+0  +repage -type PaletteMatte -colorspace sRGB -colo
 -define png:color-type=3 -set colorspace:auto-grayscale=false
  magick identify -verbose 1.png
 
-TO DO: check correctness of window out picture
-TO DO: borderadder last epoch
 ]]
 
 script_name="C XML Analyzer"
-script_description="XML Analyzer v1.5.4alpha"
+script_description="XML Analyzer v1.5.4"
 script_author="chaaaaang"
-script_version="1.5.4alpha"
+script_version="1.5.4"
 
 local xmlsimple = require("xmlSimple").newParser()
 local lfs = require "lfs"
@@ -33,7 +31,15 @@ function simulator(subtitle, selected, active)
     if fps==23.976 then fps=24000/1001 
     elseif fps==29.97 then fps=30000/1001 end
 
+    local buffer_report = io.open(path_head.."buffer.txt", "w")
+
     local intc,outtc = nil,nil
+    local silence = false
+    local epoch_count = 0
+    if events.Event[event_count]["@InTC"]=="00:00:00:00" then 
+        epoch_count,event_count = 1,event_count-1 
+        buffer_report:write("Epoch1, 207360, 49.4%%\n")
+    end
     local count = 0 -- max: 64
     local buffer = 0 -- buffer: 4M
     local BUFFER_MAX = 4*1024*1024
@@ -49,11 +55,15 @@ function simulator(subtitle, selected, active)
         local t_intc = events.Event[i]["@InTC"]
         local t_outtc = events.Event[i]["@OutTC"]
 
-        -- new epoch (interval > 1 frame)
+        -- new epoch (interval > 1 frame) first enter and update before get in the loop
         if outtc==nil or (t_intc~=outtc and NDFminus(t_intc,outtc,fps)~="00:00:00:01") then 
+            if outtc~=nil then
+                buffer_report:write(string.format("Epoch%d, %d, %.1f%%\n", epoch_count, buffer, buffer/BUFFER_MAX*100))
+            end
             data = {} 
-            -- x,y,h,w = 1920,1080,0,0
+            silence = false
             count,buffer = 0,0
+            epoch_count = epoch_count + 1
         end 
         intc,outtc = t_intc,t_outtc
 
@@ -61,104 +71,68 @@ function simulator(subtitle, selected, active)
 
         if #graphics>=2 then
             for k=1,#graphics do
-                local trigger,trigger2 = true,true
+                local trigger = true
                 local tx,ty,tw,th = graphics[k]["@X"],graphics[k]["@Y"],graphics[k]["@Width"],graphics[k]["@Height"]
                 tx,ty,tw,th = tonumber(tx),tonumber(ty),tonumber(tw),tonumber(th)
 
-                local png_path = path_head..graphics[k]:value()
-                local png_attr = lfs.attributes(png_path)
-                local tsize = png_attr.size
-
                 for _,j in ipairs(data) do
                     if j.w==tw and j.h==th then trigger = false end
-                    if j.s==tsize then trigger2 = false end
                 end
 
-                if trigger==true or trigger2==true then 
-                    table.insert(data,{w=tw,h=th,s=tsize})
-                end
-                if trigger==true then
+                if trigger==true then 
+                    table.insert(data,{w=tw,h=th})
                     count = count + 1
-                end
-                if trigger2==true then
-                    buffer = buffer + tsize
+                    buffer = buffer + tw*th
                 end
             end
             if #graphics>2 then 
                 aegisub.log(t_intc..": more than two pictures in a timestamp\n")
             end
         else
-            local trigger,trigger2 = true,true
+            local trigger = true
             local tx,ty,tw,th = graphics["@X"],graphics["@Y"],graphics["@Width"],graphics["@Height"]
             tx,ty,tw,th = tonumber(tx),tonumber(ty),tonumber(tw),tonumber(th)
 
-            local png_path = path_head..graphics:value()
-            local png_attr = lfs.attributes(png_path)
-            local tsize = png_attr.size
-
             for _,j in ipairs(data) do
                 if j.w==tw and j.h==th then trigger = false end
-                if j.s==tsize then trigger2 = false end
             end
-            if trigger==true or trigger2==true then 
-                table.insert(data,{w=tw,h=th,s=tsize})
-            end
-            if trigger==true then
+            if trigger==true then 
+                table.insert(data,{w=tw,h=th})
                 count = count + 1
-            end
-            if trigger2==true then
-                buffer = buffer + tsize
+                buffer = buffer + tw*th
             end
         end
 
         -- log out
-        if count>64 then
-            aegisub.log(t_intc.." is too close to the previous frame\n")
-            outtc = nil
-            t_intc = NDF2ms(t_intc,fps)
-            line.start_time = t_intc
-            line.end_time = t_intc
+        if silence==false and count>64 then
+            aegisub.log(t_intc..": is too close to the previous frame\n")
+            silence = true
+            line.start_time = NDF2ms(t_intc,fps)
+            line.end_time = NDF2ms(t_intc,fps)
+            line.actor = "G"..epoch_count
             line.text = "*** this Event will be discarded ***. The Time from InTC of previous Event to InTC is too close. and cannot register this Event with previous Epoch, by limitation of the number of different size images in a Epoch.  permitted number is 64."
             subtitle.append(line)
         end
 
-        if buffer>BUFFER_MAX then
-            aegisub.log(t_intc..": limited buffer 4194304 now get "..buffer.."\n")
+        if silence==false and buffer>BUFFER_MAX then
+            aegisub.log(t_intc..": buffer overflow")
+            silence = true
+            line.start_time = NDF2ms(t_intc,fps)
+            line.end_time = NDF2ms(t_intc,fps)
+            line.actor = "G"..epoch_count
+            line.text = 'buffer overflow.'
+            subtitle.append(line)
         end
 
+        -- last event break
+        if i==event_count then
+            buffer_report:write(epoch_count, string.format("Epoch%d, %d, %.1f%%\n", epoch_count, buffer, buffer/BUFFER_MAX*100))
+            break
+        end
         aegisub.progress.set(i/event_count*100)
     end
 
-    -- wirte epoch number (!rewrite event_count!)
-    local NN = #subtitle
-    local epoch_count = 0
-    outtc = nil
-    if events.Event[event_count]["@InTC"]=="00:00:00:00" then 
-        event_count = event_count - 1 
-        epoch_count = 1
-    end -- delete first black frame
-    for i=1, event_count do
-        local t_intc = events.Event[i]["@InTC"]
-        local t_outtc = events.Event[i]["@OutTC"]
-
-        -- new epoch
-        if outtc==nil or (t_intc~=outtc and NDFminus(t_intc,outtc,fps)~="00:00:00:01") then 
-            epoch_count = epoch_count + 1
-        end 
-
-        -- add epoch index
-        for j=N,NN do
-            local l = subtitle[j]
-            if NDF2starttime(t_intc,fps)<=l.start_time and NDF2endtime(t_outtc,fps)>=l.end_time then
-                l.actor = "G"..epoch_count
-                subtitle[j] = l
-            end
-        end
-
-        intc,outtc = t_intc,t_outtc
-        aegisub.progress.set(i/event_count*100)
-    end
-
+    buffer_report:close()
     aegisub.set_undo_point(script_name) 
     return selected 
 end
@@ -201,7 +175,7 @@ function borderadder(subtitle, selected, active)
     local intc,outtc
     local epoch_intc,epoch_outtc
     local epoch_count = 0
-    if events.Event[event_count]["@InTC"]=="00:00:00:00" then epoch_count = 1 end
+    if events.Event[event_count]["@InTC"]=="00:00:00:00" then epoch_count,event_count = 1,event_count-1 end
     -- local x,y,h,w=1920,1080,0,0
 
     local line = subtitle[#subtitle]
@@ -341,11 +315,6 @@ function borderadder(subtitle, selected, active)
                 local tx,ty,tw,th = graphics[k]["@X"],graphics[k]["@Y"],graphics[k]["@Width"],graphics[k]["@Height"]
                 tx,ty,tw,th = tonumber(tx),tonumber(ty),tonumber(tw),tonumber(th)
 
-                -- try to get same size events
-                local png_frame = graphics[k]:value()
-                png_frame = png_frame:gsub("_%d+%.png$","")
-                png_frame = tonumber(png_frame)
-
                 local distance,dx,dy = 3000,2000,2000
                 local index = 0
                 local w,h = tw,th
@@ -363,19 +332,14 @@ function borderadder(subtitle, selected, active)
 
                 if dx>w or dy>h then
                     table.insert(items,{})
-                    table.insert(items[#items],{f=png_frame,x=tx,y=ty,w=tw,h=th,i=t_intc,o=t_outtc})
+                    table.insert(items[#items],{x=tx,y=ty,w=tw,h=th,i=t_intc,o=t_outtc})
                 else
-                    table.insert(items[index],{f=png_frame,x=tx,y=ty,w=tw,h=th,i=t_intc,o=t_outtc})
+                    table.insert(items[index],{x=tx,y=ty,w=tw,h=th,i=t_intc,o=t_outtc})
                 end
             end
         else
             local tx,ty,tw,th = graphics["@X"],graphics["@Y"],graphics["@Width"],graphics["@Height"]
             tx,ty,tw,th = tonumber(tx),tonumber(ty),tonumber(tw),tonumber(th)
-
-            -- try to get same size events
-            local png_frame = graphics:value()
-            png_frame = png_frame:gsub("_%d+%.png$","")
-            png_frame = tonumber(png_frame)
 
             local distance,dx,dy = 3000,2000,2000
             local index = 0
@@ -394,13 +358,37 @@ function borderadder(subtitle, selected, active)
 
             if dx>w or dy>h then
                 table.insert(items,{})
-                table.insert(items[#items],{f=png_frame,x=tx,y=ty,w=tw,h=th,i=t_intc,o=t_outtc})
+                table.insert(items[#items],{x=tx,y=ty,w=tw,h=th,i=t_intc,o=t_outtc})
             else
-                table.insert(items[index],{f=png_frame,x=tx,y=ty,w=tw,h=th,i=t_intc,o=t_outtc})
+                table.insert(items[index],{x=tx,y=ty,w=tw,h=th,i=t_intc,o=t_outtc})
             end
         end
 
         epoch_outtc = t_outtc
+
+        -- last event break
+        if i==event_count then
+            if true then
+                for _,j in ipairs(items) do
+                    if #j>1 then
+                        local trigger = 0
+                        local l,t,r,b = 1921,1081,-1,-1
+                        for __,k in ipairs(j) do
+                            if l~=k.x or t~=k.y or r~=k.w+k.x or b~=k.h+k.y then trigger=trigger+1 end
+                            l,t,r,b = math.min(l,k.x),math.min(t,k.y),math.max(r,k.w+k.x),math.max(b,k.h+k.y)
+                        end
+                        if trigger>=3 then
+                            line.start_time = NDF2starttime(j[1].i,fps)
+                            line.end_time   = NDF2endtime(j[#j].o,fps)
+                            line.actor      = "G"..epoch_count
+                            line.text = string.format("{\\an7\\pos(0,0)\\fscx100\\fscy100\\bord1\\shad0\\1aFF\\3aFD\\p1}m %d %d l %d %d %d %d %d %d",l,t,r,t,r,b,l,b)
+                            subtitle.append(line)
+                        end
+                    end
+                end 
+            end
+            break
+        end
         aegisub.progress.set(i/event_count*100)
     end
 
