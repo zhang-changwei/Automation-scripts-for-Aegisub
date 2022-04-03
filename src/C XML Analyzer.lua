@@ -11,9 +11,9 @@ TO DO: borderadder last epoch
 ]]
 
 script_name="C XML Analyzer"
-script_description="XML Analyzer v1.5.3"
+script_description="XML Analyzer v1.5.4alpha"
 script_author="chaaaaang"
-script_version="1.5.3"
+script_version="1.5.4alpha"
 
 local xmlsimple = require("xmlSimple").newParser()
 local lfs = require "lfs"
@@ -34,7 +34,6 @@ function simulator(subtitle, selected, active)
     elseif fps==29.97 then fps=30000/1001 end
 
     local intc,outtc = nil,nil
-    -- local x,y,h,w=1920,1080,0,0
     local count = 0 -- max: 64
     local buffer = 0 -- buffer: 4M
     local BUFFER_MAX = 4*1024*1024
@@ -116,7 +115,7 @@ function simulator(subtitle, selected, active)
         if count>64 then
             aegisub.log(t_intc.." is too close to the previous frame\n")
             outtc = nil
-            t_intc = totime(t_intc,fps)
+            t_intc = NDF2ms(t_intc,fps)
             line.start_time = t_intc
             line.end_time = t_intc
             line.text = "*** this Event will be discarded ***. The Time from InTC of previous Event to InTC is too close. and cannot register this Event with previous Epoch, by limitation of the number of different size images in a Epoch.  permitted number is 64."
@@ -488,7 +487,7 @@ function slicecutter(subtitle, selected, active)
     -- convert real time to NDF time
     if result.realtime == true then 
         for si,li in ipairs(slices) do
-            local ts,te = toNDF(li.time_S,fps),toNDF(li.time_E,fps)
+            local ts,te = Real2NDF(li.time_S,fps),Real2NDF(li.time_E,fps)
             li.time_S,li.time_E = ts,NDFadd(ts,te,fps)
             slices[si] = li
         end
@@ -675,7 +674,7 @@ function timecalculator(subtitle, selected, active)
             elseif result.o=="Minus" then
                 t = Realminus(result.t1,result.t2)
             elseif result.o=="Convert->NDFTime" then
-                t = toNDF(result.t1,fps)
+                t = Real2NDF(result.t1,fps)
             elseif result.o=="Convert->Frame" then
                 t= Real2frame(result.t1,fps)
             end
@@ -983,121 +982,50 @@ function fpsgen()
 end
 
 -- NDF 2 Real time (ms)
-function totime(t,fps)
-    local h,m,s,ms = t:match("(%d%d):(%d%d):(%d%d):(%d%d)")
-    h,m,s,ms = tonumber(h),tonumber(m),tonumber(s),tonumber(ms)
-    local f = ms + s*math.ceil(fps) + m*60*math.ceil(fps) + h*3600*math.ceil(fps)
+function NDF2ms(t,fps)
+    local f = NDF2frame(t, fps)
     return f*1000/fps
 end
 
--- Real time 2 NDF
-function toNDF(t,fps)
-    local h,m,s,ms = t:match("(%d+):(%d%d):(%d%d)%.(%d%d%d)")
-    h,m,s,ms = tonumber(h),tonumber(m),tonumber(s),tonumber(ms)
-    local f = (ms+s*1000+m*60*1000+h*3600*1000)/(1000/fps)
-    f = round(f)
-    local FPS_U =math.ceil(fps)
-    local hour,min,sec,frame = math.floor(f/FPS_U/3600),math.floor(f/FPS_U/60)%60,math.floor(f/FPS_U)%60,f%FPS_U
-    if hour<10 then hour = "0"..hour end
-    if min<10 then min = "0"..min end
-    if sec<10 then sec = "0"..sec end
-    if frame<10 then frame = "0"..frame end
-    return hour..":"..min..":"..sec..":"..frame
-end
-
 function NDFadd(t1,t2,fps)
-    fps = math.ceil(fps)
-    local h1,m1,s1,f1 = t1:match("(%d%d):(%d%d):(%d%d):(%d%d)")
-    local h2,m2,s2,f2 = t2:match("(%d%d):(%d%d):(%d%d):(%d%d)")
-    h1,m1,s1,f1 = tonumber(h1),tonumber(m1),tonumber(s1),tonumber(f1)
-    h2,m2,s2,f2 = tonumber(h2),tonumber(m2),tonumber(s2),tonumber(f2)
-    local temp1,temp2,temp3 = 0,0,0
-    if f1+f2>=fps then temp1=1 end
-    f1 = (f1+f2)%fps
-    if s1+s2+temp1>=60 then temp2=1 end
-    s1 = (s1+s2+temp1)%60
-    if m1+m2+temp2>=60 then temp3=1 end
-    m1 = (m1+m2+temp2)%60
-    h1 = (h1+h2+temp3)
-    if h1<10 then h1 = "0"..h1 end
-    if m1<10 then m1 = "0"..m1 end
-    if s1<10 then s1 = "0"..s1 end
-    if f1<10 then f1 = "0"..f1 end
-    return h1..":"..m1..":"..s1..":"..f1
+    f1 = NDF2frame(t1, fps)
+    f2 = NDF2frame(t2, fps)
+    f  = f1 + f2
+    return frame2NDF(f, fps)
 end
-
 -- t1 - t2
 function NDFminus(t1,t2,fps)
-    fps = math.ceil(fps)
-    local h1,m1,s1,f1 = t1:match("(%d%d):(%d%d):(%d%d):(%d%d)")
-    local h2,m2,s2,f2 = t2:match("(%d%d):(%d%d):(%d%d):(%d%d)")
-    h1,m1,s1,f1 = tonumber(h1),tonumber(m1),tonumber(s1),tonumber(f1)
-    h2,m2,s2,f2 = tonumber(h2),tonumber(m2),tonumber(s2),tonumber(f2)
-    local temp1,temp2,temp3 = 0,0,0
-    if f1-f2<0 then temp1=1 end
-    f1 = (f1-f2+fps)%fps
-    if s1-s2-temp1<0 then temp2=1 end
-    s1 = (s1-s2-temp1+60)%60
-    if m1-m2-temp2<0 then temp3=1 end
-    m1 = (m1-m2-temp2+60)%60
-    h1 = (h1-h2-temp3)
-    if h1<10 then h1 = "0"..h1 end
-    if m1<10 then m1 = "0"..m1 end
-    if s1<10 then s1 = "0"..s1 end
-    if f1<10 then f1 = "0"..f1 end
-    return h1..":"..m1..":"..s1..":"..f1
+    f1 = NDF2frame(t1, fps)
+    f2 = NDF2frame(t2, fps)
+    f  = f1 - f2
+    return frame2NDF(f, fps)
 end
-
 -- a<b -> -1; a=b -> 0; a>b -> 1
 function NDFcompare(a,b)
-    local h1,m1,s1,f1 = a:match("(%d%d):(%d%d):(%d%d):(%d%d)")
-    local h2,m2,s2,f2 = b:match("(%d%d):(%d%d):(%d%d):(%d%d)")
-    h1,m1,s1,f1 = tonumber(h1),tonumber(m1),tonumber(s1),tonumber(f1)
-    h2,m2,s2,f2 = tonumber(h2),tonumber(m2),tonumber(s2),tonumber(f2)
-    if h1<h2 then return -1
-    elseif h1>h2 then return 1
-    else
-        if m1<m2 then return -1
-        elseif m1>m2 then return 1
-        else
-            if s1<s2 then return -1
-            elseif s1>s2 then return 1
-            else
-                if f1<f2 then return -1
-                elseif f1>f2 then return 1
-                else return 0
-                end
-            end
-        end
+    local t1 = a:gsub(":", "")
+    local t2 = b:gsub(":", "")
+    t1, t2 = tonumber(t1), tonumber(t2)
+    if t1<t2 then return -1
+    elseif t1>t2 then return 1
+    else return 0
     end
 end
 
-function length(x1,y1,x2,y2)
-    return math.sqrt((x2-x1)^2+(y2-y1)^2)
-end
-
--- frame 2 starttime (ms)
-function starttime(frame,fps)
+function frame2starttime(frame,fps)
     local t = 1000/fps
     return math.floor((frame*t - t/2)/10)*10
 end
-
--- frame 2 endtime (ms)
-function endtime(frame,fps)
+function frame2endtime(frame,fps)
     local t = 1000/fps
     return math.floor((frame*t + t/2)/10)*10
 end
-
 function NDF2starttime(t,fps)
     local f = NDF2frame(t,fps)
-    local time = starttime(f,fps)
-    return time
+    return frame2starttime(f,fps)
 end
-
 function NDF2endtime(t,fps)
     local f = NDF2frame(t,fps) - 1
-    local time = endtime(f,fps)
-    return time
+    return frame2endtime(f,fps)
 end
 
 function NDF2frame(t,fps)
@@ -1107,10 +1035,16 @@ function NDF2frame(t,fps)
 end
 
 function NDF2real(t,fps)
-    local tinms = totime(t,fps)
+    local tinms = NDF2ms(t,fps)
     tinms = round(tinms)
     local h,m,s,ms = math.floor(tinms/1000/3600),math.floor(tinms/1000/60)%60,math.floor(tinms/1000)%60,tinms%1000
     return string.format("%d:%02d:%02d.%03d",h,m,s,ms)
+end
+
+function frame2NDF(f, fps)
+    local FPS_U =math.ceil(fps)
+    local hour,min,sec,frame = math.floor(f/FPS_U/3600),math.floor(f/FPS_U/60)%60,math.floor(f/FPS_U)%60,f%FPS_U
+    return string.format("%02d:%02d:%02d:%02d", hour, min, sec, frame)
 end
 
 function Real2frame(t,fps)
@@ -1118,6 +1052,13 @@ function Real2frame(t,fps)
     h,m,s,ms = tonumber(h),tonumber(m),tonumber(s),tonumber(ms)
     local f = (ms+s*1000+m*60*1000+h*3600*1000)/(1000/fps)
     return round(f)
+end
+
+function Real2NDF(t,fps)
+    local f = Real2frame(t, fps)
+    local FPS_U =math.ceil(fps)
+    local hour,min,sec,frame = math.floor(f/FPS_U/3600),math.floor(f/FPS_U/60)%60,math.floor(f/FPS_U)%60,f%FPS_U
+    return string.format("%02d:%02d:%02d:%02d", hour, min, sec, frame)
 end
 
 function Realadd(t1,t2)
@@ -1183,8 +1124,10 @@ function copylargefile(source, destination)
     destinationfile:close()
 end
 
-function round(x)
-    return math.floor(x+0.5)
+function length(x1,y1,x2,y2) return math.sqrt((x2-x1)^2+(y2-y1)^2)
+end
+
+function round(x) return math.floor(x+0.5)
 end
 
 function config_read_xml(dialog)
