@@ -9,9 +9,9 @@ magick 0.png -crop 500x50+0+0  +repage -type PaletteMatte -colorspace sRGB -colo
 ]]
 
 script_name="C XML Analyzer"
-script_description="XML Analyzer v1.5.4"
+script_description="XML Analyzer v1.5.5"
 script_author="chaaaaang"
-script_version="1.5.4"
+script_version="1.5.5"
 
 local xmlsimple = require("xmlSimple").newParser()
 local lfs = require "lfs"
@@ -34,7 +34,7 @@ function simulator(subtitle, selected, active)
     local buffer_report = io.open(path_head.."buffer.txt", "w")
 
     local intc,outtc = nil,nil
-    local silence = false
+    local silence1, silence2 = false, false
     local epoch_count = 0
     if events.Event[event_count]["@InTC"]=="00:00:00:00" then 
         epoch_count,event_count = 1,event_count-1 
@@ -61,7 +61,7 @@ function simulator(subtitle, selected, active)
                 buffer_report:write(string.format("Epoch%d, %d, %.1f%%\n", epoch_count, buffer, buffer/BUFFER_MAX*100))
             end
             data = {} 
-            silence = false
+            silence1, silence2 = false, false
             count,buffer = 0,0
             epoch_count = epoch_count + 1
         end 
@@ -104,9 +104,9 @@ function simulator(subtitle, selected, active)
         end
 
         -- log out
-        if silence==false and count>64 then
+        if silence1==false and count>64 then
             aegisub.log(t_intc..": is too close to the previous frame\n")
-            silence = true
+            silence1 = true
             line.start_time = NDF2ms(t_intc,fps)
             line.end_time = NDF2ms(t_intc,fps)
             line.actor = "G"..epoch_count
@@ -114,9 +114,9 @@ function simulator(subtitle, selected, active)
             subtitle.append(line)
         end
 
-        if silence==false and buffer>BUFFER_MAX then
+        if silence2==false and buffer>BUFFER_MAX then
             aegisub.log(t_intc..": buffer overflow")
-            silence = true
+            silence2 = true
             line.start_time = NDF2ms(t_intc,fps)
             line.end_time = NDF2ms(t_intc,fps)
             line.actor = "G"..epoch_count
@@ -126,7 +126,7 @@ function simulator(subtitle, selected, active)
 
         -- last event break
         if i==event_count then
-            buffer_report:write(epoch_count, string.format("Epoch%d, %d, %.1f%%\n", epoch_count, buffer, buffer/BUFFER_MAX*100))
+            buffer_report:write(string.format("Epoch%d, %d, %.1f%%\n", epoch_count, buffer, buffer/BUFFER_MAX*100))
             break
         end
         aegisub.progress.set(i/event_count*100)
@@ -205,7 +205,8 @@ function borderadder(subtitle, selected, active)
                             line.start_time = NDF2starttime(j[1].i,fps)
                             line.end_time   = NDF2endtime(j[#j].o,fps)
                             line.actor      = "G"..epoch_count
-                            line.text = string.format("{\\an7\\pos(0,0)\\fscx100\\fscy100\\bord1\\shad0\\1aFF\\3aFD\\p1}m %d %d l %d %d %d %d %d %d",l,t,r,t,r,b,l,b)
+                            line.text = string.format("{\\an7\\pos(0,0)\\fscx100\\fscy100\\bord1\\shad0\\1aFF\\3aFD\\p1}m %d %d l %d %d %d %d %d %d",
+                                                      math.max(l,1), math.max(t,1), math.min(r,1919), math.max(t,1), math.min(r,1919), math.min(b,1079), math.max(l,1), math.min(b,1079))
                             subtitle.append(line)
                         end
                     end
@@ -381,7 +382,8 @@ function borderadder(subtitle, selected, active)
                             line.start_time = NDF2starttime(j[1].i,fps)
                             line.end_time   = NDF2endtime(j[#j].o,fps)
                             line.actor      = "G"..epoch_count
-                            line.text = string.format("{\\an7\\pos(0,0)\\fscx100\\fscy100\\bord1\\shad0\\1aFF\\3aFD\\p1}m %d %d l %d %d %d %d %d %d",l,t,r,t,r,b,l,b)
+                            line.text = string.format("{\\an7\\pos(0,0)\\fscx100\\fscy100\\bord1\\shad0\\1aFF\\3aFD\\p1}m %d %d l %d %d %d %d %d %d",
+                                                      math.max(l,1), math.max(t,1), math.min(r,1919), math.max(t,1), math.min(r,1919), math.min(b,1079), math.max(l,1), math.min(b,1079))
                             subtitle.append(line)
                         end
                     end
@@ -718,59 +720,11 @@ function forcetwowindow(subtitle, selected, active)
     if fps==23.976 then fps=24000/1001 
     elseif fps==29.97 then fps=30000/1001 end
 
-    -- -- bat & python
-    -- local batpath = path_head.."forcetwowindow.bat"
-    -- local pysrcpath = aegisub.decode_path("?user").."\\ForceTwoWindow2.py"
-    -- local pydespath = path_head.."ForceTwoWindow2.py"
-    -- local tmpfile = io.open(pysrcpath)
-    -- -- first: py2 + conf + bat2
-    -- if tmpfile~=nil then
-    --     tmpfile:close()
-    --     copyfile(pysrcpath, pydespath, false)
-    --     batpath = path_head.."forcetwowindow.bat"
-    --     local bat2path = path_head.."forcetwowindow2.bat"
-    --     bat2 = io.open(bat2path, "w")
-    --     bat2:write("@echo off\n")
-    --     bat2:write('start cmd /c "python ForceTwoWindow2.py"')
-    --     bat2:close()
-    -- else
-    --     pysrcpath = aegisub.decode_path("?user").."\\ForceTwoWindow.py"
-    --     pydespath = path_head.."ForceTwoWindow.py"
-    --     tmpfile = io.open(pysrcpath)
-    --     -- second: py + bat
-    --     if tmpfile~=nil then
-    --         tmpfile:close()
-    --         copyfile(pysrcpath, pydespath, false)
-    --     else
-    --         -- third: exe + conf
-    --         batpath = path_head.."forcetwowindow.bat"
-    --         pysrcpath = aegisub.decode_path("?user").."\\ForceTwoWindow2.exe"
-    --         pydespath = path_head.."ForceTwoWindow2.exe"
-    --         tmpfile = io.open(pysrcpath)
-    --         local tmpfile2 = io.open(pydespath, "rb")
-    --         if tmpfile~=nil and tmpfile2==nil then
-    --             tmpfile:close()
-    --             os.execute(string.format('copy "%s" "%s"', pysrcpath, pydespath))
-    --         else
-    --             if tmpfile~=nil then tmpfile:close()
-    --             elseif tmpfile2~=nil then tmpfile2:close() end
-    --         end
-    --     end
-    -- end
-    -- local bat = io.open(batpath, "w")
-    -- bat:write("@echo off\n")
-
     -- bat & python
-    local batpath = path_head.."forcetwowindow.bat"
+    local batpath = path_head.."ForceTwoWindow2.conf"
     local bat = io.open(batpath, "w")
     bat:write("@echo off\n")
     local pypath = ""
-    local tmpfile = io.open(aegisub.decode_path("?user").."\\ForceTwoWindow.py")
-    if tmpfile~=nil then
-        tmpfile:close()
-        pypath = path_head.."ForceTwoWindow.py"
-        copyfile(aegisub.decode_path("?user").."\\ForceTwoWindow.py", pypath, false)
-    end
     tmpfile = io.open(aegisub.decode_path("?user").."\\ForceTwoWindow2.exe")
     if tmpfile~=nil then
         tmpfile:close()
