@@ -122,9 +122,12 @@ if __name__ == '__main__':
             im1, im2 = Image.open(inputpath[0]), Image.open(inputpath[1])
             box1 = (u[2], u[3])
             box2 = (u[4], u[5])
-            canvas = Image.new('P', size=(u[0], u[1]), color=(0,0,0,0))
+            im1 = im1.convert('RGBA')
+            im2 = im2.convert('RGBA')
+            canvas = Image.new('RGBA', size=(u[0], u[1]), color=(0, 0, 0, 0))
             canvas.paste(im1, box=box1)
             canvas.paste(im2, box=box2)
+            canvas = canvas.convert('P', colors=256)
 
             box1 = (crops[0], crops[1], crops[2], crops[3])
             im1  = canvas.crop(box1)
