@@ -11,6 +11,7 @@
     ],
     "Lua.diagnostics.disable": [
         "lowercase-global",
-        "trailing-space"
+        "trailing-space",
+        "need-check-nil"
     ]
 }
