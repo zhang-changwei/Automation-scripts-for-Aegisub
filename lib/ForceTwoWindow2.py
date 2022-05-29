@@ -6,6 +6,7 @@ import re
 # parser.add_argument("-m","--mode", type=int, default=0, help="0: crop and convert, 1: merge, 2: convert only")
 # parser.add_argument("-c","--crop", type=int, nargs="+")
 # parser.add_argument("-u","--unite",type=int, nargs=6, help="x,y,posx1,posy1,posx2,posy2")
+# I have to use pillow 8.2.0 here, they may change the api of palette, it leads to some wired problem.
 
 class Palette:
     

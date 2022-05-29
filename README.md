@@ -13,9 +13,9 @@
     | C Fast Tools                    | v1.2.1  |
     | C Font Resize (Mocha Deshaking) | v1.3    |
     | C Gradient                      | v2.2    |
-    | C Merge Bilingual SUBS          | v1.2    |
     | C Jump                          | v1.0    |
-    | C Picture Tracker               | v1.4.1  |
+    | C Merge Bilingual SUBS          | v1.2    |
+    | C Picture Tracker (将废弃)      | v1.4.1  |
     | C Translation                   | v3.2.1  |
     | C Utilities                     | v1.7.5  |
     <!-- | C XML Analyzer                  | v1.5.2  | -->
@@ -26,6 +26,8 @@
     + 将LUA脚本复制到`C:\Program Files (x86)\Aegisub\automation\autoload`路径下，或你的Aegisub安装位置
     + 在 Aegisub Automation 项中可以发现添加的脚本  
     + 可以在`option`中将脚本与热键绑定，建议以脚本首字母绑定热键，方便记忆
+* __脚本更新器__  
+    + 用于更新、下载脚本本体，具体见[https://github.com/zhang-changwei/Automation-scripts-Puller](https://github.com/zhang-changwei/Automation-scripts-Puller)
 * __脚本依赖关系__
     + `C Picture Tracker & C Utilities > AE Importer > crop`依赖`imagemagick`，需自行下载，地址[https://imagemagick.org/](https://imagemagick.org/)
     + `C Effect & C Utilities`脚本部分功能依赖`Yutils`库，请先安装相关组件，传送门[https://github.com/Youka/Yutils](https://github.com/Youka/Yutils)，感谢原作者。
