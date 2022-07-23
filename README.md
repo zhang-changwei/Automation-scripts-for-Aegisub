@@ -15,7 +15,6 @@
     | C Gradient                      | v2.2    |
     | C Jump                          | v1.0    |
     | C Merge Bilingual SUBS          | v1.2    |
-    | C Picture Tracker (将废弃)      | v1.4.1  |
     | C Translation                   | v3.2.1  |
     | C Utilities                     | v1.7.5  |
     <!-- | C XML Analyzer                  | v1.5.2  | -->
@@ -29,9 +28,9 @@
 * __脚本更新器__  
     + 用于更新、下载脚本本体，具体见[https://github.com/zhang-changwei/Automation-scripts-Puller](https://github.com/zhang-changwei/Automation-scripts-Puller)
 * __脚本依赖关系__
-    + `C Picture Tracker & C Utilities > AE Importer > crop`依赖`imagemagick`，需自行下载，地址[https://imagemagick.org/](https://imagemagick.org/)
+    + `C Utilities > AE Importer > crop`依赖`imagemagick`，需自行下载，地址[https://imagemagick.org/](https://imagemagick.org/)
     + `C Effect & C Utilities`脚本部分功能依赖`Yutils`库，请先安装相关组件，传送门[https://github.com/Youka/Yutils](https://github.com/Youka/Yutils)，感谢原作者。
-    + `C Picture Tracker & C Effect`脚本依赖`xmlSimple`库，原作者[https://github.com/Cluain/Lua-Simple-XML-Parser](https://github.com/Cluain/Lua-Simple-XML-Parser)，本人作了一点修改，存放在`lib`文件夹下，将该文件放置在`C:\Program Files (x86)\Aegisub\automation\include\`目录下即可正常使用。
+    + `C Effect`脚本依赖`xmlSimple`库，原作者[https://github.com/Cluain/Lua-Simple-XML-Parser](https://github.com/Cluain/Lua-Simple-XML-Parser)，本人作了一点修改，存放在`lib`文件夹下，将该文件放置在`C:\Program Files (x86)\Aegisub\automation\include\`目录下即可正常使用。
     <!-- + `lib`目录下`0.png`，`00000000.png`，`ForceTwoWindow.py`为`C XML Analyzer`配套工具，请放置在`C:\Users\?\AppData\Roaming\Aegisub\`目录下。 -->
 * __该仓库本人长期维护，欢迎star与fork。__  
 * __cheatsheet每次发布release时更新__
@@ -45,6 +44,7 @@
 ## __更新日志__
 | Date | Script | Version | Detail |
 |------|--------|---------|--------|
+|2022.7.23|C Picture Tracker||废弃|
 |2022.3.13|C Merge Bilingual|1.2|增加一个更加智能的双语合并器|
 |2022.1.8|C Utilities|1.7.5|Dialog Checker 时间轴重叠功能改进|
 |2022.1.1|C Translation|3.2.1|美化界面，完善功能|

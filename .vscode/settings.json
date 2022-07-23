@@ -13,5 +13,6 @@
         "lowercase-global",
         "trailing-space",
         "need-check-nil"
-    ]
+    ],
+    "Lua.workspace.checkThirdParty": false
 }
