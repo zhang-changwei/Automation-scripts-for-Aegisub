@@ -1,5 +1,5 @@
 # Automation-scripts-for-Aegisub
-![Aegisub](https://img.shields.io/badge/Aegisub-3.2.2-blue)  
+[![Aegisub](https://img.shields.io/badge/Aegisub-3.2.2-blue)](https://github.com/Aegisub/Aegisub/releases/tag/v3.2.2)
 ![GitHub last commit](https://img.shields.io/github/last-commit/zhang-changwei/Automation-scripts-for-Aegisub)
 ![GitHub all releases](https://img.shields.io/github/downloads/zhang-changwei/Automation-scripts-for-Aegisub/total)
 ![GitHub](https://img.shields.io/github/license/zhang-changwei/Automation-scripts-for-Aegisub)
