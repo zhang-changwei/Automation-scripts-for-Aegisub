@@ -1,4 +1,10 @@
 # Automation-scripts-for-Aegisub
+![Aegisub](https://img.shields.io/badge/Aegisub-3.2.2-blue)  
+![GitHub last commit](https://img.shields.io/github/last-commit/zhang-changwei/Automation-scripts-for-Aegisub)
+![GitHub all releases](https://img.shields.io/github/downloads/zhang-changwei/Automation-scripts-for-Aegisub/total)
+![GitHub](https://img.shields.io/github/license/zhang-changwei/Automation-scripts-for-Aegisub)
+![GitHub Repo stars](https://img.shields.io/github/stars/zhang-changwei/Automation-scripts-for-Aegisub?style=social)
+
 ## __目录__
   - [__前言__](#前言)
   - [__使用方法__](#使用方法)
