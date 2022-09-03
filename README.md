@@ -14,7 +14,7 @@
 * __当前各脚本版本信息__
     | Name                            | Version |
     |---------------------------------|---------|
-    | C Change SUB resolution to match video PATCH | v1.2 |
+    | C Change SUB resolution to match video PATCH | v1.3 |
     | C Effect                        | v1.6    |
     | C Fast Tools                    | v1.2.1  |
     | C Font Resize (Mocha Deshaking) | v1.3    |
@@ -27,12 +27,14 @@
     > 在Automation Manager > Description栏中查看脚本版本信息  
     > 第二位数字表示较为重要的更新，如重要功能增加、重大bug修复等  
     > 第三位数字表示小更新
+* __下载方式__
+    + [![Download](https://img.shields.io/badge/点此下载-orange)](https://github.com/zhang-changwei/Automation-scripts-for-Aegisub/archive/refs/heads/main.zip) 会用Github的请略。
 * __使用方法__
     + 将LUA脚本复制到`C:\Program Files (x86)\Aegisub\automation\autoload`路径下，或你的Aegisub安装位置
     + 在 Aegisub Automation 项中可以发现添加的脚本  
     + 可以在`option`中将脚本与热键绑定，建议以脚本首字母绑定热键，方便记忆
-* __脚本更新器__  
-    + 用于更新、下载脚本本体，具体见[https://github.com/zhang-changwei/Automation-scripts-Puller](https://github.com/zhang-changwei/Automation-scripts-Puller)
+* __汉化版__
+    + 仓库地址链接 [![Chinese](https://img.shields.io/badge/汉化版-red)](https://github.com/zhang-changwei/Automation-scripts-for-Aegisub-Chinese)，感谢@章鱼哥的汉化。
 * __脚本依赖关系__
     + `C Utilities > AE Importer > crop`依赖`imagemagick`，需自行下载，地址[https://imagemagick.org/](https://imagemagick.org/)
     + `C Effect & C Utilities`脚本部分功能依赖`Yutils`库，请先安装相关组件，传送门[https://github.com/Youka/Yutils](https://github.com/Youka/Yutils)，感谢原作者。
@@ -50,6 +52,7 @@
 ## __更新日志__
 | Date | Script | Version | Detail |
 |------|--------|---------|--------|
+|2022.9.3|C Change SUB resolution to match video PATCH|1.3|增加舍入至3位小数|
 |2022.7.23|C Picture Tracker||废弃|
 |2022.3.13|C Merge Bilingual|1.2|增加一个更加智能的双语合并器|
 |2022.1.8|C Utilities|1.7.5|Dialog Checker 时间轴重叠功能改进|
