@@ -34,7 +34,7 @@ local dialog_config={
     {class="dropdown",name="o",items={"384x288","640x480","720x480","800x480","1024x576","1280x720","1440x810","1920x1080","3840x2160","7680x4320"},value="1920x1080",x=1,y=1},
     {class="checkbox",name="e",label="scale \\blur, \\be, \\bord and \\shad",value=false,x=0,y=2,width=2,hint="recommend: off"},
     {class="checkbox",name="p",label="scale \\1img",value=false,x=0,y=3},
-    {class="label",label="     SUB Resolution\n            Reset v1.2",x=1,y=3,height=2}
+    {class="label",label="     SUB Resolution\n            Reset v1.3",x=1,y=3,height=2}
 }
 local buttons={"Run","Quit"}
 

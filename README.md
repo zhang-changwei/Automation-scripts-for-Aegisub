@@ -15,6 +15,7 @@
     | Name                            | Version |
     |---------------------------------|---------|
     | C Change SUB resolution to match video PATCH | v1.3 |
+    | C Color Calibration             | v1.2    |
     | C Effect                        | v1.6    |
     | C Fast Tools                    | v1.2.1  |
     | C Font Resize (Mocha Deshaking) | v1.3    |
@@ -52,6 +53,7 @@
 ## __更新日志__
 | Date | Script | Version | Detail |
 |------|--------|---------|--------|
+|2022.9.5|C Color Calibration|1.2|HDR->SDR|
 |2022.9.3|C Change SUB resolution to match video PATCH|1.3|增加舍入至3位小数|
 |2022.7.23|C Picture Tracker||废弃|
 |2022.3.13|C Merge Bilingual|1.2|增加一个更加智能的双语合并器|
