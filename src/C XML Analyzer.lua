@@ -1,21 +1,204 @@
 --[[
-README:
-
-goto my repository https://github.com/zhang-changwei/Automation-scripts-for-Aegisub for the latest version
-magick 0.png -crop 500x50+0+0  +repage -type PaletteMatte -colorspace sRGB -colors 256 -define colorspace:auto-grayscale=false 1.png
--define png:color-type=3 -set colorspace:auto-grayscale=false
- magick identify -verbose 1.png
-
 ]]
 
 script_name="C XML Analyzer"
-script_description="XML Analyzer v1.5.5"
+script_description="XML Analyzer v1.6"
 script_author="chaaaaang"
-script_version="1.5.5"
+script_version="1.6"
 
 local xmlsimple = require("xmlSimple").newParser()
-local lfs = require "lfs"
 local clipboard = require("aegisub.clipboard")
+
+-- ########### Frame #############
+
+local function frame2starttime(frame,fps)
+    local t = 1000/fps
+    return math.floor((frame*t - t/2)/10)*10
+end
+local function frame2endtime(frame,fps)
+    local t = 1000/fps
+    return math.floor((frame*t + t/2)/10)*10
+end
+local function frame2NDF(f, fps)
+    local FPS_U =math.ceil(fps)
+    local hour,min,sec,frame = math.floor(f/FPS_U/3600),math.floor(f/FPS_U/60)%60,math.floor(f/FPS_U)%60,f%FPS_U
+    return string.format("%02d:%02d:%02d:%02d", hour, min, sec, frame)
+end
+
+-- ########### NDF #############
+
+local function NDF2frame(t,fps)
+    local h,m,s,ms = t:match("(%d+):(%d%d):(%d%d):(%d%d)")
+    h,m,s,ms = tonumber(h),tonumber(m),tonumber(s),tonumber(ms)
+    return ms + s*math.ceil(fps) + m*60*math.ceil(fps) + h*3600*math.ceil(fps)
+end
+-- -> double
+local function NDF2ms(t,fps)
+    local f = NDF2frame(t, fps)
+    return f*1000/fps
+end
+local function NDF2real(t,fps)
+    local tinms = NDF2ms(t,fps)
+    tinms = round(tinms)
+    local h,m,s,ms = math.floor(tinms/1000/3600),math.floor(tinms/1000/60)%60,math.floor(tinms/1000)%60,tinms%1000
+    return string.format("%d:%02d:%02d.%03d",h,m,s,ms)
+end
+local function NDF2starttime(t,fps)
+    local f = NDF2frame(t,fps)
+    return frame2starttime(f,fps)
+end
+local function NDF2endtime(t,fps)
+    local f = NDF2frame(t,fps) - 1
+    return frame2endtime(f,fps)
+end
+
+local function NDFadd(t1,t2,fps)
+    f1 = NDF2frame(t1, fps)
+    f2 = NDF2frame(t2, fps)
+    f  = f1 + f2
+    return frame2NDF(f, fps)
+end
+-- t1 - t2 -> NDF
+local function NDFminus(t1,t2,fps)
+    f1 = NDF2frame(t1, fps)
+    f2 = NDF2frame(t2, fps)
+    f  = f1 - f2
+    return frame2NDF(f, fps)
+end
+-- a<b -> -1; a=b -> 0; a>b -> 1
+local function NDFcompare(a,b)
+    local t1 = a:gsub(":", "")
+    local t2 = b:gsub(":", "")
+    t1, t2 = tonumber(t1), tonumber(t2)
+    if t1 < t2 then return -1
+    elseif t1 > t2 then return 1
+    else return 0
+    end
+end
+
+-- ########### Real #############
+
+local function Real2frame(t,fps)
+    local h,m,s,ms = t:match("(%d+):(%d%d):(%d%d)%.(%d%d%d)")
+    h,m,s,ms = tonumber(h),tonumber(m),tonumber(s),tonumber(ms)
+    local f = (ms+s*1000+m*60*1000+h*3600*1000)/(1000/fps)
+    return round(f)
+end
+
+local function Real2NDF(t,fps)
+    local f = Real2frame(t, fps)
+    local FPS_U =math.ceil(fps)
+    local hour,min,sec,frame = math.floor(f/FPS_U/3600),math.floor(f/FPS_U/60)%60,math.floor(f/FPS_U)%60,f%FPS_U
+    return string.format("%02d:%02d:%02d:%02d", hour, min, sec, frame)
+end
+
+local function Realadd(t1,t2)
+    local h1,m1,s1,ms1 = t1:match("(%d+):(%d%d):(%d%d)%.(%d%d%d)")
+    local h2,m2,s2,ms2 = t2:match("(%d+):(%d%d):(%d%d)%.(%d%d%d)")
+    h1,m1,s1,ms1 = tonumber(h1),tonumber(m1),tonumber(s1),tonumber(ms1)
+    h2,m2,s2,ms2 = tonumber(h2),tonumber(m2),tonumber(s2),tonumber(ms2)
+    local temp1,temp2,temp3 = 0,0,0
+    if ms1+ms2>=1000 then temp1=1 end
+    ms1 = (ms1+ms2)%1000
+    if s1+s2+temp1>=60 then temp2=1 end
+    s1 = (s1+s2+temp1)%60
+    if m1+m2+temp2>=60 then temp3=1 end
+    m1 = (m1+m2+temp2)%60
+    h1 = (h1+h2+temp3)
+    return string.format("%d:%02d:%02d.%03d",h1,m1,s1,ms1)
+end
+
+local function Realminus(t1,t2)
+    local h1,m1,s1,ms1 = t1:match("(%d+):(%d%d):(%d%d)%.(%d%d%d)")
+    local h2,m2,s2,ms2 = t2:match("(%d+):(%d%d):(%d%d)%.(%d%d%d)")
+    h1,m1,s1,ms1 = tonumber(h1),tonumber(m1),tonumber(s1),tonumber(ms1)
+    h2,m2,s2,ms2 = tonumber(h2),tonumber(m2),tonumber(s2),tonumber(ms2)
+    local temp1,temp2,temp3 = 0,0,0
+    if ms1-ms2<0 then temp1=1 end
+    ms1 = (ms1-ms2+1000)%1000
+    if s1-s2-temp1<0 then temp2=1 end
+    s1 = (s1-s2-temp1+60)%60
+    if m1-m2-temp2<0 then temp3=1 end
+    m1 = (m1-m2-temp2+60)%60
+    h1 = (h1-h2-temp3)
+    return string.format("%d:%02d:%02d.%03d",h1,m1,s1,ms1)
+end
+
+-- ########### Misc #############
+
+local function fpsgen()
+	local f = 10000
+	if aegisub.ms_from_frame(f)==nil then return 23.976 end
+	local t = (aegisub.ms_from_frame(f)+aegisub.ms_from_frame(f+1))/2
+	local fps = f/t*1000
+	return round(fps*1000)/1000
+end
+
+local function copyfile(source, destination, byte)
+    local sourcefile, destinationfile
+    if byte==true then
+        sourcefile = io.open(source, "rb")
+        destinationfile = io.open(destination, "wb")
+    else
+        sourcefile = io.open(source, "r")
+        destinationfile = io.open(destination, "w")
+    end
+    destinationfile:write(sourcefile:read("*all"))
+    sourcefile:close()
+    destinationfile:close()
+end
+
+local function str2bool(str)
+    if str=="true" then return true
+    else return false end
+end
+local function bool2str(bool)
+    if bool==true then return "true"
+    else return "false" end
+end
+
+local function config_read_xml(dialog)
+    local path = aegisub.decode_path("?user").."\\xmlanalyzer_config.xml"
+    local file = io.open(path, "r")
+    if file~=nil then
+        file:close()
+        local config = require("xmlSimple").newParser():loadFile(path)
+        for si,li in ipairs(dialog) do
+            for sj,lj in pairs(li) do
+                if sj=="class" and lj~="label" then
+                    local name = li.name
+                    local item = config.Config[name]
+                    if item["@Type"]=="boolean" then 
+                        dialog[si].value = str2bool(item["@Value"])
+                    elseif item["@Type"]=="number" then 
+                        dialog[si].value = tonumber(item["@Value"])
+                    elseif item["@Type"]=="string" then 
+                        dialog[si].value = item["@Value"]
+                    end
+                    break
+                end
+            end
+        end
+    else
+        return nil
+    end
+end
+local function config_write_xml(result)
+    local path = aegisub.decode_path("?user").."\\xmlanalyzer_config.xml"
+    local file = io.open(path, "w")
+    file:write('<?xml version="1.0" encoding="UTF-8"?>\n<Config>\n')
+    for key,value in pairs(result) do
+        if type(value)=="boolean" then 
+            file:write(string.format('<%s Type="%s" Value="%s"/>\n', key, type(value), bool2str(value)))
+        else
+            file:write(string.format('<%s Type="%s" Value="%s"/>\n', key, type(value), value))
+        end
+    end
+    file:write('</Config>')
+    file:close()
+end
+
+-- ########### Main #############
 
 function simulator(subtitle, selected, active)
 	local path = aegisub.dialog.open('XML Analyzer', '', '', 'XML files (.xml)|*.xml|All Files (.)|.', false, true)
@@ -24,10 +207,9 @@ function simulator(subtitle, selected, active)
     local events = xml.BDN.Events
     local N = #subtitle + 1
 
-    -- local event_count = xml.BDN.Description.Events["@NumberofEvents"]
     local event_count = #events.Event
     local fps = xml.BDN.Description.Format["@FrameRate"]
-    event_count,fps = tonumber(event_count),tonumber(fps)
+    fps = tonumber(fps)
     if fps==23.976 then fps=24000/1001 
     elseif fps==29.97 then fps=30000/1001 end
 
@@ -165,10 +347,9 @@ function borderadder(subtitle, selected, active)
         man_endtime   = math.max(man_endtime,   subtitle[li].end_time)
     end
 
-    -- local event_count = xml.BDN.Description.Events["@NumberofEvents"]
     local event_count = #events.Event
     local fps = xml.BDN.Description.Format["@FrameRate"]
-    event_count,fps = tonumber(event_count),tonumber(fps)
+    fps = tonumber(fps)
     if fps==23.976 then fps=24000/1001 
     elseif fps==29.97 then fps=30000/1001 end
 
@@ -443,12 +624,11 @@ function slicecutter(subtitle, selected, active)
     local xml = xmlsimple:loadFile(path)
     local events = xml.BDN.Events
 
-    -- local event_count = xml.BDN.Description.Events["@NumberofEvents"]
     local event_count = #events.Event
     local fps = xml.BDN.Description.Format["@FrameRate"]
     local title = xml.BDN.Description.Name["@Title"]
     local video_format = xml.BDN.Description.Format["@VideoFormat"]
-    event_count,fps = tonumber(event_count),tonumber(fps)
+    fps = tonumber(fps)
     local FPS = fps
     if fps==23.976 then fps=24000/1001 
     elseif fps==29.97 then fps=30000/1001 end
@@ -707,7 +887,7 @@ function dialogpuller(subtitle, selected, active)
     end
 end
 
-function forcetwowindow(subtitle, selected, active)
+function forced_window(subtitle, selected, active)
     local path = aegisub.dialog.open('XML Analyzer', '', '', 'XML files (.xml)|*.xml|All Files (.)|.', false, true)
     local path_head = path:gsub("[^\\]*%.xml$","") -- E:\\XXX\\
     local path_new = path:gsub("%.xml$","_FTW.xml")
@@ -716,20 +896,18 @@ function forcetwowindow(subtitle, selected, active)
     local events = BDNHandler.BDN.Events
     local event_count = #events.Event
     local fps = BDNHandler.BDN.Description.Format["@FrameRate"]
-    event_count,fps = tonumber(event_count),tonumber(fps)
+    fps = tonumber(event_count)
     if fps==23.976 then fps=24000/1001 
     elseif fps==29.97 then fps=30000/1001 end
 
-    -- bat & python
-    local batpath = path_head.."ForceTwoWindow2.conf"
-    local bat = io.open(batpath, "w")
-    bat:write("@echo off\n")
-    local pypath = ""
-    tmpfile = io.open(aegisub.decode_path("?user").."\\ForceTwoWindow2.exe")
+    -- conf & python
+    local conf_path = path_head.."ForcedWindow.conf"
+    local conf_table = {}
+    tmpfile = io.open(aegisub.decode_path("?user").."\\ForcedWindow.exe")
     if tmpfile~=nil then
         tmpfile:close()
-        pypath = path_head.."ForceTwoWindow2.exe"
-        pypathdata = aegisub.decode_path("?user").."\\ForceTwoWindow2.exe"
+        pypath = path_head.."ForcedWindow.exe"
+        pypathdata = aegisub.decode_path("?user").."\\ForcedWindow.exe"
         os.execute(string.format('copy "%s" "%s"', pypathdata, pypath))
     end
 
@@ -741,7 +919,7 @@ function forcetwowindow(subtitle, selected, active)
     -- ass part
     local rule_table = {}
     for si, li in ipairs(selected) do
-        if subtitle[li].comment==false and subtitle[li].actor=="FTW" then
+        if subtitle[li].comment==false then
             local line = subtitle[li]
             local x1,y1,x2,y2,x3,y3 = line.text:match("m +([%d%.]+) +([%d%.]+) +l +([%d%.]+) +([%d%.]+)[l ]+([%d%.]+) +([%d%.]+)")
             x1,x2,y1,y2 = math.min(x1,x2,x3),math.max(x1,x2,x3),math.min(y1,y2,y3),math.max(y1,y2,y3)
@@ -757,29 +935,24 @@ function forcetwowindow(subtitle, selected, active)
         local graphics = events.Event[i].Graphic
         if #graphics<2 then
             local newgraphics = {} -- for xml
-            local pngi = 1
+            local pngi = 0
             local png
-            local pngnew = {} -- for python
-            local cropinfo = {}
             for si,ri in ipairs(rule_table) do
                 if NDF2frame(t_intc, fps)<ri.o and NDF2frame(t_outtc, fps)>ri.i then
                     local tx,ty,tw,th = graphics["@X"], graphics["@Y"], graphics["@Width"], graphics["@Height"]
                     tx,ty,tw,th = tonumber(tx),tonumber(ty),tonumber(tw),tonumber(th)
         
-                    local l,t,r,b = math.max(ri.l,tx), math.max(ri.t,ty), math.min(ri.r,tx+tw), math.min(ri.b,ty+th) -- box
-                    if r>l and b>t then
+                    if ri.r > tx and ri.b > ty and ri.l < tx+tw and ri.t < ty+th then
                         png = graphics:value()
                         local png1 = png:gsub("%.png$","_"..pngi..".png")
-                        if pngi==3 then aegisub.log("3 windows in one frame") aegisub.cancel() end
+                        if pngi==2 then aegisub.log("3 windows in one frame") aegisub.cancel() end
                         pngi = pngi + 1
             
-                        -- local cmd = string.format("magick %s -crop %dx%d+%d+%d +repage -type PaletteMatte -colorspace sRGB -colors 256 -depth 8 %s", png_path, r-l, b-t, l-tx, t-ty, png1_path)
-                        table.insert(pngnew, png1)
-                        table.insert(cropinfo, l-tx)
-                        table.insert(cropinfo, t-ty)
-                        table.insert(cropinfo, r-tx)
-                        table.insert(cropinfo, b-ty)
-                        table.insert(newgraphics, {_attr={Width=r-l,Height=b-t,X=l,Y=t}, png1})
+                        local info = string.format('<Output Width="%d" Height="%d" X="%d" Y="%d" Name="%s">\n', ri.r-ri.l, ri.b-ri.t, ri.l, ri.t, png1) ..
+                            string.format('<Input Width="%d" Height="%d" X="%d" Y="%d" Name="%s"></Input>\n', tw, th, tx, ty, png) ..
+                            '</Output>\n'
+                        table.insert(conf_table, info)
+                        table.insert(newgraphics, {_attr={Width=ri.r-ri.l,Height=ri.b-ri.t,X=ri.l,Y=ri.t}, png1})
                     end
                 end
             end           
@@ -792,53 +965,41 @@ function forcetwowindow(subtitle, selected, active)
                     end
                     return graphicsstr
                 end)
-                local cmd = string.format("python ForceTwoWindow.py -i %s -o %s -c %s", png, table.concat(pngnew," "), table.concat(cropinfo," "))
-                bat:write(string.format("start cmd /c \"%s\"\n", cmd))
             end
         else
             local newgraphics = {}
-            local pngi = 1
+            local pngi = 0
             local png, pnga, pngb
             local tx,ty,tw,th,Tx,Ty,Tw,Th
-            local pngnew = {}
-            local cropinfo = {}
-            local png_frame, L,T,R,B
             for si,ri in ipairs(rule_table) do
                 if NDF2frame(t_intc, fps)<ri.o and NDF2frame(t_outtc, fps)>ri.i then
                     if pngi==1 then
                         tx,ty,tw,th = graphics[1]["@X"], graphics[1]["@Y"], graphics[1]["@Width"], graphics[1]["@Height"]
                         tx,ty,tw,th = tonumber(tx),tonumber(ty),tonumber(tw),tonumber(th)
-                        L,T,R,B = tx,ty,tx+tw,ty+th
                         Tx,Ty,Tw,Th = graphics[2]["@X"], graphics[2]["@Y"], graphics[2]["@Width"], graphics[2]["@Height"]
                         Tx,Ty,Tw,Th = tonumber(Tx),tonumber(Ty),tonumber(Tw),tonumber(Th)
-                        L,T,R,B = math.min(L,Tx), math.min(T,Ty), math.max(R,Tx+Tw), math.max(B,Ty+Th)
 
                         pnga, pngb = graphics[1]:value(), graphics[2]:value()
                         png = pnga:gsub("_%d%.png$", "_0_0.png")
-                        png_frame = pnga:gsub("_%d%.png$", "")
-                        -- local cmd = string.format("magick convert -size %dx%d -strip xc:none %s -geometry +%d+%d -composite %s -geometry +%d+%d -composite %s",
-                        --     R-L, B-T, pnga_path, tx-L, ty-T, pngb_path, Tx-L,Ty-T, png_path)
                     end
 
                     local png1 = png:gsub("%d%.png$", pngi..".png")
 
-                    local l,t,r,b = math.max(ri.l,L), math.max(ri.t,T), math.min(ri.r,R), math.min(ri.b,B) -- box
-                    if r>l and b>t then
-                        -- local cmd = string.format("magick %s -crop %dx%d+%d+%d +repage -type PaletteMatte -colorspace sRGB -colors 256 -depth 8 %s", png_path, r-l, b-t, l-L, t-T, png1_path)
-                        table.insert(pngnew, png1)
-                        table.insert(cropinfo, l-L)
-                        table.insert(cropinfo, t-T)
-                        table.insert(cropinfo, r-L)
-                        table.insert(cropinfo, b-T)
-                        table.insert(newgraphics, {_attr={Width=r-l,Height=b-t,X=l,Y=t}, png_frame.."_0_"..pngi..".png"})
+                    if (ri.r > tx and ri.b > ty and ri.l < tx+tw and ri.t < ty+th) or (ri.r > Tx and ri.b > Ty and ri.l < Tx+Tw and ri.t < Ty+Th) then
+                        local info = string.format('<Output Width="%d" Height="%d" X="%d" Y="%d" Name="%s">\n', ri.r-ri.l, ri.b-ri.t, ri.l, ri.t, png1) ..
+                            string.format('<Input Width="%d" Height="%d" X="%d" Y="%d">%s</Input>\n', tw, th, tx, ty, pnga) ..
+                            string.format('<Input Width="%d" Height="%d" X="%d" Y="%d">%s</Input>\n', Tw, Th, Tx, Ty, pngb) ..
+                            '</Output>\n'
+                        table.insert(conf_table, info)
+                        table.insert(newgraphics, {_attr={WWidth=ri.r-ri.l,Height=ri.b-ri.t,X=ri.l,Y=ri.t}, png1})
 
-                        if pngi==3 then aegisub.log("3 windows in one frame") aegisub.cancel() end
+                        if pngi==2 then aegisub.log("3 windows in one frame") aegisub.cancel() end
                         pngi = pngi + 1
                     end
                 end
             end
             if #newgraphics~=0 then
-                xmlFTW = xmlFTW:gsub('<Graphic[^\n]+'..png_frame..'_0%.png</Graphic>\n[^\n]*<Graphic[^\n]+'..png_frame..'_1%.png</Graphic>\n', function() 
+                xmlFTW = xmlFTW:gsub('<Graphic[^\n]+'..pnga..'</Graphic>\n[^\n]*<Graphic[^\n]+'..pngb..'</Graphic>\n', function() 
                     local graphicsstr = ""
                     for sj,gj in ipairs(newgraphics) do
                         graphicsstr = graphicsstr..string.format('<Graphic Width="%d" Height="%d" X="%d" Y="%d">%s</Graphic>\n',
@@ -846,23 +1007,20 @@ function forcetwowindow(subtitle, selected, active)
                     end
                     return graphicsstr
                 end)
-                local cmd = string.format("python ForceTwoWindow.py -i %s -o %s -c %s -m 1 -u %d %d %d %d %d %d", 
-                    pnga.." "..pngb, table.concat(pngnew," "), table.concat(cropinfo," "), R-L, B-T, tx-L, ty-T, Tx-L, Ty-T)
-                bat:write(string.format("start cmd /c \"%s\"\n", cmd))
             end
         end
         aegisub.progress.set(i/event_count*100)
     end
 
-    -- run bat
-    bat:close()
-    -- os.execute(batpath)
-    -- os.remove(batpath)
-    -- os.remove(pypath)
-
+    conffile = io.open(conf_path, 'r')
+    conffile:write('<ForcedWindow>\n')
+    conffile:write(table.concat(conf_table, ''))
+    conffile:write('</ForcedWindow>\n')
+    conffile:close()
     xmlFTWfile:write(xmlFTW)
     xmlFTWfile:close()
-    aegisub.log("Succeed!\nIf you get nothing, check whether your actor is FTW.")
+
+    aegisub.log("Succeed!")
     return selected
 end
 
@@ -914,220 +1072,16 @@ function ptINsquare(posx,posy,x,y,w,h)
     end
 end
 
-function fpsgen()
-	local f = 10000
-	if aegisub.ms_from_frame(f)==nil then return 23.976 end
-	local t = (aegisub.ms_from_frame(f)+aegisub.ms_from_frame(f+1))/2
-	-- f = t/(1000/fps) = t/1000*fps
-	local fps = f/t*1000
-	return round(fps*1000)/1000
-end
-
--- NDF 2 Real time (ms)
-function NDF2ms(t,fps)
-    local f = NDF2frame(t, fps)
-    return f*1000/fps
-end
-
-function NDFadd(t1,t2,fps)
-    f1 = NDF2frame(t1, fps)
-    f2 = NDF2frame(t2, fps)
-    f  = f1 + f2
-    return frame2NDF(f, fps)
-end
--- t1 - t2
-function NDFminus(t1,t2,fps)
-    f1 = NDF2frame(t1, fps)
-    f2 = NDF2frame(t2, fps)
-    f  = f1 - f2
-    return frame2NDF(f, fps)
-end
--- a<b -> -1; a=b -> 0; a>b -> 1
-function NDFcompare(a,b)
-    local t1 = a:gsub(":", "")
-    local t2 = b:gsub(":", "")
-    t1, t2 = tonumber(t1), tonumber(t2)
-    if t1<t2 then return -1
-    elseif t1>t2 then return 1
-    else return 0
-    end
-end
-
-function frame2starttime(frame,fps)
-    local t = 1000/fps
-    return math.floor((frame*t - t/2)/10)*10
-end
-function frame2endtime(frame,fps)
-    local t = 1000/fps
-    return math.floor((frame*t + t/2)/10)*10
-end
-function NDF2starttime(t,fps)
-    local f = NDF2frame(t,fps)
-    return frame2starttime(f,fps)
-end
-function NDF2endtime(t,fps)
-    local f = NDF2frame(t,fps) - 1
-    return frame2endtime(f,fps)
-end
-
-function NDF2frame(t,fps)
-    local h,m,s,ms = t:match("(%d+):(%d%d):(%d%d):(%d%d)")
-    h,m,s,ms = tonumber(h),tonumber(m),tonumber(s),tonumber(ms)
-    return ms + s*math.ceil(fps) + m*60*math.ceil(fps) + h*3600*math.ceil(fps)
-end
-
-function NDF2real(t,fps)
-    local tinms = NDF2ms(t,fps)
-    tinms = round(tinms)
-    local h,m,s,ms = math.floor(tinms/1000/3600),math.floor(tinms/1000/60)%60,math.floor(tinms/1000)%60,tinms%1000
-    return string.format("%d:%02d:%02d.%03d",h,m,s,ms)
-end
-
-function frame2NDF(f, fps)
-    local FPS_U =math.ceil(fps)
-    local hour,min,sec,frame = math.floor(f/FPS_U/3600),math.floor(f/FPS_U/60)%60,math.floor(f/FPS_U)%60,f%FPS_U
-    return string.format("%02d:%02d:%02d:%02d", hour, min, sec, frame)
-end
-
-function Real2frame(t,fps)
-    local h,m,s,ms = t:match("(%d+):(%d%d):(%d%d)%.(%d%d%d)")
-    h,m,s,ms = tonumber(h),tonumber(m),tonumber(s),tonumber(ms)
-    local f = (ms+s*1000+m*60*1000+h*3600*1000)/(1000/fps)
-    return round(f)
-end
-
-function Real2NDF(t,fps)
-    local f = Real2frame(t, fps)
-    local FPS_U =math.ceil(fps)
-    local hour,min,sec,frame = math.floor(f/FPS_U/3600),math.floor(f/FPS_U/60)%60,math.floor(f/FPS_U)%60,f%FPS_U
-    return string.format("%02d:%02d:%02d:%02d", hour, min, sec, frame)
-end
-
-function Realadd(t1,t2)
-    local h1,m1,s1,ms1 = t1:match("(%d+):(%d%d):(%d%d)%.(%d%d%d)")
-    local h2,m2,s2,ms2 = t2:match("(%d+):(%d%d):(%d%d)%.(%d%d%d)")
-    h1,m1,s1,ms1 = tonumber(h1),tonumber(m1),tonumber(s1),tonumber(ms1)
-    h2,m2,s2,ms2 = tonumber(h2),tonumber(m2),tonumber(s2),tonumber(ms2)
-    local temp1,temp2,temp3 = 0,0,0
-    if ms1+ms2>=1000 then temp1=1 end
-    ms1 = (ms1+ms2)%1000
-    if s1+s2+temp1>=60 then temp2=1 end
-    s1 = (s1+s2+temp1)%60
-    if m1+m2+temp2>=60 then temp3=1 end
-    m1 = (m1+m2+temp2)%60
-    h1 = (h1+h2+temp3)
-    return string.format("%d:%02d:%02d.%03d",h1,m1,s1,ms1)
-end
-
-function Realminus(t1,t2)
-    local h1,m1,s1,ms1 = t1:match("(%d+):(%d%d):(%d%d)%.(%d%d%d)")
-    local h2,m2,s2,ms2 = t2:match("(%d+):(%d%d):(%d%d)%.(%d%d%d)")
-    h1,m1,s1,ms1 = tonumber(h1),tonumber(m1),tonumber(s1),tonumber(ms1)
-    h2,m2,s2,ms2 = tonumber(h2),tonumber(m2),tonumber(s2),tonumber(ms2)
-    local temp1,temp2,temp3 = 0,0,0
-    if ms1-ms2<0 then temp1=1 end
-    ms1 = (ms1-ms2+1000)%1000
-    if s1-s2-temp1<0 then temp2=1 end
-    s1 = (s1-s2-temp1+60)%60
-    if m1-m2-temp2<0 then temp3=1 end
-    m1 = (m1-m2-temp2+60)%60
-    h1 = (h1-h2-temp3)
-    return string.format("%d:%02d:%02d.%03d",h1,m1,s1,ms1)
-end
-
-function copyfile(source, destination, byte)
-    local sourcefile, destinationfile
-    if byte==true then
-        sourcefile = io.open(source, "rb")
-        destinationfile = io.open(destination, "wb")
-    else
-        sourcefile = io.open(source, "r")
-        destinationfile = io.open(destination, "w")
-    end
-    destinationfile:write(sourcefile:read("*all"))
-    sourcefile:close()
-    destinationfile:close()
-end
-
--- byte = true
-function copylargefile(source, destination)
-    local buffer = 8192
-    local sourcefile, destinationfile
-    sourcefile = io.open(source, "rb")
-    destinationfile = io.open(destination, "wb")
-
-    local filelen = sourcefile:seek("end")
-    for i=0, filelen, buffer do
-        sourcefile:seek("set", i)
-        local data = sourcefile:read(math.min(filelen, i+buffer)-i)
-        destinationfile:write(data)
-    end
-    sourcefile:close()
-    destinationfile:close()
-end
-
 function length(x1,y1,x2,y2) return math.sqrt((x2-x1)^2+(y2-y1)^2)
 end
 
 function round(x) return math.floor(x+0.5)
 end
 
-function config_read_xml(dialog)
-    local path = aegisub.decode_path("?user").."\\xmlanalyzer_config.xml"
-    local file = io.open(path, "r")
-    if file~=nil then
-        file:close()
-        local config = require("xmlSimple").newParser():loadFile(path)
-        for si,li in ipairs(dialog) do
-            for sj,lj in pairs(li) do
-                if sj=="class" and lj~="label" then
-                    local name = li.name
-                    local item = config.Config[name]
-                    if item["@Type"]=="boolean" then 
-                        dialog[si].value = str2bool(item["@Value"])
-                    elseif item["@Type"]=="number" then 
-                        dialog[si].value = tonumber(item["@Value"])
-                    elseif item["@Type"]=="string" then 
-                        dialog[si].value = item["@Value"]
-                    end
-                    break
-                end
-            end
-        end
-    else
-        return nil
-    end
-end
-
-function config_write_xml(result)
-    local path = aegisub.decode_path("?user").."\\xmlanalyzer_config.xml"
-    local file = io.open(path, "w")
-    file:write('<?xml version="1.0" encoding="UTF-8"?>\n<Config>\n')
-    for key,value in pairs(result) do
-        if type(value)=="boolean" then 
-            file:write(string.format('<%s Type="%s" Value="%s"/>\n', key, type(value), bool2str(value)))
-        else
-            file:write(string.format('<%s Type="%s" Value="%s"/>\n', key, type(value), value))
-        end
-    end
-    file:write('</Config>')
-    file:close()
-end
-
-function str2bool(str)
-    if str=="true" then return true
-    else return false end
-end
-
-function bool2str(bool)
-    if bool==true then return "true"
-    else return "false" end
-end
-
 --This is what puts your automation in Aegisub's automation list
 aegisub.register_macro(script_name.."/Simulator",script_description,simulator)
 aegisub.register_macro(script_name.."/BorderAdder",script_description,borderadder)
-aegisub.register_macro(script_name.."/ForceTwoWindow",script_description,forcetwowindow)
+aegisub.register_macro(script_name.."/ForceTwoWindow",script_description,forced_window)
 aegisub.register_macro(script_name.."/FirstFrameBlackScreen",script_description,firstframeblackscreen)
 aegisub.register_macro(script_name.."/SliceCutter",script_description,slicecutter)
 aegisub.register_macro(script_name.."/TimeCalculator",script_description,timecalculator)
