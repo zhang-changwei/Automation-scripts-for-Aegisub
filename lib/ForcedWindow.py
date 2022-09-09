@@ -1,6 +1,4 @@
-from xml.etree.ElementTree import ElementTree
 from PIL import Image, ImageDraw
-import re
 import xml.etree.ElementTree as ET
 # version 1.6
 # I have to use pillow 8.2.0 here, they may change the api of palette, it leads to some wired problem.

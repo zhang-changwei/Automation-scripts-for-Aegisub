@@ -9,6 +9,13 @@ script_version="1.6"
 local xmlsimple = require("xmlSimple").newParser()
 local clipboard = require("aegisub.clipboard")
 
+-- ########### Math #############
+
+local function length(x1,y1,x2,y2) return math.sqrt((x2-x1)^2+(y2-y1)^2)
+end
+local function round(x) return math.floor(x+0.5)
+end
+
 -- ########### Frame #############
 
 local function frame2starttime(frame,fps)
@@ -148,56 +155,6 @@ local function copyfile(source, destination, byte)
     destinationfile:close()
 end
 
-local function str2bool(str)
-    if str=="true" then return true
-    else return false end
-end
-local function bool2str(bool)
-    if bool==true then return "true"
-    else return "false" end
-end
-
-local function config_read_xml(dialog)
-    local path = aegisub.decode_path("?user").."\\xmlanalyzer_config.xml"
-    local file = io.open(path, "r")
-    if file~=nil then
-        file:close()
-        local config = require("xmlSimple").newParser():loadFile(path)
-        for si,li in ipairs(dialog) do
-            for sj,lj in pairs(li) do
-                if sj=="class" and lj~="label" then
-                    local name = li.name
-                    local item = config.Config[name]
-                    if item["@Type"]=="boolean" then 
-                        dialog[si].value = str2bool(item["@Value"])
-                    elseif item["@Type"]=="number" then 
-                        dialog[si].value = tonumber(item["@Value"])
-                    elseif item["@Type"]=="string" then 
-                        dialog[si].value = item["@Value"]
-                    end
-                    break
-                end
-            end
-        end
-    else
-        return nil
-    end
-end
-local function config_write_xml(result)
-    local path = aegisub.decode_path("?user").."\\xmlanalyzer_config.xml"
-    local file = io.open(path, "w")
-    file:write('<?xml version="1.0" encoding="UTF-8"?>\n<Config>\n')
-    for key,value in pairs(result) do
-        if type(value)=="boolean" then 
-            file:write(string.format('<%s Type="%s" Value="%s"/>\n', key, type(value), bool2str(value)))
-        else
-            file:write(string.format('<%s Type="%s" Value="%s"/>\n', key, type(value), value))
-        end
-    end
-    file:write('</Config>')
-    file:close()
-end
-
 -- ########### Main #############
 
 function simulator(subtitle, selected, active)
@@ -217,9 +174,9 @@ function simulator(subtitle, selected, active)
 
     local intc,outtc = nil,nil
     local silence1, silence2 = false, false
-    local epoch_count = 0
+    local epoch_ind = 0
     if events.Event[event_count]["@InTC"]=="00:00:00:00" then 
-        epoch_count,event_count = 1,event_count-1 
+        epoch_ind,event_count = 1,event_count-1 
         buffer_report:write("Epoch1, 207360, 49.4%%\n")
     end
     local count = 0 -- max: 64
@@ -240,12 +197,12 @@ function simulator(subtitle, selected, active)
         -- new epoch (interval > 1 frame) first enter and update before get in the loop
         if outtc==nil or (t_intc~=outtc and NDFminus(t_intc,outtc,fps)~="00:00:00:01") then 
             if outtc~=nil then
-                buffer_report:write(string.format("Epoch%d, %d, %.1f%%\n", epoch_count, buffer, buffer/BUFFER_MAX*100))
+                buffer_report:write(string.format("Epoch%d, %d, %.1f%%\n", epoch_ind, buffer, buffer/BUFFER_MAX*100))
             end
             data = {} 
             silence1, silence2 = false, false
             count,buffer = 0,0
-            epoch_count = epoch_count + 1
+            epoch_ind = epoch_ind + 1
         end 
         intc,outtc = t_intc,t_outtc
 
@@ -291,7 +248,7 @@ function simulator(subtitle, selected, active)
             silence1 = true
             line.start_time = NDF2ms(t_intc,fps)
             line.end_time = NDF2ms(t_intc,fps)
-            line.actor = "G"..epoch_count
+            line.actor = "G"..epoch_ind
             line.text = "*** this Event will be discarded ***. The Time from InTC of previous Event to InTC is too close. and cannot register this Event with previous Epoch, by limitation of the number of different size images in a Epoch.  permitted number is 64."
             subtitle.append(line)
         end
@@ -301,14 +258,14 @@ function simulator(subtitle, selected, active)
             silence2 = true
             line.start_time = NDF2ms(t_intc,fps)
             line.end_time = NDF2ms(t_intc,fps)
-            line.actor = "G"..epoch_count
+            line.actor = "G"..epoch_ind
             line.text = 'buffer overflow.'
             subtitle.append(line)
         end
 
         -- last event break
         if i==event_count then
-            buffer_report:write(string.format("Epoch%d, %d, %.1f%%\n", epoch_count, buffer, buffer/BUFFER_MAX*100))
+            buffer_report:write(string.format("Epoch%d, %d, %.1f%%\n", epoch_ind, buffer, buffer/BUFFER_MAX*100))
             break
         end
         aegisub.progress.set(i/event_count*100)
@@ -323,30 +280,6 @@ function borderadder(subtitle, selected, active)
 	local path = aegisub.dialog.open('XML Analyzer', '', '', 'XML files (.xml)|*.xml|All Files (.)|.', false, true)
     local xml = xmlsimple:loadFile(path)
     local events = xml.BDN.Events
-
-    --UI
-    local dialog_config = {
-        {class="checkbox",name="b",label="basic",value=true,x=0,y=0},--1
-        {class="checkbox",name="m",label="merge",value=false,x=0,y=1},--2
-        {class="label",label="proportion threshold",x=1,y=1},--3
-        {class="floatedit",name="mp",value=0.9,x=2,y=1},--4
-        {class="checkbox",name="man",label="manual",value=false,x=0,y=2},--5
-        {class="checkbox",name="r",label="remember",value=false,x=1,y=0}--6
-    }
-    local buttons = {"Run","Quit"}
-    -- read config
-    config_read_xml(dialog_config)
-    -- show UI
-    local pressed,result = aegisub.dialog.display(dialog_config,buttons)
-    if (pressed=="Quit") then aegisub.cancel() end
-    if result.r==true then config_write_xml(result) end
-    -- manual
-    local man_starttime,man_endtime = subtitle[selected[1]].start_time,subtitle[selected[1]].end_time
-    for si,li in ipairs(selected) do
-        man_starttime = math.min(man_starttime, subtitle[li].start_time)
-        man_endtime   = math.max(man_endtime,   subtitle[li].end_time)
-    end
-
     local event_count = #events.Event
     local fps = xml.BDN.Description.Format["@FrameRate"]
     fps = tonumber(fps)
@@ -355,9 +288,10 @@ function borderadder(subtitle, selected, active)
 
     local intc,outtc
     local epoch_intc,epoch_outtc
-    local epoch_count = 0
-    if events.Event[event_count]["@InTC"]=="00:00:00:00" then epoch_count,event_count = 1,event_count-1 end
-    -- local x,y,h,w=1920,1080,0,0
+    local epoch_ind = 0
+    if events.Event[event_count]["@InTC"]=="00:00:00:00" then 
+        epoch_ind, event_count = 1, event_count-1 
+    end
 
     local line = subtitle[#subtitle]
     line.actor = "G"
@@ -373,120 +307,27 @@ function borderadder(subtitle, selected, active)
         -- new epoch
         if outtc==nil or (t_intc~=outtc and NDFminus(t_intc,outtc,fps)~="00:00:00:01") then 
             -- add border
-            if result.b==true then 
-                for _,j in ipairs(items) do
-                    if #j>1 then
-                        local trigger = 0
-                        local l,t,r,b = 1921,1081,-1,-1
-                        for __,k in ipairs(j) do
-                            if l~=k.x or t~=k.y or r~=k.w+k.x or b~=k.h+k.y then trigger=trigger+1 end
-                            l,t,r,b = math.min(l,k.x),math.min(t,k.y),math.max(r,k.w+k.x),math.max(b,k.h+k.y)
-                        end
-                        if trigger>=3 then
-                            line.start_time = NDF2starttime(j[1].i,fps)
-                            line.end_time   = NDF2endtime(j[#j].o,fps)
-                            line.actor      = "G"..epoch_count
-                            line.text = string.format("{\\an7\\pos(0,0)\\fscx100\\fscy100\\bord1\\shad0\\1aFF\\3aFD\\p1}m %d %d l %d %d %d %d %d %d",
-                                                      math.max(l,1), math.max(t,1), math.min(r,1919), math.max(t,1), math.min(r,1919), math.min(b,1079), math.max(l,1), math.min(b,1079))
-                            subtitle.append(line)
-                        end
-                    end
-                end 
-            elseif result.m==true then
-                local itemoutline = {}
-                for _,j in ipairs(items) do
+            for _,j in ipairs(items) do
+                if #j>1 then
                     local trigger = 0
                     local l,t,r,b = 1921,1081,-1,-1
                     for __,k in ipairs(j) do
                         if l~=k.x or t~=k.y or r~=k.w+k.x or b~=k.h+k.y then trigger=trigger+1 end
                         l,t,r,b = math.min(l,k.x),math.min(t,k.y),math.max(r,k.w+k.x),math.max(b,k.h+k.y)
                     end
-                    if trigger>=3 then trigger=true else trigger=false end
-                    table.insert(itemoutline, {l=l,t=t,w=r-l,h=b-t,i=j[1].i,o=j[#j].o,trigger=trigger})
-                end
-
-                for nj,j in ipairs(itemoutline) do
-                    for nk=nj+1,#itemoutline do
-                        local k = itemoutline[nk]
-                        local judge,l,t,r,b = square_overlap(j.l,j.t,j.w,j.h,k.l,k.t,k.w,k.h)
-                        if judge==true then
-                            local proportion = overlap_proportion(j.l,j.t,j.w,j.h,k.l,k.t,k.w,k.h)
-                            if proportion>=result.mp then
-                                j.l, j.t, j.w, j.h, j.trigger = l,t,r-l,b-t,true
-                                k.l, k.t, k.w, k.h, k.trigger = l,t,r-l,b-t,true
-                                itemoutline[nj],itemoutline[nk] = j,k
-                            end
-                        end
-                    end
-                end
-
-                local nj = 1
-                while nj<=#itemoutline-1 do
-                    local nk=nj+1
-                    if itemoutline[nj].trigger==true then
-                        while nk<=#itemoutline do
-                            if itemoutline[nk].trigger==true then
-                                local j,k = itemoutline[nj],itemoutline[nk]
-                                if j.l==k.l and j.t==k.t and j.w==k.w and j.h==k.h then
-                                    if NDFcompare(k.i,j.o)<=0 and NDFcompare(k.o,j.o)<=0 then
-                                        table.remove(itemoutline, nk)
-                                        nk = nk - 1
-                                    elseif NDFcompare(k.i,j.o)<=0 and NDFcompare(k.o,j.o)>0 then
-                                        itemoutline[nj].o = k.o
-                                        table.remove(itemoutline, nk)
-                                        nk = nk - 1
-                                    end
-                                end
-                            end
-                            nk = nk + 1
-                        end
-                    end
-                    nj = nj + 1
-                end
-
-                for _,j in ipairs(itemoutline) do
-                    if j.trigger==true then
-                        line.start_time = NDF2starttime(j.i,fps)
-                        line.end_time   = NDF2endtime(j.o,fps)
-                        line.actor      = "G"..epoch_count
-                        local r,b = j.l+j.w, j.t+j.h
-                        line.text = string.format("{\\an7\\pos(0,0)\\fscx100\\fscy100\\bord1\\shad0\\1aFF\\3aFD\\p1}m %d %d l %d %d %d %d %d %d",j.l,j.t,r,j.t,r,b,j.l,b)
+                    if trigger>=3 then
+                        line.start_time = NDF2starttime(j[1].i,fps)
+                        line.end_time   = NDF2endtime(j[#j].o,fps)
+                        line.actor      = "G"..epoch_ind
+                        line.text = string.format("{\\an7\\pos(0,0)\\fscx100\\fscy100\\bord1\\shad0\\1aFF\\3aFD\\p1}m %d %d l %d %d %d %d %d %d",
+                                                    math.max(l,1), math.max(t,1), math.min(r,1919), math.max(t,1), math.min(r,1919), math.min(b,1079), math.max(l,1), math.min(b,1079))
                         subtitle.append(line)
                     end
                 end
-            elseif result.man==true then
-                if epoch_intc~=nil then
-                    local epoch_starttime,epoch_endtime = NDF2starttime(epoch_intc,fps),NDF2endtime(epoch_outtc,fps)
-                    if epoch_starttime>=man_endtime then break 
-                    elseif not (epoch_endtime<=man_starttime) then
-                        for _,j in ipairs(items) do
-                            if #j>1 then
-                                local trigger = 0
-                                local l,t,r,b = 1921,1081,-1,-1
-                                for __,k in ipairs(j) do
-                                    local k_st,k_et = NDF2starttime(k.i,fps),NDF2endtime(k.o,fps)
-                                    if k_st<man_endtime and k_et>man_starttime then
-                                        if l~=k.x or t~=k.y or r~=k.w+k.x or b~=k.h+k.y then trigger=trigger+1 end
-                                        l,t,r,b = math.min(l,k.x),math.min(t,k.y),math.max(r,k.w+k.x),math.max(b,k.h+k.y)
-                                    end
-                                end
-                                if trigger>=2 then
-                                    line.start_time = math.max(NDF2starttime(j[1].i,fps),man_starttime)
-                                    line.end_time   = math.min(NDF2endtime(j[#j].o,fps),man_endtime)
-                                    if line.end_time>line.start_time then
-                                        line.actor  = "G"..epoch_count
-                                        line.text = string.format("{\\an7\\pos(0,0)\\fscx100\\fscy100\\bord1\\shad0\\1aFF\\3aFD\\p1}m %d %d l %d %d %d %d %d %d",l,t,r,t,r,b,l,b)
-                                        subtitle.append(line)
-                                    end
-                                end
-                            end
-                        end 
-                    end
-                end
-            end 
+            end  
             -- clear memory
             items = {}
-            epoch_intc,epoch_count = t_intc,epoch_count+1
+            epoch_intc, epoch_ind = t_intc, epoch_ind + 1
         end 
         intc,outtc = t_intc,t_outtc
 
@@ -550,26 +391,24 @@ function borderadder(subtitle, selected, active)
 
         -- last event break
         if i==event_count then
-            if true then
-                for _,j in ipairs(items) do
-                    if #j>1 then
-                        local trigger = 0
-                        local l,t,r,b = 1921,1081,-1,-1
-                        for __,k in ipairs(j) do
-                            if l~=k.x or t~=k.y or r~=k.w+k.x or b~=k.h+k.y then trigger=trigger+1 end
-                            l,t,r,b = math.min(l,k.x),math.min(t,k.y),math.max(r,k.w+k.x),math.max(b,k.h+k.y)
-                        end
-                        if trigger>=3 then
-                            line.start_time = NDF2starttime(j[1].i,fps)
-                            line.end_time   = NDF2endtime(j[#j].o,fps)
-                            line.actor      = "G"..epoch_count
-                            line.text = string.format("{\\an7\\pos(0,0)\\fscx100\\fscy100\\bord1\\shad0\\1aFF\\3aFD\\p1}m %d %d l %d %d %d %d %d %d",
-                                                      math.max(l,1), math.max(t,1), math.min(r,1919), math.max(t,1), math.min(r,1919), math.min(b,1079), math.max(l,1), math.min(b,1079))
-                            subtitle.append(line)
-                        end
+            for _,j in ipairs(items) do
+                if #j>1 then
+                    local trigger = 0
+                    local l,t,r,b = 1921,1081,-1,-1
+                    for __,k in ipairs(j) do
+                        if l~=k.x or t~=k.y or r~=k.w+k.x or b~=k.h+k.y then trigger=trigger+1 end
+                        l,t,r,b = math.min(l,k.x),math.min(t,k.y),math.max(r,k.w+k.x),math.max(b,k.h+k.y)
                     end
-                end 
-            end
+                    if trigger>=3 then
+                        line.start_time = NDF2starttime(j[1].i,fps)
+                        line.end_time   = NDF2endtime(j[#j].o,fps)
+                        line.actor      = "G"..epoch_ind
+                        line.text = string.format("{\\an7\\pos(0,0)\\fscx100\\fscy100\\bord1\\shad0\\1aFF\\3aFD\\p1}m %d %d l %d %d %d %d %d %d",
+                                                    math.max(l,1), math.max(t,1), math.min(r,1919), math.max(t,1), math.min(r,1919), math.min(b,1079), math.max(l,1), math.min(b,1079))
+                        subtitle.append(line)
+                    end
+                end
+            end 
             break
         end
         aegisub.progress.set(i/event_count*100)
@@ -579,43 +418,51 @@ function borderadder(subtitle, selected, active)
     return selected 
 end
 
-function patch_overlapjoiner(subtitle, selected, active)
-    local i = 1
-    while i<=#selected-1 do
-        local ii = selected[i]
-        local li = subtitle[ii]
-        local j = i + 1
-        while j<=#selected do
-            local ji = selected[j]
-            local lj = subtitle[ji]
-            if lj.start_time<=li.end_time then
-                li = subtitle[ii]
-                local l1,t1,r1,b1 = li.text:match("m ([%d]+) ([%d]+) l ([%d]+) [%d]+ [%d]+ ([%d]+)")--ltrtrb
-                l1,t1,r1,b1 = tonumber(l1),tonumber(t1),tonumber(r1),tonumber(b1)
-                local l2,t2,r2,b2 = lj.text:match("m ([%d]+) ([%d]+) l ([%d]+) [%d]+ [%d]+ ([%d]+)")--ltrtrb
-                l2,t2,r2,b2 = tonumber(l2),tonumber(t2),tonumber(r2),tonumber(b2)
-                local judge,lnew,tnew,rnew,bnew = square_overlap(l1,t1,r1-l1,b1-t1,l2,t2,r2-l2,b2-t2)
-                if judge==true then
-                    -- overlap
-                    li.end_time = math.max(li.end_time, lj.end_time)
-                    li.text = li.text:gsub("}.*$",string.format("}m %d %d l %d %d %d %d %d %d",lnew,tnew,rnew,tnew,rnew,bnew,lnew,bnew))
-                    subtitle[ii] = li
-                    for k=j+1,#selected do
-                        selected[k] = selected[k] - 1
-                    end
-                    table.remove(selected, j)
-                    subtitle.delete(ji)
-                else
-                    j = j + 1
-                end
-            else
-                j = j + 1
-            end
+function recttrimmer(subtitle, selected, active)
+    local start_time, end_time, l, t, r, b
+    for si, li in ipairs(selected) do
+        local line = subtitle[li]
+        local l1,t1,r1,b1 = line.text:match("m ([%d]+) ([%d]+) l ([%d]+) [%d]+ [%d]+ ([%d]+)")
+        l1,t1,r1,b1 = tonumber(l1),tonumber(t1),tonumber(r1),tonumber(b1)
+        if si == 1 then
+            start_time = line.start_time
+            end_time = line.end_time
+            l, t, r, b = l1, t1, r1, b1
+        else
+            end_time = math.max(end_time, line.end_time)
+            start_time = math.min(start_time, line.start_time)
+            l, t = math.min(l, l1), math.min(t, t1)
+            r, b = math.max(r, r1), math.max(b, b1)
         end
-        i = i + 1
+    end
+    local offset = 0
+    for si, li in ipairs(selected) do
+        line = subtitle[li]
+        line.start_time = start_time
+        line.end_time = end_time
+        line.text = line.text:gsub("}.*$",string.format("}m %d %d l %d %d %d %d %d %d", l, t, r, t, r, b, l, b) )
+        subtitle[li] = line
+        if si ~= 1 then
+            subtitle.delete(li - offset)
+            offset = offset + 1
+        end
     end
     aegisub.set_undo_point(script_name) 
-    return selected
+    return {selected[1]}
+end
+
+function rectnormalizer(subtitle, selected, active)
+    for si, li in ipairs(selected) do
+        local line = subtitle[li]
+        local x, y = line.text:match("\\pos%( *([%d%.%-]+) *, *([%d%.%-]+) *%)")
+        x, y = round(tonumber(x)), round(tonumber(y))
+        local l1,t1,r1,b1 = line.text:match("m ([%d]+) ([%d]+) l ([%d]+) [%d]+ [%d]+ ([%d]+)")
+        l1,t1,r1,b1 = tonumber(l1),tonumber(t1),tonumber(r1),tonumber(b1)
+        line.text = line.text:gsub("}.*$", 
+            string.format("}m %d %d l %d %d %d %d %d %d", l1+x, t1+y, r1+x, t1+y, r1+x, b1+y, l1+x, b1+y))
+        line.text = line.text:gsub("\\pos%([^%)]+%)", "\\pos(0,0)")
+        subtitle[li] = line
+    end
 end
 
 function slicecutter(subtitle, selected, active)
@@ -887,28 +734,33 @@ function dialogpuller(subtitle, selected, active)
     end
 end
 
-function forced_window(subtitle, selected, active)
+function forcedwindow(subtitle, selected, active)
     local path = aegisub.dialog.open('XML Analyzer', '', '', 'XML files (.xml)|*.xml|All Files (.)|.', false, true)
     local path_head = path:gsub("[^\\]*%.xml$","") -- E:\\XXX\\
-    local path_new = path:gsub("%.xml$","_FTW.xml")
+    local path_new = path:gsub("%.xml$","_FW.xml")
     local BDNHandler = xmlsimple:loadFile(path)
 
     local events = BDNHandler.BDN.Events
     local event_count = #events.Event
     local fps = BDNHandler.BDN.Description.Format["@FrameRate"]
-    fps = tonumber(event_count)
+    fps = tonumber(fps)
     if fps==23.976 then fps=24000/1001 
     elseif fps==29.97 then fps=30000/1001 end
 
     -- conf & python
     local conf_path = path_head.."ForcedWindow.conf"
     local conf_table = {}
-    tmpfile = io.open(aegisub.decode_path("?user").."\\ForcedWindow.exe")
-    if tmpfile~=nil then
-        tmpfile:close()
-        pypath = path_head.."ForcedWindow.exe"
-        pypathdata = aegisub.decode_path("?user").."\\ForcedWindow.exe"
-        os.execute(string.format('copy "%s" "%s"', pypathdata, pypath))
+    local pypath = path_head.."ForcedWindow.exe"
+    local pyfile = io.open(pypath)
+    if pyfile == nil then
+        local tmpfile = io.open(aegisub.decode_path("?user").."\\ForcedWindow.exe")
+        if tmpfile ~= nil then
+            tmpfile:close()
+            pypathdata = aegisub.decode_path("?user").."\\ForcedWindow.exe"
+            os.execute(string.format('copy "%s" "%s"', pypathdata, pypath))
+        end
+    else
+        pyfile:close()
     end
 
     -- open the new xml to write
@@ -945,7 +797,7 @@ function forced_window(subtitle, selected, active)
                     if ri.r > tx and ri.b > ty and ri.l < tx+tw and ri.t < ty+th then
                         png = graphics:value()
                         local png1 = png:gsub("%.png$","_"..pngi..".png")
-                        if pngi==2 then aegisub.log("3 windows in one frame") aegisub.cancel() end
+                        if pngi == 2 then aegisub.log("3 windows in one frame") aegisub.cancel() end
                         pngi = pngi + 1
             
                         local info = string.format('<Output Width="%d" Height="%d" X="%d" Y="%d" Name="%s">\n', ri.r-ri.l, ri.b-ri.t, ri.l, ri.t, png1) ..
@@ -973,7 +825,7 @@ function forced_window(subtitle, selected, active)
             local tx,ty,tw,th,Tx,Ty,Tw,Th
             for si,ri in ipairs(rule_table) do
                 if NDF2frame(t_intc, fps)<ri.o and NDF2frame(t_outtc, fps)>ri.i then
-                    if pngi==1 then
+                    if pngi == 0 then
                         tx,ty,tw,th = graphics[1]["@X"], graphics[1]["@Y"], graphics[1]["@Width"], graphics[1]["@Height"]
                         tx,ty,tw,th = tonumber(tx),tonumber(ty),tonumber(tw),tonumber(th)
                         Tx,Ty,Tw,Th = graphics[2]["@X"], graphics[2]["@Y"], graphics[2]["@Width"], graphics[2]["@Height"]
@@ -987,13 +839,13 @@ function forced_window(subtitle, selected, active)
 
                     if (ri.r > tx and ri.b > ty and ri.l < tx+tw and ri.t < ty+th) or (ri.r > Tx and ri.b > Ty and ri.l < Tx+Tw and ri.t < Ty+Th) then
                         local info = string.format('<Output Width="%d" Height="%d" X="%d" Y="%d" Name="%s">\n', ri.r-ri.l, ri.b-ri.t, ri.l, ri.t, png1) ..
-                            string.format('<Input Width="%d" Height="%d" X="%d" Y="%d">%s</Input>\n', tw, th, tx, ty, pnga) ..
-                            string.format('<Input Width="%d" Height="%d" X="%d" Y="%d">%s</Input>\n', Tw, Th, Tx, Ty, pngb) ..
+                            string.format('<Input Width="%d" Height="%d" X="%d" Y="%d" Name="%s"></Input>\n', tw, th, tx, ty, pnga) ..
+                            string.format('<Input Width="%d" Height="%d" X="%d" Y="%d" Name="%s"></Input>\n', Tw, Th, Tx, Ty, pngb) ..
                             '</Output>\n'
                         table.insert(conf_table, info)
-                        table.insert(newgraphics, {_attr={WWidth=ri.r-ri.l,Height=ri.b-ri.t,X=ri.l,Y=ri.t}, png1})
+                        table.insert(newgraphics, {_attr={Width=ri.r-ri.l,Height=ri.b-ri.t,X=ri.l,Y=ri.t}, png1})
 
-                        if pngi==2 then aegisub.log("3 windows in one frame") aegisub.cancel() end
+                        if pngi == 2 then aegisub.log("3 windows in one frame") aegisub.cancel() end
                         pngi = pngi + 1
                     end
                 end
@@ -1012,7 +864,7 @@ function forced_window(subtitle, selected, active)
         aegisub.progress.set(i/event_count*100)
     end
 
-    conffile = io.open(conf_path, 'r')
+    conffile = io.open(conf_path, 'w')
     conffile:write('<ForcedWindow>\n')
     conffile:write(table.concat(conf_table, ''))
     conffile:write('</ForcedWindow>\n')
@@ -1021,6 +873,102 @@ function forced_window(subtitle, selected, active)
     xmlFTWfile:close()
 
     aegisub.log("Succeed!")
+    return selected
+end
+
+function epochdetector(subtitle, selected, active)
+    local path = aegisub.dialog.open('XML Analyzer', '', '', 'XML files (.xml)|*.xml|All Files (.)|.', false, true)
+    local BDNHandler = xmlsimple:loadFile(path)
+
+    local events = BDNHandler.BDN.Events
+    local event_count = #events.Event
+    local fps = BDNHandler.BDN.Description.Format["@FrameRate"]
+    fps = tonumber(fps)
+    if fps==23.976 then fps=24000/1001 
+    elseif fps==29.97 then fps=30000/1001 end
+
+    local epoch_table = {}
+
+    if events.Event[event_count]["@InTC"]=="00:00:00:00" then 
+        local tmp = events.Event[event_count]
+        event_count = event_count - 1 
+        table.insert(epoch_table, {i=NDF2ms(tmp["@InTC"], fps), o=NDF2ms(tmp["@OutTC"], fps)})
+    end
+
+    local intc, outtc = events.Event[1]["@InTC"], nil
+    for i=1, event_count do
+        local t_intc = events.Event[i]["@InTC"]
+        local t_outtc = events.Event[i]["@OutTC"]
+
+        -- new epoch (interval > 1 frame) first enter and update before get in the loop
+        if outtc~=nil and t_intc~=outtc and NDFminus(t_intc,outtc,fps)~="00:00:00:01" then 
+            table.insert(epoch_table, {i=NDF2starttime(intc, fps), o=NDF2endtime(outtc, fps)})
+            -- update
+            intc = t_intc
+        end
+        outtc = t_outtc
+        if i == event_count then
+            table.insert(epoch_table, {i=NDF2starttime(intc, fps), o=NDF2endtime(outtc, fps)})
+            break
+        end
+    end
+
+    local count_undef = 0
+    for li=1, #subtitle do
+        local line = subtitle[li]
+        if line.class == "dialogue" then
+            if line.comment == true then
+                line.effect = "comment"
+            else
+                local mid_time = (line.start_time + line.end_time)/2
+                local trigger = false
+                for i, epoch in ipairs(epoch_table) do
+                    if mid_time > epoch.i and mid_time < epoch.o then
+                        line.effect = "epoch"..i
+                        trigger = true
+                        break
+                    end
+                end
+                if trigger == false then
+                    line.effect = "undefined"
+                    count_undef = count_undef + 1
+                end
+            end
+            subtitle[li] = line
+        end
+    end
+    if count_undef > 0 then
+        aegisub.log("Number of lines not in epoches: "..count_undef..". Please check.")
+    end
+    aegisub.set_undo_point(script_name) 
+    return selected
+end
+
+function epochselector(subtitle, selected, active)
+    local dialog_config = {
+        {class="label", label="Select 1 or more epoch(es), Separated by ',' or use 'all'", x=0, y=0},
+        {class="edit", name="epoch", x=0, y=1}
+    }
+    local buttons = {"Run", "Quit"}
+    local pressed, result = aegisub.dialog.display(dialog_config, buttons)
+    if not pressed=="Run" then aegisub.cancel() end
+
+    local sel_epoches = ","..result.epoch..","
+
+    for li=1, #subtitle do
+        local line = subtitle[li]
+        if line.class == "dialogue" and line.effect:match("epoch") ~= nil then
+            if sel_epoches == ",all," then
+                line.comment = false
+            elseif sel_epoches:match(","..line.effect:sub(6)..",") ~= nil then
+                line.comment = false
+            else
+                line.comment = true
+            end
+            subtitle[li] = line
+        end
+    end
+    aegisub.set_undo_point(script_name) 
     return selected
 end
 
@@ -1041,49 +989,15 @@ function firstframeblackscreen(subtitle, selected, active)
     return selected
 end
 
---********************************************************************************************--
---********************************************************************************************--
-
-function square_overlap(x1,y1,w1,h1,x2,y2,w2,h2)
-    local judge = false
-    local l,t,r,b = math.min(x1,x2),math.min(y1,y2),math.max(x1+w1,x2+w2),math.max(y1+h1,y2+h2)
-    judge = judge or ptINsquare(x1,y1,x2,y2,w2,h2)
-    judge = judge or ptINsquare(x1,y1+h1,x2,y2,w2,h2)
-    judge = judge or ptINsquare(x1+w1,y1,x2,y2,w2,h2)
-    judge = judge or ptINsquare(x1+w1,y1+h1,x2,y2,w2,h2)
-    judge = judge or ptINsquare(x2,y2,x1,y1,w1,h1)
-    judge = judge or ptINsquare(x2+w2,y2,x1,y1,w1,h1)
-    judge = judge or ptINsquare(x2,y2+h2,x1,y1,w1,h1)
-    judge = judge or ptINsquare(x2+w2,y2+h2,x1,y1,w1,h1)
-    return judge,l,t,r,b
-end
-
-function overlap_proportion(x1,y1,w1,h1,x2,y2,w2,h2)
-    local l,t,r,b = math.max(x1,x2),math.max(y1,y2),math.min(x1+w1,x2+w2),math.min(y1+h1,y2+h2)
-    local s,s1,s2 = (r-l)*(b-t),w1*h1,w2*h2
-    return math.max(s/s1,s/s2)
-end
-
-function ptINsquare(posx,posy,x,y,w,h)
-    if posx>=x and posx<=x+w and posy>=y and posy<=y+h then
-        return true
-    else
-        return false
-    end
-end
-
-function length(x1,y1,x2,y2) return math.sqrt((x2-x1)^2+(y2-y1)^2)
-end
-
-function round(x) return math.floor(x+0.5)
-end
-
 --This is what puts your automation in Aegisub's automation list
 aegisub.register_macro(script_name.."/Simulator",script_description,simulator)
 aegisub.register_macro(script_name.."/BorderAdder",script_description,borderadder)
-aegisub.register_macro(script_name.."/ForceTwoWindow",script_description,forced_window)
+aegisub.register_macro(script_name.."/ForcedWindow",script_description,forcedwindow)
 aegisub.register_macro(script_name.."/FirstFrameBlackScreen",script_description,firstframeblackscreen)
 aegisub.register_macro(script_name.."/SliceCutter",script_description,slicecutter)
+aegisub.register_macro(script_name.."/EpochDetector",script_description,epochdetector)
+aegisub.register_macro(script_name.."/EpochSelector",script_description,epochselector)
+aegisub.register_macro(script_name.."/RectTrimmer",script_description,recttrimmer)
+aegisub.register_macro(script_name.."/RectNormalizer",script_description,rectnormalizer)
 aegisub.register_macro(script_name.."/TimeCalculator",script_description,timecalculator)
---aegisub.register_macro(script_name.."/Patch_OverlapJoiner",script_description,patch_overlapjoiner)
 --aegisub.register_macro(script_name.."/DialogPuller",script_description,dialogpuller)
