@@ -1,4 +1,4 @@
-# version 1.1
+# version 1.3
 
 import tkinter as tk
 import tkinter.filedialog as filedialog
@@ -41,7 +41,14 @@ class App:
         ttk.Button(grid2, text='Run', width=15, command=self.compare) \
             .pack(side='left', fill='y', padx=4, pady=4)
 
-        ttk.Entry(grid3, textvariable=self.param).pack(fill='both', padx=4, pady=4)
+        ttk.Entry(grid3, textvariable=self.param).pack(fill='x', padx=4, pady=4)
+
+        self.inputPNG8 = tk.BooleanVar(value=False)
+        self.outputPNG8 = tk.BooleanVar(value=False)
+        ttk.Checkbutton(grid3, text='Input PNG8', variable=self.inputPNG8, width=22) \
+            .pack(side='left', fill='y', padx=4, pady=4)
+        ttk.Checkbutton(grid3, text='Output PNG8', variable=self.outputPNG8, width=22) \
+            .pack(side='left', fill='y', padx=4, pady=4)
 
         self.root.mainloop()
 
@@ -66,6 +73,9 @@ class App:
             for file in self.files:
                 try:
                     im = Image.open(file)
+                    if self.inputPNG8.get():
+                        im = im.convert('RGBA')
+                    # to numpy
                     arr = np.asarray(im)
                     channel = np.size(arr, axis=-1)
                     if channel == 4:
@@ -78,12 +88,15 @@ class App:
                         rgb = self.sdr2hdr(rgb).astype(np.uint8)
                     else:
                         rgb = self.hdr2sdr(rgb).astype(np.uint8)
+                    # to Image
                     if channel == 4:
                         arr = np.dstack((rgb, a))
                         im = Image.fromarray(arr, mode='RGBA')
                     else:
                         arr = rgb
                         im = Image.fromarray(arr, mode='RGB')
+                    if self.outputPNG8.get():
+                        im = im.convert('P')
                     # save
                     head, tail = os.path.split(file)
                     if x == 'S2H':
@@ -99,6 +112,9 @@ class App:
             try:
                 sdr = Image.open(self.sdr)
                 hdr = Image.open(self.hdr)
+                if self.inputPNG8.get():
+                    sdr = sdr.convert('RGBA')
+                    hdr = hdr.convert('RGBA')
                 sdrrgb = np.asarray(sdr)[..., :3]
                 hdrrgb = np.asarray(hdr)[..., :3]
                 sdrrgb = self.sdr2hdr(sdrrgb)
