@@ -1,4 +1,4 @@
-# version 1.3
+# version 1.4
 
 import tkinter as tk
 import tkinter.filedialog as filedialog
@@ -8,6 +8,90 @@ from PIL import Image
 import numpy as np
 import colour
 import os
+import multiprocessing
+from timeit import default_timer
+
+def main(file:str, x:str, scaling:float, i8:bool, o8:bool):
+    print(f'Processing {file}.')
+    try:
+        im = Image.open(file)
+        if i8:
+            im = im.convert('RGBA')
+        # to numpy
+        arr = np.asarray(im)
+        channel = np.size(arr, axis=-1)
+        if channel == 4:
+            rgb = arr[..., :3]
+            a = arr[..., -1:]
+        else:
+            rgb = arr
+        # main function
+        if x == 'S2H':
+            rgb = sdr2hdr(rgb, scaling).astype(np.uint8)
+        else:
+            rgb = hdr2sdr(rgb, scaling).astype(np.uint8)
+        # to Image
+        if channel == 4:
+            arr = np.dstack((rgb, a))
+            im = Image.fromarray(arr, mode='RGBA')
+        else:
+            arr = rgb
+            im = Image.fromarray(arr, mode='RGB')
+        if o8:
+            im = im.convert('P')
+        # save
+        head, tail = os.path.split(file)
+        if x == 'S2H':
+            im.save(os.path.join(head, 'HDR_' + tail))
+        else:
+            im.save(os.path.join(head, 'SDR_' + tail))
+    except:
+        print(f'An error occured when converting "{file}".')
+
+def sdr2hdr(rgb:np.ndarray, scaling:float):
+    rgb = colour.models.eotf_sRGB(rgb / 255)
+    # rgb = colour.models.oetf_inverse_BT709(rgb / 255)
+    # XYZ = colour.models.RGB_to_XYZ(rgb, 
+    #                                 colour.models.RGB_COLOURSPACE_sRGB.whitepoint,
+    #                                 colour.models.RGB_COLOURSPACE_sRGB.whitepoint,
+    #                                 colour.models.RGB_COLOURSPACE_sRGB.matrix_RGB_to_XYZ,
+    #                                 chromatic_adaptation_transform='XYZ Scaling')
+    # xyY = colour.models.XYZ_to_xyY(XYZ + np.PZERO)
+    # xyY[..., -1] = xyY[..., -1] / scaling
+    # XYZ = colour.models.xyY_to_XYZ(xyY)
+    # rgb = colour.models.XYZ_to_RGB(XYZ,
+    #                                 colour.models.RGB_COLOURSPACE_sRGB.whitepoint,
+    #                                 colour.models.RGB_COLOURSPACE_BT2020.whitepoint,
+    #                                 colour.models.RGB_COLOURSPACE_BT2020.matrix_XYZ_to_RGB,
+    #                                 chromatic_adaptation_transform='XYZ Scaling')
+    # rgb = colour.models.oetf_PQ_BT2100(rgb)
+    rgb = colour.models.RGB_to_RGB(rgb, 
+                                    colour.models.RGB_COLOURSPACE_sRGB, 
+                                    colour.models.RGB_COLOURSPACE_BT2020,
+                                    chromatic_adaptation_transform='XYZ Scaling')
+    rgb = colour.models.oetf_PQ_BT2100(rgb / scaling)
+    rgb = colour.models.RGB_to_YCbCr(rgb, colour.WEIGHTS_YCBCR['ITU-R BT.2020'])
+    rgb = colour.models.YCbCr_to_RGB(rgb, colour.WEIGHTS_YCBCR['ITU-R BT.709'])
+    rgb *= 255
+    return rgb
+def hdr2sdr(rgb:np.ndarray, scaling:float):
+    rgb = colour.models.RGB_to_YCbCr(rgb / 255, colour.WEIGHTS_YCBCR['ITU-R BT.709'])
+    rgb = colour.models.YCbCr_to_RGB(rgb, colour.WEIGHTS_YCBCR['ITU-R BT.2020'])
+    np.putmask(rgb, rgb>1, 1)
+    np.putmask(rgb, rgb<0, 0)
+    rgb = colour.models.oetf_inverse_PQ_BT2100(rgb)
+    rgb *= scaling
+    np.putmask(rgb, rgb>1, 1)
+    np.putmask(rgb, rgb<0, 0)
+    rgb = colour.models.RGB_to_RGB(rgb, 
+                                    colour.models.RGB_COLOURSPACE_BT2020, 
+                                    colour.models.RGB_COLOURSPACE_sRGB,
+                                    chromatic_adaptation_transform='XYZ Scaling')
+    np.putmask(rgb, rgb>1, 1)
+    np.putmask(rgb, rgb<0, 0)
+    rgb = colour.models.eotf_inverse_sRGB(rgb)
+    rgb *= 255
+    return rgb
 
 class App:
 
@@ -19,6 +103,7 @@ class App:
         self.sdr = ''
         self.hdr = ''
         self.param = tk.IntVar(value=30)
+        self.cpu = min(8, multiprocessing.cpu_count())
 
         grid1 = ttk.Labelframe(self.root, text='Convert')
         grid1.pack(side='top', fill='x', padx=10, pady=(10, 5))
@@ -53,7 +138,7 @@ class App:
         self.root.mainloop()
 
     def selectFiles(self):
-        path = filedialog.askopenfilenames(title='Select', filetypes=[('PNG File', ['.png', '.PNG'])])
+        path = filedialog.askopenfilenames(title='Select', filetypes=[('PNG File', ['.png', '.PNG', '.jpg'])])
         if path:
             self.files = path
             print(f'Select: {path}')
@@ -70,42 +155,15 @@ class App:
 
     def convert(self, x:str):
         if self.files:
-            for file in self.files:
-                try:
-                    im = Image.open(file)
-                    if self.inputPNG8.get():
-                        im = im.convert('RGBA')
-                    # to numpy
-                    arr = np.asarray(im)
-                    channel = np.size(arr, axis=-1)
-                    if channel == 4:
-                        rgb = arr[..., :3]
-                        a = arr[..., -1:]
-                    else:
-                        rgb = arr
-                    # main function
-                    if x == 'S2H':
-                        rgb = self.sdr2hdr(rgb).astype(np.uint8)
-                    else:
-                        rgb = self.hdr2sdr(rgb).astype(np.uint8)
-                    # to Image
-                    if channel == 4:
-                        arr = np.dstack((rgb, a))
-                        im = Image.fromarray(arr, mode='RGBA')
-                    else:
-                        arr = rgb
-                        im = Image.fromarray(arr, mode='RGB')
-                    if self.outputPNG8.get():
-                        im = im.convert('P')
-                    # save
-                    head, tail = os.path.split(file)
-                    if x == 'S2H':
-                        im.save(os.path.join(head, 'HDR_' + tail))
-                    else:
-                        im.save(os.path.join(head, 'SDR_' + tail))
-                except:
-                    print(f'An error occured when converting "{file}".')
-            messagebox.showinfo(message='Convertion finished.')
+            t1 = default_timer()
+            with multiprocessing.Pool(processes=self.cpu) as pool:
+                for file in self.files:
+                    pool.apply_async(main, (file, x, self.param.get(), self.inputPNG8.get(), self.outputPNG8.get()))
+                    # main(file, x, self.param.get(), self.inputPNG8.get(), self.outputPNG8.get())
+                pool.close()
+                pool.join()
+            t2 = default_timer()
+            messagebox.showinfo(message=f'Convertion finished. Used Time {t2-t1}')
 
     def compare(self):
         if self.sdr and self.hdr:
@@ -122,38 +180,8 @@ class App:
                 im = Image.fromarray(err.astype(np.uint8))
                 im.show()
             except:
-                print(f'An error occured when comparing "{self.sdr}" with "{self.hdr}".')
-
-    def sdr2hdr(self, rgb:np.ndarray):
-        rgb = colour.models.eotf_sRGB(rgb / 255)
-        rgb = colour.models.RGB_to_RGB(rgb, 
-                                        colour.models.RGB_COLOURSPACE_sRGB, 
-                                        colour.models.RGB_COLOURSPACE_BT2020,
-                                        chromatic_adaptation_transform='XYZ Scaling')
-        rgb = colour.models.oetf_PQ_BT2100(rgb / self.param.get())
-        rgb = colour.models.RGB_to_YCbCr(rgb, colour.WEIGHTS_YCBCR['ITU-R BT.2020'])
-        rgb = colour.models.YCbCr_to_RGB(rgb, colour.WEIGHTS_YCBCR['ITU-R BT.709'])
-        rgb *= 255
-        return rgb
-
-    def hdr2sdr(self, rgb:np.ndarray):
-        rgb = colour.models.RGB_to_YCbCr(rgb / 255, colour.WEIGHTS_YCBCR['ITU-R BT.709'])
-        rgb = colour.models.YCbCr_to_RGB(rgb, colour.WEIGHTS_YCBCR['ITU-R BT.2020'])
-        np.putmask(rgb, rgb>1, 1)
-        np.putmask(rgb, rgb<0, 0)
-        rgb = colour.models.oetf_inverse_PQ_BT2100(rgb)
-        rgb *= self.param.get()
-        np.putmask(rgb, rgb>1, 1)
-        np.putmask(rgb, rgb<0, 0)
-        rgb = colour.models.RGB_to_RGB(rgb, 
-                                        colour.models.RGB_COLOURSPACE_BT2020, 
-                                        colour.models.RGB_COLOURSPACE_sRGB,
-                                        chromatic_adaptation_transform='XYZ Scaling')
-        np.putmask(rgb, rgb>1, 1)
-        np.putmask(rgb, rgb<0, 0)
-        rgb = colour.models.eotf_inverse_sRGB(rgb)
-        rgb *= 255
-        return rgb  
+                print(f'An error occured when comparing "{self.sdr}" with "{self.hdr}".')  
 
 if __name__ == '__main__':
+    multiprocessing.freeze_support()
     App()
